@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <Description>Template Engine-backed generation engine and template catalog for Dorn.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Dorn.Abstractions\Dorn.Abstractions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.TemplateEngine.Abstractions" />
+        <PackageReference Include="Microsoft.TemplateEngine.Edge" />
+        <PackageReference Include="Microsoft.TemplateEngine.Orchestrator.RunnableProjects" />
+        <PackageReference Include="Microsoft.TemplateEngine.Utils" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    </ItemGroup>
+</Project>

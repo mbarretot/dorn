@@ -1,0 +1,39 @@
+<Project>
+    <!-- Self-contained on purpose: not shared with the Dorn repo root, see Directory.Build.props. -->
+
+    <PropertyGroup>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Persistence -->
+        <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
+        <!-- Pulls SQLitePCLRaw.lib.e_sqlite3 2.1.11, flagged by GHSA-2m69-gcr7-jv3q (bundled SQLite older than 3.50.2).
+             No patched SQLitePCLRaw version exists yet (first_patched_version is null upstream); tracked, not fixable via override. -->
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
+
+        <!-- Web -->
+        <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+        <!-- Transitive override: Microsoft.AspNetCore.OpenApi 10.0.9 still pulls Microsoft.OpenApi 2.0.0,
+             vulnerable to GHSA-v5pm-xwqc-g5wc (stack overflow parsing circular schema refs), patched in 2.7.5+. -->
+        <PackageVersion Include="Microsoft.OpenApi" Version="2.10.0" />
+
+        <!-- DI / Configuration abstractions used outside the ASP.NET Core host (Application, Infrastructure) -->
+        <PackageVersion
+            Include="Microsoft.Extensions.DependencyInjection.Abstractions"
+            Version="10.0.9"
+        />
+        <PackageVersion
+            Include="Microsoft.Extensions.Configuration.Abstractions"
+            Version="10.0.9"
+        />
+
+        <!-- Testing -->
+        <PackageVersion Include="xunit" Version="2.9.3" />
+        <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+        <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+        <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,64 @@
+## .NET / Visual Studio / Rider standard ignores
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# Build artifacts
+*.dll
+*.exe
+*.pdb
+*.cache
+*.nupkg
+*.snupkg
+artifacts/
+
+# Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+TestResults/
+
+# NuGet
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts.props
+.nuget/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# User-specific files
+*.rsuser
+*.suo
+*.userprefs
+
+# Dorn scratch space — populated locally by `dorn new`, never committed
+samples/*
+!samples/README.md
+
+# Local agent tooling, not part of the project
+.atl/
+.claude/

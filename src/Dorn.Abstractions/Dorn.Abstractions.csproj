@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <Description>Core contracts for Dorn's generation engine and template catalog.</Description>
+    </PropertyGroup>
+</Project>

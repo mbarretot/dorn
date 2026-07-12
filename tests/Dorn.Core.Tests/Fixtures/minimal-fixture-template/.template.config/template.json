@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Dorn Contributors",
+  "classifications": ["Test"],
+  "identity": "Dorn.Tests.FixtureMinimal",
+  "name": "Dorn Fixture Minimal Template",
+  "description": "Minimal throwaway template used to exercise TemplateEngineGenerationEngine in isolation, without depending on the full webapi template.",
+  "shortName": "dorn-fixture-minimal",
+  "sourceName": "FixtureProject",
+  "preferNameDirectory": false,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  }
+}

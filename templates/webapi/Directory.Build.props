@@ -1,0 +1,15 @@
+<Project>
+    <!--
+    Self-contained on purpose: this template is copied outside the Dorn repo when
+    generated, so it must build standalone without chaining to the Dorn root's
+    Directory.Build.props (MSBuild only auto-imports the nearest one walking up
+    the tree, it does not merge multiple).
+  -->
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+    </PropertyGroup>
+</Project>

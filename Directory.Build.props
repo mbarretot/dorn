@@ -1,0 +1,23 @@
+<Project>
+    <!--
+    Applies to src/ and tests/ only. templates/webapi has its own self-contained
+    Directory.Build.props and does not import this one — MSBuild only auto-imports
+    the nearest Directory.Build.props walking up the tree, it does not chain multiple.
+  -->
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <TreatWarningsAsErrors Condition="'$(CI)' == 'true'">true</TreatWarningsAsErrors>
+        <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <AnalysisLevel>latest</AnalysisLevel>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <Authors>Dorn Contributors</Authors>
+        <RepositoryUrl>https://github.com/mbarretot/dorn</RepositoryUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    </PropertyGroup>
+</Project>

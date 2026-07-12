@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: build-and-test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          # There are two Directory.Packages.props files in this repo (root, and
+          # templates/webapi which is deliberately self-contained — see the root
+          # Directory.Packages.props and templates/webapi/Directory.Packages.props).
+          # The glob below covers both so the cache key changes whenever either changes.
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore Dorn.sln
+
+      - name: Build
+        run: dotnet build Dorn.sln --no-restore -c Release
+
+      - name: Test
+        env:
+          DORN_TEMPLATES_PATH: ${{ github.workspace }}/templates
+        run: >
+          dotnet test Dorn.sln --no-build -c Release
+          --collect:"XPlat Code Coverage"
+
+      # TODO(eng): upload the coverage results produced above (coverlet + XPlat Code
+      # Coverage output under **/TestResults/**/coverage.cobertura.xml) to a coverage
+      # service (e.g. Codecov) or as a workflow artifact. Deferred for v1 — see
+      # eng/README.md.
+
+      # Packaging smoke test: only needs to run once, not once per OS in the matrix.
+      - name: Pack Dorn.Cli (smoke test)
+        if: matrix.os == 'ubuntu-latest'
+        run: dotnet pack src/Dorn.Cli/Dorn.Cli.csproj -c Release -o ./artifacts
+
+      # Dual-distribution smoke test: pack templates/webapi as a standalone NuGet
+      # template package and prove it's installable/usable via vanilla `dotnet new`,
+      # independent of the `dorn` CLI. See docs/adr/0009-dual-distribution-dotnet-new-template-pack.md.
+      - name: Pack and smoke-test Dorn.Templates.WebApi (dotnet new)
+        if: matrix.os == 'ubuntu-latest'
+        shell: pwsh
+        run: |
+          ./eng/scripts/pack-templates.ps1
+          dotnet new install ./artifacts/Dorn.Templates.WebApi.*.nupkg
+          dotnet new list | Select-String "dorn-webapi"
+          dotnet new dorn-webapi -n CiSmokeTestApp -o /tmp/ci-smoke-test-app
+          dotnet build /tmp/ci-smoke-test-app -c Release
+          dotnet new uninstall Dorn.Templates.WebApi
+
+  check-shared-sync:
+    name: check-shared-sync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify templates/shared is in sync with templates/webapi
+        run: eng/scripts/check-shared-sync.sh
+
+  # TODO(eng): add a release/publish job gated on tag pushes (e.g. `v*`) that runs
+  # `dotnet pack src/Dorn.Cli` and `dotnet nuget push` to publish the `dorn` global
+  # tool to NuGet.org. Deferred for v1 — see eng/README.md.

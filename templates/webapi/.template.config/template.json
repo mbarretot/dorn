@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Dorn Contributors",
+  "classifications": ["Web", "WebAPI", "Clean Architecture"],
+  "identity": "Dorn.Templates.WebApi",
+  "name": "Dorn Clean Architecture Web API",
+  "description": "ASP.NET Core Minimal API scaffolded with Clean Architecture, a custom MIT-licensed mediator (no MediatR), and EF Core + SQLite persistence.",
+  "shortName": "dorn-webapi",
+  "sourceName": "CleanArchWebApi",
+  "preferNameDirectory": true,
+  "symbols": {
+    "IncludeTests": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "true",
+      "description": "Include the xUnit test project for the Application layer."
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(!IncludeTests)",
+          "exclude": ["tests/**"]
+        }
+      ]
+    }
+  ],
+  "postActions": [
+    {
+      "description": "Restore NuGet packages required by this project.",
+      "manualInstructions": [
+        {
+          "text": "Run 'dotnet restore'"
+        }
+      ],
+      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
+      "continueOnError": true
+    }
+  ],
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  }
+}

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <Description>Dorn — community scaffolding CLI for .NET, Clean Architecture templates.</Description>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>dorn</ToolCommandName>
+        <PackageId>Dorn.Cli</PackageId>
+        <PackageOutputPath>$(MSBuildThisFileDirectory)nupkg</PackageOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Dorn.Core\Dorn.Core.csproj" />
+        <ProjectReference Include="..\Dorn.Abstractions\Dorn.Abstractions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Spectre.Console.Cli" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    </ItemGroup>
+</Project>
