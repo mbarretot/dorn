@@ -27,6 +27,10 @@
              vulnerable to GHSA-v5pm-xwqc-g5wc (stack overflow parsing circular schema refs), patched in 2.7.5+. -->
         <PackageVersion Include="Microsoft.OpenApi" Version="2.10.0" />
 
+        <!-- Validation -->
+        <PackageVersion Include="FluentValidation" Version="12.1.1" />
+        <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+
         <!-- DI / Configuration abstractions used outside the ASP.NET Core host (Application, Infrastructure) -->
         <PackageVersion
             Include="Microsoft.Extensions.DependencyInjection.Abstractions"
@@ -48,5 +52,4 @@
         <PackageVersion Include="coverlet.collector" Version="6.0.2" />
         <PackageVersion Include="NSubstitute" Version="5.3.0" />
     </ItemGroup>
-
 </Project>

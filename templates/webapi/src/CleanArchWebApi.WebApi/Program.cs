@@ -1,15 +1,21 @@
 using CleanArchWebApi.Application.Todos.CreateTodoItem;
 using CleanArchWebApi.Infrastructure.DependencyInjection;
 using CleanArchWebApi.Infrastructure.Persistence;
+using CleanArchWebApi.WebApi;
 using CleanArchWebApi.WebApi.Endpoints;
 using Dorn.Messaging;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMediator(typeof(CreateTodoItemCommand).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(CreateTodoItemCommand).Assembly);
 builder.Services.AddOpenApi();
+
+builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -27,6 +33,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
 

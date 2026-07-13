@@ -12,6 +12,7 @@
     <ItemGroup>
         <PackageReference Include="Dorn.Messaging" />
         <PackageReference Include="Dorn.Messaging.Contracts" />
+        <PackageReference Include="FluentValidation" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
