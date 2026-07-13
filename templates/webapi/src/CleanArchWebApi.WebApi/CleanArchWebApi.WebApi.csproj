@@ -2,6 +2,7 @@
     <ItemGroup>
         <ProjectReference Include="..\CleanArchWebApi.Application\CleanArchWebApi.Application.csproj" />
         <ProjectReference Include="..\CleanArchWebApi.Infrastructure\CleanArchWebApi.Infrastructure.csproj" />
+        <ProjectReference Include="..\CleanArchWebApi.ServiceDefaults\CleanArchWebApi.ServiceDefaults.csproj" />
     </ItemGroup>
 
     <ItemGroup>

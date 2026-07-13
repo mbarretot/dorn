@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMediator(typeof(CreateTodoItemCommand).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(CreateTodoItemCommand).Assembly);
@@ -39,5 +41,6 @@ app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 app.MapTodoEndpoints();
+app.MapDefaultEndpoints();
 
 app.Run();
