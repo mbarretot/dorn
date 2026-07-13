@@ -2,14 +2,15 @@
 
 ## Status
 
-Accepted
+Superseded by ADR 0011
 
 ## Context
 
 Some code needs to be identical across every Dorn template that adopts the same
-patterns — currently the domain base types (`BaseEntity`, `Result`) and the entire custom
-CQRS mediator (ADR 0003: `IRequest`, `ISender`, `IRequestHandler`, `IPipelineBehavior`,
-`Mediator`, `Unit`, and the `AddMediator` registration extension — seven files under
+patterns — currently the domain base types (`Entity`, `AggregateRoot`, `INotification`,
+`Result`) and the entire custom CQRS mediator (ADR 0003, ADR 0010: `IRequest`, `ISender`,
+`IRequestHandler`, `IPipelineBehavior`, `INotificationHandler`, `IPublisher`, `Mediator`,
+`Unit`, and the `AddMediator` registration extension — nine files under
 `Application/Messaging/`). Maintaining independent copies of this code per template by
 hand, with no enforcement, would let them silently drift apart over time as one template
 is edited and the other isn't.
@@ -33,15 +34,18 @@ checkout/archive/zip path a template might travel through before reaching an end
 `templates/shared/` is the canonical source of truth for code meant to be shared across
 templates:
 
-- `templates/shared/Domain/BaseEntity.cs`, `templates/shared/Domain/Result.cs`
-- `templates/shared/Application/Messaging/*.cs` (seven files: `IRequest.cs`, `ISender.cs`,
-  `IRequestHandler.cs`, `IPipelineBehavior.cs`, `Mediator.cs`,
-  `ServiceCollectionExtensions.cs`, `Unit.cs`)
+- `templates/shared/Domain/Entity.cs`, `templates/shared/Domain/AggregateRoot.cs`,
+  `templates/shared/Domain/INotification.cs`, `templates/shared/Domain/Result.cs`
+- `templates/shared/Application/Messaging/*.cs` (nine files: `IRequest.cs`, `ISender.cs`,
+  `IRequestHandler.cs`, `IPipelineBehavior.cs`, `INotificationHandler.cs`, `IPublisher.cs`,
+  `Mediator.cs`, `ServiceCollectionExtensions.cs`, `Unit.cs`)
 
 `templates/webapi` keeps a **physical, byte-for-byte copy** of each file at the
 corresponding path:
 
-- `templates/webapi/src/CleanArchWebApi.Domain/BaseEntity.cs`,
+- `templates/webapi/src/CleanArchWebApi.Domain/Entity.cs`,
+  `templates/webapi/src/CleanArchWebApi.Domain/AggregateRoot.cs`,
+  `templates/webapi/src/CleanArchWebApi.Domain/INotification.cs`,
   `templates/webapi/src/CleanArchWebApi.Domain/Result.cs`
 - `templates/webapi/src/CleanArchWebApi.Application/Messaging/*.cs`
 
@@ -55,6 +59,10 @@ shared code would add its own copy-pair entries to the script's `PAIRS` list
 (`docs/contributing.md`, step 3 of "Adding a new template").
 
 ## Consequences
+
+The physical-copy approach described below was replaced by real NuGet packages once
+cross-template code needed to be consumed via ordinary `PackageReference` instead of
+copied per-template — see ADR 0011.
 
 - `templates/webapi` stays genuinely self-contained — no reference of any kind reaches
   outside its own directory tree — which keeps `tests/Templates.Tests`'s

@@ -34,6 +34,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Pack Dorn's own NuGet packages (local feed for templates/webapi)
+        shell: pwsh
+        run: pwsh eng/scripts/pack-packages.ps1
+
       - name: Restore
         run: dotnet restore Dorn.sln
 
@@ -43,6 +47,7 @@ jobs:
       - name: Test
         env:
           DORN_TEMPLATES_PATH: ${{ github.workspace }}/templates
+          DORN_LOCAL_NUGET_FEED: ${{ github.workspace }}/artifacts
         run: >
           dotnet test Dorn.sln --no-build -c Release
           --collect:"XPlat Code Coverage"
@@ -68,18 +73,13 @@ jobs:
           dotnet new install ./artifacts/Dorn.Templates.WebApi.*.nupkg
           dotnet new list | Select-String "dorn-webapi"
           dotnet new dorn-webapi -n CiSmokeTestApp -o /tmp/ci-smoke-test-app
-          dotnet build /tmp/ci-smoke-test-app -c Release
+          # The generated project lives outside the repo, so it can't see this repo's
+          # nuget.config "dorn-local" source for Dorn.Messaging.Contracts/Dorn.Messaging/
+          # Dorn.SharedKernel (not published to NuGet.org yet - see ADR 0011). Point restore
+          # at the local feed explicitly, same as tests/Templates.Tests does.
+          dotnet restore /tmp/ci-smoke-test-app -p:RestoreAdditionalProjectSources=${{ github.workspace }}/artifacts
+          dotnet build /tmp/ci-smoke-test-app -c Release --no-restore
           dotnet new uninstall Dorn.Templates.WebApi
-
-  check-shared-sync:
-    name: check-shared-sync
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Verify templates/shared is in sync with templates/webapi
-        run: eng/scripts/check-shared-sync.sh
 
   # TODO(eng): add a release/publish job gated on tag pushes (e.g. `v*`) that runs
   # `dotnet pack src/Dorn.Cli` and `dotnet nuget push` to publish the `dorn` global

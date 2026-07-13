@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <PackageId>Dorn.SharedKernel</PackageId>
+        <Description>Minimal DDD building blocks shared across every Dorn template: Entity (identity-based equality), AggregateRoot (domain event collection), and Result/Result&lt;T&gt; (railway-style success/failure without exceptions).</Description>
+        <PackageTags>dorn;ddd;domain-driven-design;shared-kernel</PackageTags>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Dorn.Messaging.Contracts\Dorn.Messaging.Contracts.csproj" />
+    </ItemGroup>
+</Project>

@@ -12,22 +12,32 @@ followed by `dorn new webapi MyApp`, and isn't available yet; see the root `READ
   feature-band SDK is also accepted but nothing below `10.0.301`). Install it from
   https://dotnet.microsoft.com/download/dotnet/10.0 if `dotnet --list-sdks` doesn't
   already show a matching version.
-- A `bash`-capable shell if you intend to run `eng/scripts/check-shared-sync.sh` (macOS
-  and Linux have this natively; on Windows use WSL or Git Bash).
+- **pwsh (PowerShell)** to run `eng/scripts/pack-packages.ps1` and
+  `eng/scripts/pack-templates.ps1` — install from
+  https://learn.microsoft.com/powershell/scripting/install/installing-powershell if
+  `pwsh --version` doesn't already show one.
 
 ## Build the repo locally
 
 ```bash
 git clone https://github.com/mbarretot/dorn.git
 cd dorn
+pwsh eng/scripts/pack-packages.ps1
 dotnet restore Dorn.sln
 dotnet build Dorn.sln
 ```
 
-This builds all of `src/` (`Dorn.Abstractions`, `Dorn.Core`, `Dorn.Cli`), all of `tests/`,
-and `templates/webapi` — the generated Clean Architecture Web API template is a normal
-project reference inside `Dorn.sln`, so building the solution also confirms the template
-itself still compiles as a standalone project (see `docs/architecture.md` for why
+`pack-packages.ps1` must run before `restore`: `templates/webapi` consumes
+`Dorn.Messaging.Contracts`, `Dorn.Messaging`, and `Dorn.SharedKernel` via ordinary
+`PackageReference` (see `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`),
+and those packages aren't published to NuGet.org yet — the root `nuget.config` points a
+`dorn-local` source at `./artifacts`, which only has content once this script has packed
+the three projects under `packages/` into it.
+
+This builds all of `src/` (`Dorn.Abstractions`, `Dorn.Core`, `Dorn.Cli`), all of `packages/`
+and `tests/`, and `templates/webapi` — the generated Clean Architecture Web API template is
+a normal project reference inside `Dorn.sln`, so building the solution also confirms the
+template itself still compiles as a standalone project (see `docs/architecture.md` for why
 `templates/webapi` has its own, non-inherited `Directory.Build.props` /
 `Directory.Packages.props`).
 
@@ -95,7 +105,7 @@ for details.
 ## Run the tests
 
 ```bash
-DORN_TEMPLATES_PATH="$(pwd)/templates" dotnet test Dorn.sln
+DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" dotnet test Dorn.sln
 ```
 
 `DORN_TEMPLATES_PATH` is required for `tests/Templates.Tests`, which generates a real
@@ -105,6 +115,13 @@ template is genuinely self-contained and buildable by an end user, not just insi
 repo's solution. Without the environment variable set, that test (and anything else that
 resolves the templates root without a fallback match) fails with the same
 `DirectoryNotFoundException` described above.
+
+`DORN_LOCAL_NUGET_FEED` is required for the same test for a different reason: the
+generated project lives outside the repo, so it can't see the root `nuget.config`'s
+`dorn-local` source, and the nested `dotnet restore` subprocess needs to be told
+explicitly where `Dorn.Messaging.Contracts`/`Dorn.Messaging`/`Dorn.SharedKernel` live
+(`-p:RestoreAdditionalProjectSources`). Run `pwsh eng/scripts/pack-packages.ps1` first so
+`./artifacts` actually has something in it.
 
 `tests/Dorn.Core.Tests` also runs the real Template Engine, but against a minimal fixture
 under `tests/Dorn.Core.Tests/Fixtures/minimal-fixture-template/` rather than the full

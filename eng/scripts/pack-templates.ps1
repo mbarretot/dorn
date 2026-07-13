@@ -12,13 +12,10 @@
 # fork or duplicate the template itself.
 #
 # What this script does:
-#   1. Runs eng/scripts/check-shared-sync.sh and fails fast if templates/shared and
-#      templates/webapi have drifted (a stale physical copy must not ship in the
-#      package - see docs/adr/0008-templates-shared-physical-copy-sync.md).
-#   2. Runs `dotnet pack` against eng/packaging/Dorn.Templates.WebApi, which is
+#   1. Runs `dotnet pack` against eng/packaging/Dorn.Templates.WebApi, which is
 #      deliberately outside templates/webapi/ so the packaging .csproj itself never
 #      gets instantiated into a user's generated project.
-#   3. Emits the resulting .nupkg to ./artifacts and prints its path.
+#   2. Emits the resulting .nupkg to ./artifacts and prints its path.
 #
 # See docs/adr/0009-dual-distribution-dotnet-new-template-pack.md for the full
 # decision record.
@@ -39,17 +36,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "../..")
-$checkSharedSyncScript = Join-Path $repoRoot "eng/scripts/check-shared-sync.sh"
 $packagingProject = Join-Path $repoRoot "eng/packaging/Dorn.Templates.WebApi/Dorn.Templates.WebApi.csproj"
 $artifactsDir = Join-Path $repoRoot "artifacts"
-
-Write-Host "==> Verifying templates/shared and templates/webapi are in sync..."
-
-& bash $checkSharedSyncScript
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "check-shared-sync.sh failed (exit code $LASTEXITCODE). templates/shared/ and templates/webapi/ have drifted - fix the drift before packaging, otherwise a stale physical copy would ship inside the NuGet package. See docs/adr/0008-templates-shared-physical-copy-sync.md."
-    exit 1
-}
 
 Write-Host "==> Packing $packagingProject (version $Version)..."
 

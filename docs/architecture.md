@@ -6,9 +6,10 @@ Dorn has two halves that are easy to conflate but serve different purposes:
   scaffolding engine itself, distributed (eventually) as a `dotnet tool`.
 - **The templates** (`templates/`) — the actual project skeletons Dorn generates, each an
   independent, self-contained codebase in its own right.
+- **The packages** (`packages/`) — first-party NuGet packages that generated projects
+  depend on at runtime (the mediator and DDD building blocks) — see ADR 0011.
 
-This document covers both, plus the convention that keeps a piece of code shared between
-them in sync.
+This document covers all three, plus the packages that keep cross-template code shared.
 
 ## The three `src/` projects
 
@@ -105,9 +106,9 @@ panel and a non-zero exit code on failure.
 
 ## The custom mediator (ADR 0003)
 
-`templates/shared/Application/Messaging/` (physically copied into every template that
-needs CQRS — currently just `webapi`) implements a MediatR-shaped but independent,
-MIT-licensed mediator:
+`packages/Dorn.Messaging.Contracts/` and `packages/Dorn.Messaging/` (consumed by every
+template that needs CQRS — currently just `webapi` — via ordinary `PackageReference`)
+implement a MediatR-shaped but independent, MIT-licensed mediator:
 
 - `IRequest<TResponse>` / `IRequest` (the latter is `IRequest<Unit>`, with `Unit` a
   zero-information struct standing in for "no return value").
@@ -115,20 +116,35 @@ MIT-licensed mediator:
 - `ISender.Send<TResponse>(IRequest<TResponse>, CancellationToken)`.
 - `IPipelineBehavior<TRequest, TResponse>.Handle(TRequest, RequestHandlerDelegate<TResponse>, CancellationToken)`
   for decorator-style cross-cutting concerns (validation, logging, transactions, etc.).
+- `INotificationHandler<TNotification>.Handle(TNotification, CancellationToken)` and
+  `IPublisher.Publish(INotification, CancellationToken)` for the publish/subscribe side:
+  zero-or-more handlers per event type, dispatched by `Mediator.Publish`. `INotification`
+  itself lives in `packages/Dorn.Messaging.Contracts/INotification.cs` alongside the rest
+  of the wire contracts, so that `AggregateRoot` (in `packages/Dorn.SharedKernel/`) can
+  type its event collection as `IReadOnlyCollection<INotification>` by depending only on
+  the lightweight, dependency-free contracts package — see ADR 0010 and ADR 0011.
 
-`Mediator : ISender` resolves the handler for a request's concrete type via
-`IServiceProvider` (reflection over `IRequestHandler<,>`), then wraps the call in every
-registered `IPipelineBehavior<,>` for that request/response pair, innermost handler last,
-exactly the decorator chain MediatR itself uses — just without MediatR's dependency or
-its RPL-1.5/commercial licensing from v13 onward.
-`ServiceCollectionExtensions.AddMediator(this IServiceCollection, Assembly)` scans an
-assembly's concrete classes and registers every `IRequestHandler<,>` and
-`IPipelineBehavior<,>` implementation it finds, plus `ISender → Mediator` itself.
+All of the above interfaces/types live in `packages/Dorn.Messaging.Contracts/` — pure
+interfaces, zero package dependencies, safe to reference from any layer including Domain.
+`Mediator : ISender, IPublisher` (in `packages/Dorn.Messaging/Mediator.cs`) resolves the
+handler for a request's concrete type via `IServiceProvider` (reflection over
+`IRequestHandler<,>`), then wraps the call in every registered `IPipelineBehavior<,>` for
+that request/response pair, innermost handler last, exactly the decorator chain MediatR
+itself uses — just without MediatR's dependency or its RPL-1.5/commercial licensing from
+v13 onward. `Publish` resolves every registered `INotificationHandler<,>` for the
+notification's concrete type and invokes each in turn.
+`ServiceCollectionExtensions.AddMediator(this IServiceCollection, Assembly)` (also in
+`packages/Dorn.Messaging/`) scans an assembly's concrete classes and registers every
+`IRequestHandler<,>`, `IPipelineBehavior<,>`, and `INotificationHandler<>` implementation
+it finds, plus `ISender → Mediator` and `IPublisher → Mediator`.
 
 See `docs/adr/0003-custom-mediator-instead-of-mediatr.md` for the licensing rationale in
-full, and `docs/templates/webapi.md` for a worked command+handler example.
+full, `docs/adr/0010-ddd-aggregates-and-domain-events.md` for the domain-event dispatch
+design, `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md` for why
+this code lives in packages rather than physically-copied template source, and
+`docs/templates/webapi.md` for worked examples of both.
 
-## The `templates/shared` → `templates/webapi` sync convention (ADR 0008)
+## Cross-template building blocks: `packages/` (ADR 0011)
 
 `templates/webapi` must be **self-contained**: it ships its own `Directory.Build.props`
 and `Directory.Packages.props` that do *not* chain to the repo root's (MSBuild only
@@ -143,25 +159,30 @@ Self-containment means `templates/webapi` cannot reference code living outside i
 directory tree via a normal project reference or `<Compile Include>` — that would break
 the moment the template is packaged (a future NuGet `PackageType=Template` package, see
 `eng/scripts/pack-templates.ps1`) or copied out of the repo checkout. But some code —
-`BaseEntity`/`Result` in the domain layer, and the entire custom mediator — is meant to
-be identical across every template that needs it, not maintained independently per
-template. `templates/shared/` is the canonical source for that code:
+`Entity`/`AggregateRoot`/`Result` and `INotification`, and the entire custom mediator —
+is meant to be identical across every template that needs it, not maintained
+independently per template. Rather than a physical copy (the original approach, ADR
+0008, now superseded), this code ships as three real NuGet packages under the top-level
+`packages/` directory (a sibling of `src/`, `templates/`, `tests/`), consumed via ordinary
+`PackageReference`:
 
-| Canonical source (`templates/shared/`)         | Physical copy (`templates/webapi/`)                                          |
-|--------------------------------------------------|--------------------------------------------------------------------------------|
-| `Domain/BaseEntity.cs`, `Domain/Result.cs`        | `src/CleanArchWebApi.Domain/BaseEntity.cs`, `src/CleanArchWebApi.Domain/Result.cs` |
-| `Application/Messaging/*.cs` (7 files)            | `src/CleanArchWebApi.Application/Messaging/*.cs`                              |
+| Package                       | Contents                                                    |
+|--------------------------------|--------------------------------------------------------------|
+| `packages/Dorn.Messaging.Contracts/` | Pure mediator interfaces + `INotification`, zero dependencies. |
+| `packages/Dorn.Messaging/`           | The mediator implementation (`Mediator`, `AddMediator`).        |
+| `packages/Dorn.SharedKernel/`        | `Entity`, `AggregateRoot`, `Result`/`Result<T>`.                |
 
-`eng/scripts/check-shared-sync.sh` diffs every file in the left column against its
-counterpart in the right column and fails (non-zero exit, `diff -u` output) if they've
-diverged; it runs as a dedicated job in `.github/workflows/ci.yml` on every push and pull
-request. See `eng/README.md` and
-`docs/adr/0008-templates-shared-physical-copy-sync.md` for the full rationale, including
-why a symlink or an MSBuild-level share was rejected.
+Since these three packages aren't published to NuGet.org yet, they're built locally via
+`eng/scripts/pack-packages.ps1` into `./artifacts`, which the root `nuget.config`'s
+`dorn-local` source resolves as a package feed for `templates/webapi`'s in-repo build.
+See `eng/README.md` and `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`
+for the full rationale, including why a physical copy (the ADR 0008 approach) or a
+symlink or an MSBuild-level share was rejected.
 
 ## Related documents
 
 - `docs/adr/0001-target-framework-net10.md` through
-  `docs/adr/0008-templates-shared-physical-copy-sync.md` — the full decision records.
+  `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md` — the full
+  decision records.
 - `docs/templates/webapi.md` — user-facing docs for what `dorn new webapi` generates.
 - `docs/contributing.md` — conventions for adding a new template.

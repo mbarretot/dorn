@@ -1,7 +1,3 @@
-using CleanArchWebApi.Application.Common.Persistence;
-using CleanArchWebApi.Application.Messaging;
-using CleanArchWebApi.Domain.Entities;
-
 namespace CleanArchWebApi.Application.Todos.CreateTodoItem;
 
 public sealed class CreateTodoItemCommandHandler : IRequestHandler<CreateTodoItemCommand, Guid>
@@ -15,7 +11,7 @@ public sealed class CreateTodoItemCommandHandler : IRequestHandler<CreateTodoIte
 
     public async Task<Guid> Handle(CreateTodoItemCommand request, CancellationToken ct)
     {
-        var todoItem = new TodoItem { Title = request.Title };
+        var todoItem = TodoItem.Create(request.Title);
 
         _dbContext.Items.Add(todoItem);
         await _dbContext.SaveChangesAsync(ct);

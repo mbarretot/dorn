@@ -1,1 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk"></Project>
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <PackageReference Include="Dorn.SharedKernel" />
+        <PackageReference Include="Dorn.Messaging.Contracts" />
+    </ItemGroup>
+</Project>

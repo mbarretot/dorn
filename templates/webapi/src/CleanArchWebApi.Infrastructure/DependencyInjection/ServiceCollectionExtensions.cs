@@ -1,6 +1,4 @@
-using CleanArchWebApi.Application.Common.Persistence;
 using CleanArchWebApi.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -21,11 +21,10 @@ next one on the roadmap is `ui`, currently just a placeholder at `templates/ui/R
    analyzer/package versions instead of choosing its own. See `docs/architecture.md` for
    the full rationale.
 3. If the template needs code that should stay identical across templates (currently:
-   the domain base types and the custom mediator), copy it from `templates/shared/`
-   rather than referencing it — templates must not reference files outside their own
-   directory tree. Register the new copy pair in
-   `eng/scripts/check-shared-sync.sh`'s `PAIRS` array so CI keeps it in sync going
-   forward, and see `docs/adr/0008-templates-shared-physical-copy-sync.md`.
+   the domain base types and the custom mediator), add a `PackageReference` to
+   `Dorn.SharedKernel`/`Dorn.Messaging.Contracts`/`Dorn.Messaging` as needed (pin the
+   version in the template's own `Directory.Packages.props`) — no copying required. See
+   `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`.
 4. Add the new template's projects to `Dorn.sln` so `dotnet build Dorn.sln` builds it as
    part of the normal solution build (this is how `templates/webapi` is wired in today).
 5. Add a `tests/<Name>Templates.Tests`-style integration test (or extend
@@ -54,8 +53,9 @@ next one on the roadmap is `ui`, currently just a placeholder at `templates/ui/R
   worked example (overriding the `Microsoft.OpenApi` version pulled in transitively by
   `Microsoft.AspNetCore.OpenApi` to patch GHSA-v5pm-xwqc-g5wc).
 - **No MediatR, FluentAssertions, or Moq.** See ADR 0003 and ADR 0006 for why. Use the
-  custom mediator in `templates/shared/Application/Messaging/` for CQRS in templates, and
-  xUnit + NSubstitute (plain `Assert.*` — no fluent assertion library) for tests.
+  custom mediator (`Dorn.Messaging.Contracts` + `Dorn.Messaging` NuGet packages, see ADR
+  0011) for CQRS in templates, and xUnit + NSubstitute (plain `Assert.*` — no fluent
+  assertion library) for tests.
 - **English only** in code, comments, and docs — Dorn is a community OSS project.
 
 ## Verification loop before opening a PR
@@ -63,21 +63,18 @@ next one on the roadmap is `ui`, currently just a placeholder at `templates/ui/R
 Run the same checks CI runs, locally, before pushing:
 
 ```bash
+pwsh eng/scripts/pack-packages.ps1
 dotnet build Dorn.sln -c Release
-DORN_TEMPLATES_PATH="$(pwd)/templates" dotnet test Dorn.sln
+DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" dotnet test Dorn.sln
 ```
 
-If your change touched anything under `templates/shared/` or the corresponding copied
-paths in `templates/webapi/` (see `docs/architecture.md`), also run:
+`pack-packages.ps1` must run first: `templates/webapi` resolves `Dorn.Messaging.Contracts`/
+`Dorn.Messaging`/`Dorn.SharedKernel` from the local `./artifacts` feed (see
+`docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`), and
+`tests/Templates.Tests` needs it too, for the same reason, via `DORN_LOCAL_NUGET_FEED`.
 
-```bash
-eng/scripts/check-shared-sync.sh
-```
-
-All three are enforced in `.github/workflows/ci.yml` on every push and pull request
-(build + test run on an `ubuntu-latest`/`windows-latest` matrix; `check-shared-sync.sh`
-runs once, on `ubuntu-latest`, since it's a bash script with no OS-specific behavior to
-verify).
+All of the above are enforced in `.github/workflows/ci.yml` on every push and pull
+request (build + test run on an `ubuntu-latest`/`windows-latest` matrix).
 
 ## License
 

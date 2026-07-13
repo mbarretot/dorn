@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <PackageId>Dorn.Messaging.Contracts</PackageId>
+        <Description>Pure interfaces for Dorn's mediator: commands/queries (IRequest, IRequestHandler, ISender), pipeline behaviors, and pub/sub notifications (INotification, INotificationHandler, IPublisher). Zero dependencies -- safe to reference from any layer, including Domain.</Description>
+        <PackageTags>dorn;mediator;cqrs;ddd;domain-events</PackageTags>
+    </PropertyGroup>
+</Project>

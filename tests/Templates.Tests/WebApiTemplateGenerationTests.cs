@@ -18,6 +18,8 @@ namespace Templates.Tests;
 [Trait("Category", "Integration")]
 public class WebApiTemplateGenerationTests
 {
+    private const string LocalNuGetFeedEnvironmentVariableName = "DORN_LOCAL_NUGET_FEED";
+
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplate_ProducesBuildableSolution()
     {
@@ -83,12 +85,24 @@ public class WebApiTemplateGenerationTests
     /// every layer references Domain) at the same time, racing to write the same generated
     /// `*.csproj.nuget.g.props` file and failing with "file already exists". Restoring the
     /// whole solution up front as one coordinated NuGet operation avoids that race.
+    ///
+    /// The generated solution lives outside the repo (Path.GetTempPath()), so it doesn't see
+    /// the repo root's nuget.config "dorn-local" source that resolves Dorn.Messaging.Contracts/
+    /// Dorn.Messaging/Dorn.SharedKernel. RestoreAdditionalProjectSources points restore at the
+    /// same local feed explicitly, mirroring how TemplateLocator resolves the templates root.
     /// </summary>
     private static async Task<(int ExitCode, string StdOut, string StdErr)> RunDotnetBuildAsync(
         string solutionPath
     )
     {
-        var restoreResult = await RunProcessAsync(solutionPath, "restore", solutionPath);
+        var localNuGetFeed = ResolveLocalNuGetFeed();
+
+        var restoreResult = await RunProcessAsync(
+            solutionPath,
+            "restore",
+            solutionPath,
+            $"-p:RestoreAdditionalProjectSources={localNuGetFeed}"
+        );
         if (restoreResult.ExitCode != 0)
         {
             return restoreResult;
@@ -101,6 +115,39 @@ public class WebApiTemplateGenerationTests
             "-c",
             "Release",
             "--no-restore"
+        );
+    }
+
+    /// <summary>
+    /// Resolves the absolute path of Dorn's local NuGet feed (./artifacts, populated by
+    /// eng/scripts/pack-packages.ps1), the same way TemplateLocator.ResolveTemplatesRoot
+    /// resolves the templates root: an environment variable first, then a directory walk
+    /// fallback from this test assembly's own location.
+    /// </summary>
+    private static string ResolveLocalNuGetFeed()
+    {
+        var envOverride = Environment.GetEnvironmentVariable(LocalNuGetFeedEnvironmentVariableName);
+        if (!string.IsNullOrWhiteSpace(envOverride))
+        {
+            return Path.GetFullPath(envOverride);
+        }
+
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            var candidate = Path.Combine(current.FullName, "artifacts");
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException(
+            $"Could not locate Dorn's local NuGet feed. Set the {LocalNuGetFeedEnvironmentVariableName} "
+                + "environment variable to point at the repo's 'artifacts' directory (see "
+                + "eng/scripts/pack-packages.ps1), or run the tests from a repo checkout that already has one."
         );
     }
 

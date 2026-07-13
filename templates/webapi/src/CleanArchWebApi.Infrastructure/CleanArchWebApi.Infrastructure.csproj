@@ -4,6 +4,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Dorn.Messaging.Contracts" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />

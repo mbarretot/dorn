@@ -1,4 +1,4 @@
-namespace CleanArchWebApi.Domain;
+namespace Dorn.SharedKernel;
 
 public class Result
 {

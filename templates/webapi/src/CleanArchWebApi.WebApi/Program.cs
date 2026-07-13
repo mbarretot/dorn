@@ -1,8 +1,8 @@
-using CleanArchWebApi.Application.Messaging;
 using CleanArchWebApi.Application.Todos.CreateTodoItem;
 using CleanArchWebApi.Infrastructure.DependencyInjection;
 using CleanArchWebApi.Infrastructure.Persistence;
 using CleanArchWebApi.WebApi.Endpoints;
+using Dorn.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);

@@ -1,4 +1,4 @@
-namespace CleanArchWebApi.Application.Messaging;
+namespace Dorn.Messaging.Contracts;
 
 public delegate Task<TResponse> RequestHandlerDelegate<TResponse>();
 

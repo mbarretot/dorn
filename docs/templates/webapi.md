@@ -52,17 +52,21 @@ The generated solution (`<Name>.sln`, itself self-contained with its own
 `Directory.Build.props`/`Directory.Packages.props` — see `docs/architecture.md`) has four
 projects under `src/`:
 
-- **`<Name>.Domain`** — entities and domain primitives. Includes `BaseEntity`
-  (base type providing an `Id` and a domain-event collection with `AddDomainEvent`/
-  `ClearDomainEvents`) and `Result` (a lightweight result type for representing
-  success/failure without exceptions), plus template-specific entities such as
-  `TodoItem`. `BaseEntity` and `Result` are physical copies of
-  `templates/shared/Domain/*.cs` — see ADR 0008.
-- **`<Name>.Application`** — CQRS commands/queries, handlers, and the custom mediator
-  (`Messaging/`, a physical copy of `templates/shared/Application/Messaging/*.cs`), plus
-  application-layer ports such as `IApplicationDbContext` that `Infrastructure`
-  implements. No dependency on EF Core directly — only on the `IApplicationDbContext`
-  abstraction it defines.
+- **`<Name>.Domain`** — entities and domain primitives. Includes `Entity` (base type
+  providing an `Id` and identity-based equality), `AggregateRoot : Entity` (adds the
+  domain-event collection, with `AddDomainEvent` restricted to `protected` and
+  `ClearDomainEvents` public — only an aggregate can raise its own events), `INotification`
+  (the marker interface domain events implement), and `Result` (a lightweight result type
+  for representing success/failure without exceptions), plus template-specific entities
+  such as `TodoItem`. `Entity`, `AggregateRoot`, and `Result` come from the
+  `Dorn.SharedKernel` NuGet package; `INotification` comes from `Dorn.Messaging.Contracts`
+  — see ADR 0011.
+- **`<Name>.Application`** — CQRS commands/queries, handlers, and application-layer ports
+  such as `IApplicationDbContext` that `Infrastructure` implements. The mediator itself
+  (`IRequest`, `ISender`, `IRequestHandler<,>`, etc.) comes from the `Dorn.Messaging.Contracts`
+  and `Dorn.Messaging` NuGet packages, not a local `Messaging/` folder — see ADR 0011. No
+  dependency on EF Core directly — only on the `IApplicationDbContext` abstraction it
+  defines.
 - **`<Name>.Infrastructure`** — EF Core `DbContext` implementing `IApplicationDbContext`,
   and `AddInfrastructure(this IServiceCollection, IConfiguration)` which registers the
   `DbContext` (SQLite provider, connection string from configuration) and binds
@@ -140,6 +144,103 @@ builder.Services.AddMediator(typeof(CreateTodoItemCommand).Assembly);
 
 See `docs/architecture.md` and `docs/adr/0003-custom-mediator-instead-of-mediatr.md` for
 why this is a from-scratch mediator instead of MediatR.
+
+## Domain events with `INotification`
+
+Only aggregate roots (`AggregateRoot`, not plain `Entity`) raise domain events.
+`INotification` is a marker interface that comes from the `Dorn.Messaging.Contracts`
+NuGet package: `AggregateRoot.DomainEvents` is typed `IReadOnlyCollection<INotification>`,
+and `AggregateRoot` (from `Dorn.SharedKernel`) depends on `Dorn.Messaging.Contracts` for
+that one type — the same dependency-free contracts package `INotificationHandler<T>` and
+`IPublisher` reference. See ADR 0011 for why `INotification` lives in
+`Dorn.Messaging.Contracts` rather than `Dorn.SharedKernel`.
+
+An aggregate raises an event from within its own method, using the `protected`
+`AddDomainEvent`:
+
+```csharp
+// Domain/Entities/TodoItem.cs
+public class TodoItem : AggregateRoot
+{
+    public string Title { get; private set; } = string.Empty;
+
+    public bool IsComplete { get; private set; }
+
+    private TodoItem() { }
+
+    public static TodoItem Create(string title)
+    {
+        var todoItem = new TodoItem { Title = title };
+        todoItem.AddDomainEvent(new TodoItemCreatedEvent(todoItem.Id, todoItem.Title));
+        return todoItem;
+    }
+}
+
+// Domain/Events/TodoItemCreatedEvent.cs
+public sealed record TodoItemCreatedEvent(Guid TodoItemId, string Title) : INotification;
+```
+
+`ApplicationDbContext.SaveChangesAsync` dispatches pending events after a successful save,
+then clears them, so an event is never published for a transaction that didn't actually
+commit:
+
+```csharp
+public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+{
+    var aggregatesWithEvents = ChangeTracker
+        .Entries<AggregateRoot>()
+        .Select(entry => entry.Entity)
+        .Where(aggregate => aggregate.DomainEvents.Count > 0)
+        .ToList();
+
+    var result = await base.SaveChangesAsync(cancellationToken);
+
+    foreach (var aggregate in aggregatesWithEvents)
+    {
+        var domainEvents = aggregate.DomainEvents.ToArray();
+        aggregate.ClearDomainEvents();
+
+        foreach (var domainEvent in domainEvents)
+        {
+            await _publisher.Publish(domainEvent, cancellationToken);
+        }
+    }
+
+    return result;
+}
+```
+
+`INotificationHandler<TNotification>` implementations subscribe to an event type — zero,
+one, or many per event type, all of them invoked on `Publish`. They're auto-registered by
+the same `AddMediator` assembly scan that registers `IRequestHandler<,>` and
+`IPipelineBehavior<,>` implementations, no separate registration call needed:
+
+```csharp
+// Application/Todos/CreateTodoItem/TodoItemCreatedEventHandler.cs
+public sealed class TodoItemCreatedEventHandler : INotificationHandler<TodoItemCreatedEvent>
+{
+    private readonly ILogger<TodoItemCreatedEventHandler> _logger;
+
+    public TodoItemCreatedEventHandler(ILogger<TodoItemCreatedEventHandler> logger)
+    {
+        _logger = logger;
+    }
+
+    public Task Handle(TodoItemCreatedEvent notification, CancellationToken ct)
+    {
+        _logger.LogInformation(
+            "Todo item {TodoItemId} created: {Title}",
+            notification.TodoItemId,
+            notification.Title
+        );
+        return Task.CompletedTask;
+    }
+}
+```
+
+See `docs/adr/0010-ddd-aggregates-and-domain-events.md` for the full decision record,
+including why dispatch is sequential and in-process rather than an outbox or a
+fire-and-forget strategy.
 
 ## Persistence: EF Core + SQLite by default
 

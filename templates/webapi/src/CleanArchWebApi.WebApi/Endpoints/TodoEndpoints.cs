@@ -1,4 +1,3 @@
-using CleanArchWebApi.Application.Messaging;
 using CleanArchWebApi.Application.Todos.CreateTodoItem;
 using CleanArchWebApi.Application.Todos.GetTodoItems;
 

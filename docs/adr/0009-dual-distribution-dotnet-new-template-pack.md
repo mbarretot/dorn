@@ -69,13 +69,12 @@ every scaffolded solution. Keeping packaging plumbing in `eng/` (already the con
 for repository-maintenance tooling that must not ship to end users — see `eng/README.md`)
 avoids that entirely.
 
-`eng/scripts/pack-templates.ps1` is now a real script (was: a stub) that:
-
-1. Runs `eng/scripts/check-shared-sync.sh` first and fails fast on drift — a stale
-   physical copy of `templates/shared/` code (ADR 0008) must never ship inside the NuGet
-   package.
-2. Runs `dotnet pack` against the `eng/packaging/Dorn.Templates.WebApi` project, versioned
-   via an optional `-Version` parameter (default `0.1.0-dev`), emitting to `./artifacts`.
+`eng/scripts/pack-templates.ps1` is now a real script (was: a stub) that runs `dotnet pack`
+against the `eng/packaging/Dorn.Templates.WebApi` project, versioned via an optional
+`-Version` parameter (default `0.1.0-dev`), emitting to `./artifacts`. (At the time this
+ADR was written, the script also ran a shared-file drift check as a fail-fast pre-check —
+that mechanism was retired by ADR 0011 in favor of real NuGet packages, so the step no
+longer exists.)
 
 `.github/workflows/ci.yml` runs this script and a full install → list → generate → build →
 uninstall smoke cycle on `ubuntu-latest`, so a regression in either distribution channel
@@ -96,8 +95,10 @@ job marker in `.github/workflows/ci.yml` and `eng/README.md`). Until that exists
   drift is the packaging `.csproj`'s include/exclude glob itself, which is a small,
   reviewable surface.
 - `templates/webapi` must remain self-contained for both channels to keep working (ADR
-  0008 already established and enforces this via `check-shared-sync.sh`); this ADR adds
-  no new constraint on that front, it exercises a constraint that already existed.
+  0008 originally established this; ADR 0011 later changed *how* cross-template code is
+  shared — real NuGet packages instead of a physical copy — without changing this
+  self-containment requirement); this ADR adds no new constraint on that front, it
+  exercises a constraint that already existed.
 - CI now smoke-tests both paths: the existing `dorn new webapi` path (via
   `tests/Templates.Tests`, unaffected by this change) and the new
   `dotnet new install`/`dotnet new dorn-webapi`/`dotnet new uninstall` path (new CI step

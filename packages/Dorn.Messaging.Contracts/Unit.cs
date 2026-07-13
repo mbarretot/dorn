@@ -1,4 +1,4 @@
-namespace CleanArchWebApi.Application.Messaging;
+namespace Dorn.Messaging.Contracts;
 
 public readonly struct Unit : IEquatable<Unit>
 {

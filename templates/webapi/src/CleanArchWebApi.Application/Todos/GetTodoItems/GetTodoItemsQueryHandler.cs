@@ -1,7 +1,3 @@
-using CleanArchWebApi.Application.Common.Persistence;
-using CleanArchWebApi.Application.Messaging;
-using Microsoft.EntityFrameworkCore;
-
 namespace CleanArchWebApi.Application.Todos.GetTodoItems;
 
 public sealed class GetTodoItemsQueryHandler : IRequestHandler<GetTodoItemsQuery, List<TodoItemDto>>

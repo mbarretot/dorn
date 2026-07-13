@@ -24,9 +24,16 @@ carefully evaluate RPL-1.5 compliance, directly undermines that goal.
 
 ## Decision
 
-`templates/shared/Application/Messaging/` implements a minimal, MediatR-shaped mediator
-from scratch, as MIT-licensed source code (not a published NuGet package in v1 — see the
-"Decisiones tomadas por defecto" note on distribution in the original planning document):
+> **Update (ADR 0011):** this mediator now ships as the `Dorn.Messaging.Contracts` and
+> `Dorn.Messaging` NuGet packages under `packages/`, consumed via `PackageReference`,
+> rather than as physically-copied source. The decision below — a from-scratch,
+> MIT-licensed mediator instead of MediatR — is unchanged; only the distribution
+> mechanism moved. See
+> `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`.
+
+The mediator was implemented from scratch as MIT-licensed, MediatR-shaped source code
+(not a published NuGet package in v1 — see the "Decisiones tomadas por defecto" note on
+distribution in the original planning document):
 
 - `IRequest<TResponse>` / `IRequest` (the latter is `IRequest<Unit>`, with `Unit` a
   zero-information struct for "no meaningful return value").
@@ -42,9 +49,9 @@ rather than depended on. `ServiceCollectionExtensions.AddMediator(this IServiceC
 Assembly)` scans an assembly's concrete classes for `IRequestHandler<,>` and
 `IPipelineBehavior<,>` implementations and registers them, alongside `ISender → Mediator`.
 
-This code lives in `templates/shared/` and is physically copied into
-`templates/webapi/src/CleanArchWebApi.Application/Messaging/` (see ADR 0008) so it stays
-identical across every template that adopts the same CQRS pattern.
+This code now lives in `packages/Dorn.Messaging.Contracts/` and `packages/Dorn.Messaging/`,
+consumed by `templates/webapi` via `PackageReference` (see ADR 0011) so it stays identical
+across every template that adopts the same CQRS pattern.
 
 ## Consequences
 
@@ -52,16 +59,15 @@ identical across every template that adopts the same CQRS pattern.
   infrastructure, and that infrastructure is unambiguously MIT-licensed source the
   project owns outright — no commercial license or RPL-1.5 compliance question ever
   arises.
-- The implementation is intentionally minimal compared to MediatR: no built-in
-  notification/publish (`INotification`) support, no assembly-scanning configuration
-  options beyond a single `Assembly` parameter, no exception-handling middleware hooks.
-  Contributors extending this need to add such features directly to
-  `templates/shared/Application/Messaging/` (and re-sync into `templates/webapi/`) rather
-  than getting them for free from an upstream package.
-- Because it's copied source rather than a package reference, updates to the mediator
-  require running `eng/scripts/check-shared-sync.sh` and keeping both copies identical
-  (ADR 0008) — a small amount of ongoing process discipline in exchange for the
-  self-contained, packageable template structure that requires.
+- The implementation is intentionally minimal compared to MediatR: no assembly-scanning
+  configuration options beyond a single `Assembly` parameter, no exception-handling
+  middleware hooks. (Notification/publish support — `INotification`, `IPublisher` — was
+  added later, see ADR 0010.) Contributors extending this need to add such features
+  directly to `packages/Dorn.Messaging.Contracts/`/`packages/Dorn.Messaging/` rather than
+  getting them for free from an upstream package.
+- As of ADR 0011, updates to the mediator are ordinary package version bumps
+  (`packages/Dorn.Messaging.Contracts/`, `packages/Dorn.Messaging/`, repacked via
+  `eng/scripts/pack-packages.ps1`) rather than a copy-and-diff-check step.
 - If MediatR's licensing changes again in the future (or Dorn decides the tradeoff is
   worth it for a richer feature set), this decision can be revisited without touching
   `Dorn.Abstractions`/`Dorn.Core` — the mediator lives entirely inside the templates.

@@ -6,6 +6,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <!-- Dorn's own packages - not yet published to NuGet.org, resolved from a local feed during development.
+             See nuget.config, eng/scripts/pack-packages.ps1, and docs/adr/0011-*.md. -->
+        <PackageVersion Include="Dorn.Messaging.Contracts" Version="0.1.0-dev" />
+        <PackageVersion Include="Dorn.Messaging" Version="0.1.0-dev" />
+        <PackageVersion Include="Dorn.SharedKernel" Version="0.1.0-dev" />
+    </ItemGroup>
+
+    <ItemGroup>
         <!-- Persistence -->
         <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
         <!-- Pulls SQLitePCLRaw.lib.e_sqlite3 2.1.11, flagged by GHSA-2m69-gcr7-jv3q (bundled SQLite older than 3.50.2).
@@ -28,6 +36,10 @@
             Include="Microsoft.Extensions.Configuration.Abstractions"
             Version="10.0.9"
         />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
+        <!-- Concrete DI container (not just abstractions), needed by MediatorPublishTests to build
+             a real IServiceProvider. -->
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
 
         <!-- Testing -->
         <PackageVersion Include="xunit" Version="2.9.3" />
@@ -36,4 +48,5 @@
         <PackageVersion Include="coverlet.collector" Version="6.0.2" />
         <PackageVersion Include="NSubstitute" Version="5.3.0" />
     </ItemGroup>
+
 </Project>

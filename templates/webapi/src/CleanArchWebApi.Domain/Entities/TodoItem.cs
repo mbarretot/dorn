@@ -1,8 +1,19 @@
+using CleanArchWebApi.Domain.Events;
+
 namespace CleanArchWebApi.Domain.Entities;
 
-public class TodoItem : BaseEntity
+public class TodoItem : AggregateRoot
 {
-    public required string Title { get; set; }
+    public string Title { get; private set; } = string.Empty;
 
-    public bool IsComplete { get; set; }
+    public bool IsComplete { get; private set; }
+
+    private TodoItem() { }
+
+    public static TodoItem Create(string title)
+    {
+        var todoItem = new TodoItem { Title = title };
+        todoItem.AddDomainEvent(new TodoItemCreatedEvent(todoItem.Id, todoItem.Title));
+        return todoItem;
+    }
 }

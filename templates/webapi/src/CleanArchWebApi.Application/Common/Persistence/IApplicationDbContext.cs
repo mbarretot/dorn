@@ -1,6 +1,3 @@
-using CleanArchWebApi.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
-
 namespace CleanArchWebApi.Application.Common.Persistence;
 
 public interface IApplicationDbContext

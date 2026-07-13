@@ -4,4 +4,4 @@ Coming soon.
 
 This will be a Blazor UI + Clean Architecture template. It is not implemented yet.
 
-Once started, it will follow the same `templates/shared` convention as `templates/webapi`: `shared/` stays the canonical source for cross-template building blocks, and `ui/` keeps its own physical, self-contained copy (see `templates/README.md`).
+Once started, it will reference `Dorn.SharedKernel`/`Dorn.Messaging.Contracts`/`Dorn.Messaging` via `PackageReference`, the same way `templates/webapi` does, rather than copying source (see `templates/README.md` and `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`).

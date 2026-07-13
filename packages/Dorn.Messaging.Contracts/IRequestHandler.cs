@@ -1,4 +1,4 @@
-namespace CleanArchWebApi.Application.Messaging;
+namespace Dorn.Messaging.Contracts;
 
 public interface IRequestHandler<TRequest, TResponse>
     where TRequest : IRequest<TResponse>

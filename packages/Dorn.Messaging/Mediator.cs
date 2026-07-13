@@ -1,8 +1,9 @@
+using Dorn.Messaging.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CleanArchWebApi.Application.Messaging;
+namespace Dorn.Messaging;
 
-public sealed class Mediator : ISender
+public sealed class Mediator : ISender, IPublisher
 {
     private readonly IServiceProvider _serviceProvider;
 
@@ -65,5 +66,23 @@ public sealed class Mediator : ISender
         }
 
         return handlerDelegate();
+    }
+
+    public async Task Publish(INotification notification, CancellationToken ct = default)
+    {
+        var notificationType = notification.GetType();
+        var handlerType = typeof(INotificationHandler<>).MakeGenericType(notificationType);
+        var handleMethod =
+            handlerType.GetMethod(nameof(INotificationHandler<INotification>.Handle))
+            ?? throw new InvalidOperationException(
+                $"'{handlerType}' does not expose a Handle method."
+            );
+
+        var handlers = _serviceProvider.GetServices(handlerType);
+
+        foreach (var handler in handlers)
+        {
+            await (Task)handleMethod.Invoke(handler, [notification, ct])!;
+        }
     }
 }
