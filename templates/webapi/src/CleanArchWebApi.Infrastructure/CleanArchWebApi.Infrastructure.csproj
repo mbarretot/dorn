@@ -3,10 +3,33 @@
         <ProjectReference Include="..\CleanArchWebApi.Application\CleanArchWebApi.Application.csproj" />
     </ItemGroup>
 
+    <!--
+      Dorn.sln includes this un-generated csproj directly, where both Sqlite/ and
+      SqlServer/ migration folders exist side by side and would otherwise both compile,
+      producing duplicate ModelSnapshot symbols.
+    -->
+    <ItemGroup>
+        <Compile
+            Remove="Persistence\Migrations\SqlServer\**\*.cs"
+            Condition="'$(UseSqlServer)' != 'True'"
+        />
+        <Compile
+            Remove="Persistence\Migrations\Sqlite\**\*.cs"
+            Condition="'$(UseSqlServer)' == 'True'"
+        />
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="Dorn.Messaging.Contracts" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+        <PackageReference
+            Include="Microsoft.EntityFrameworkCore.Sqlite"
+            Condition="'$(UseSqlServer)' != 'True'"
+        />
+        <PackageReference
+            Include="Microsoft.EntityFrameworkCore.SqlServer"
+            Condition="'$(UseSqlServer)' == 'True'"
+        />
         <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     </ItemGroup>
 </Project>

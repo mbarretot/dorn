@@ -39,10 +39,12 @@ options.UseSqlite(configuration.GetConnectionString("Default")))`, with
 string in `appsettings.json` (`"Default": "Data Source=app.db"`) points at a local SQLite
 file, requiring no server setup.
 
-`docs/templates/webapi.md` documents the steps to swap providers (replace the EF Core
-provider package, change `UseSqlite(...)` to `UseSqlServer(...)`/`UseNpgsql(...)` in
-`AddInfrastructure`, update the connection string, and regenerate migrations, since EF
-Core migrations are provider-specific).
+`docs/templates/webapi.md` documents the manual steps to swap to PostgreSQL (replace the
+EF Core provider package, change `UseSqlite(...)`/`UseSqlServer(...)` to `UseNpgsql(...)`
+in `AddInfrastructure`, update the connection string, and regenerate migrations, since EF
+Core migrations are provider-specific). SQL Server is no longer a manual swap — see
+`docs/adr/0012-database-provider-selection.md` for the first-class `--database sqlserver`
+choice added later.
 
 The template ships a real `InitialCreate` EF Core migration
 (`Infrastructure/Persistence/Migrations/`), and `WebApi/Program.cs` calls

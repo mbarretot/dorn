@@ -2,10 +2,13 @@
 
 The `webapi` template (short name `dorn-webapi`, identity `Dorn.Templates.WebApi`)
 generates an ASP.NET Core Minimal API project in Clean Architecture, using a
-from-scratch, MIT-licensed CQRS mediator (no MediatR) and EF Core + SQLite persistence.
+from-scratch, MIT-licensed CQRS mediator (no MediatR) and EF Core persistence, with a
+choice of database provider at generation time.
 
 ```bash
-dorn new webapi MyApp
+dorn new webapi MyApp                       # SQLite (default), no external setup required
+dorn new webapi MyApp --database sqlserver  # SQL Server, run via an Aspire-managed container
+dorn new webapi MyApp                       # omit --database in an interactive terminal to be prompted
 # or, from a repo checkout during development:
 dotnet run --project src/Dorn.Cli -- new webapi MyApp
 ```
@@ -14,6 +17,10 @@ This creates `./MyApp/` (override with `-o|--output`; pass `--force` to overwrit
 non-empty directory), sourced from `Dorn.Templates.WebApi` and renamed from the
 template's `sourceName` (`CleanArchWebApi`) to your project name throughout files,
 folders, and namespaces.
+
+See [Persistence: EF Core, database provider selection](#persistence-ef-core-database-provider-selection)
+below for the full `--database` behavior, and
+`docs/adr/0012-database-provider-selection.md` for the decision record.
 
 ### Alternative: vanilla `dotnet new`, without the `dorn` CLI
 
@@ -48,7 +55,7 @@ for the full decision record.
 
 ## Layers
 
-The generated solution (`<Name>.sln`, itself self-contained with its own
+The generated solution (`<Name>.slnx`, itself self-contained with its own
 `Directory.Build.props`/`Directory.Packages.props` — see `docs/architecture.md`) has four
 projects under `src/`:
 
@@ -69,7 +76,7 @@ projects under `src/`:
   defines.
 - **`<Name>.Infrastructure`** — EF Core `DbContext` implementing `IApplicationDbContext`,
   and `AddInfrastructure(this IServiceCollection, IConfiguration)` which registers the
-  `DbContext` (SQLite provider, connection string from configuration) and binds
+  `DbContext` (SQLite or SQL Server, chosen at generation time — see below) and binds
   `IApplicationDbContext` to it.
 - **`<Name>.WebApi`** — the ASP.NET Core host: Minimal API endpoints (via `MapGroup`,
   see below), `Program.cs` composition root, `appsettings.json`.
@@ -83,9 +90,14 @@ The solution also includes a standard .NET Aspire orchestration layer, generated
 `dotnet new aspire-apphost` / `aspire-servicedefaults` and wired into the template:
 
 - **`<Name>.AppHost`** — orchestrates local runs. `dotnet run --project src/<Name>.AppHost`
-  starts the Aspire dashboard and launches the `<Name>.WebApi` resource under it. SQLite
-  stays untouched by Aspire's resource model (it's an embedded file-based DB, not something
-  Aspire containerizes/orchestrates) — the AppHost only orchestrates the WebApi project itself.
+  starts the Aspire dashboard and launches the `<Name>.WebApi` resource under it. With the
+  default SQLite provider, SQLite stays untouched by Aspire's resource model (it's an
+  embedded file-based DB, not something Aspire containerizes/orchestrates) — the AppHost
+  only orchestrates the WebApi project itself. With `--database sqlserver`, the AppHost
+  additionally provisions a SQL Server container resource (`builder.AddSqlServer(...)`)
+  and wires its connection string into the WebApi project via `WithReference(...)` — this
+  requires Docker to be running locally. See
+  [Persistence: EF Core, database provider selection](#persistence-ef-core-database-provider-selection).
 - **`<Name>.ServiceDefaults`** — a shared class library centralizing OpenTelemetry
   (logging, metrics, tracing, with an OTLP exporter enabled when
   `OTEL_EXPORTER_OTLP_ENDPOINT` is set), health checks, and service-discovery/resilience
@@ -258,44 +270,69 @@ See `docs/adr/0010-ddd-aggregates-and-domain-events.md` for the full decision re
 including why dispatch is sequential and in-process rather than an outbox or a
 fire-and-forget strategy.
 
-## Persistence: EF Core + SQLite by default
+## Persistence: EF Core, database provider selection
 
 `Infrastructure/Persistence/ApplicationDbContext.cs` is a plain `DbContext` implementing
-the `Application`-layer `IApplicationDbContext` port. The default provider is SQLite,
-configured in `Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs`:
+the `Application`-layer `IApplicationDbContext` port. The provider is chosen at
+generation time via `dorn new webapi MyApp --database sqlite|sqlserver`:
+
+- **`--database sqlite`** (default) — zero-config: a generated project builds and runs
+  without installing or provisioning a database server, which matters for a scaffolded
+  starting point.
+- **`--database sqlserver`** — runs SQL Server via an Aspire-managed container, so it's
+  runnable out of the box with Docker instead of requiring a manually provisioned server.
+- Omit `--database` in an interactive terminal to be prompted; in a non-interactive
+  session (e.g. CI) the omitted flag silently falls back to `sqlite`.
 
 ```csharp
+// Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs
 services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(configuration.GetConnectionString("Default")));
+#if (UseSqlServer)
+    options.UseSqlServer(configuration.GetConnectionString("CleanArchWebApi"))
+#else
+    options.UseSqlite(configuration.GetConnectionString("Default"))
+#endif
+);
 ```
 
-with the connection string in `appsettings.json`:
+With SQLite, the connection string is static in `appsettings.json`
+(`"ConnectionStrings": { "Default": "Data Source=app.db" }`). With SQL Server, no static
+connection string is needed — Aspire's `WithReference(sql)` in `AppHost.cs` injects the
+resolved connection string into the WebApi project's configuration at runtime under the
+resource name `"CleanArchWebApi"` (renamed to your project name like everything else
+sourced from `sourceName`).
 
-```json
-"ConnectionStrings": { "Default": "Data Source=app.db" }
-```
-
-SQLite is zero-config — a generated project builds and runs without installing or
-provisioning a database server, which matters for a scaffolded starting point. The
-template ships a real EF Core migration (`Infrastructure/Persistence/Migrations/`), and
-`Program.cs` calls `dbContext.Database.MigrateAsync()` on startup, so `dotnet run` against
-a freshly generated project creates `app.db` and its schema automatically — no manual
+The template ships a real, provider-specific EF Core migration for whichever provider is
+selected (`Infrastructure/Persistence/Migrations/`, generated once per provider — SQLite's
+and SQL Server's authoring folders never both land in the same generated output, so there
+is exactly one `ApplicationDbContextModelSnapshot`), and `Program.cs` calls
+`dbContext.Database.MigrateAsync()` on startup, so `dotnet run` (SQLite) or
+`dotnet run --project src/<Name>.AppHost` (SQL Server, with Docker running) against a
+freshly generated project creates the schema automatically — no manual
 `dotnet ef database update` step needed for the golden path. This was verified by
-generating a project, running it, and exercising `POST`/`GET /api/todos` for real.
+generating a project with each provider, building it, and exercising
+`POST`/`GET /api/todos` for real.
 
-To swap to SQL Server or PostgreSQL:
+To swap to PostgreSQL (not a first-class `--database` choice, still a manual swap):
 
-1. Replace the `Microsoft.EntityFrameworkCore.Sqlite` package reference (and its
-   `PackageVersion` entry in `templates/webapi`'s — or your generated project's —
-   `Directory.Packages.props`) with `Microsoft.EntityFrameworkCore.SqlServer` or
-   `Npgsql.EntityFrameworkCore.PostgreSQL`.
-2. Change `options.UseSqlite(...)` to `options.UseSqlServer(...)` /
-   `options.UseNpgsql(...)` in `AddInfrastructure`.
-3. Update the `Default` connection string in `appsettings.json` (and
-   `appsettings.Development.json` if you add one) to match the new provider.
-4. Delete `Infrastructure/Persistence/Migrations/` and regenerate it for the new provider
+1. Replace the `Microsoft.EntityFrameworkCore.Sqlite`/`.SqlServer` package reference (and
+   its `PackageVersion` entry in `templates/webapi`'s — or your generated project's —
+   `Directory.Packages.props`) with `Npgsql.EntityFrameworkCore.PostgreSQL`.
+2. Change `options.UseSqlite(...)`/`options.UseSqlServer(...)` to `options.UseNpgsql(...)`
+   in `AddInfrastructure`.
+3. Add or update the `ConnectionStrings` entry in `appsettings.json` (and
+   `appsettings.Development.json` if you add one) to match the new provider — if you're
+   starting from `--database sqlserver`, there is no static entry to update, since Aspire
+   injects that connection string at runtime; you'll need to add one.
+4. If you started from `--database sqlserver`, remove the Aspire SQL Server wiring: the
+   `builder.AddSqlServer("sql").AddDatabase(...)` resource and `.WithReference(sql)` in
+   `AppHost.cs`, and the `Aspire.Hosting.SqlServer` package reference in
+   `<Name>.AppHost.csproj` — otherwise you're left running an unused SQL Server container.
+5. Delete `Infrastructure/Persistence/Migrations/` and regenerate it for the new provider
    (`dotnet ef migrations add InitialCreate --project src/<Name>.Infrastructure
    --startup-project src/<Name>.WebApi`) — EF Core migrations are provider-specific and
-   the SQLite ones won't apply cleanly to SQL Server/PostgreSQL.
+   neither the SQLite nor the SQL Server ones will apply cleanly to PostgreSQL.
 
-See `docs/adr/0005-ef-core-sqlite-default-persistence.md` for the full rationale.
+See `docs/adr/0005-ef-core-sqlite-default-persistence.md` for the original SQLite-only
+rationale, and `docs/adr/0012-database-provider-selection.md` for the decision to make
+SQL Server a first-class, Aspire-hosted `--database` choice.

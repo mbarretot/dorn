@@ -12,7 +12,11 @@ public static class ServiceCollectionExtensions
     )
     {
         services.AddDbContext<ApplicationDbContext>(options =>
+#if (UseSqlServer)
+            options.UseSqlServer(configuration.GetConnectionString("CleanArchWebApi"))
+#else
             options.UseSqlite(configuration.GetConnectionString("Default"))
+#endif
         );
 
         services.AddScoped<IApplicationDbContext>(sp =>

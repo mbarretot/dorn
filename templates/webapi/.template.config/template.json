@@ -14,7 +14,18 @@
       "datatype": "bool",
       "defaultValue": "true",
       "description": "Include the xUnit test project for the Application layer."
-    }
+    },
+    "DatabaseProvider": {
+      "type": "parameter",
+      "datatype": "choice",
+      "choices": [
+        { "choice": "sqlite", "description": "SQLite — no external setup required (default)." },
+        { "choice": "sqlserver", "description": "SQL Server, run via an Aspire-managed container." }
+      ],
+      "defaultValue": "sqlite",
+      "description": "The EF Core database provider used for persistence."
+    },
+    "UseSqlServer": { "type": "computed", "value": "(DatabaseProvider == \"sqlserver\")" }
   },
   "sources": [
     {
@@ -22,6 +33,20 @@
         {
           "condition": "(!IncludeTests)",
           "exclude": ["tests/**"]
+        },
+        {
+          "condition": "(UseSqlServer)",
+          "rename": {
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/": "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/"
+          },
+          "exclude": ["src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/**"]
+        },
+        {
+          "condition": "(!UseSqlServer)",
+          "rename": {
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/": "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/"
+          },
+          "exclude": ["src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/**"]
         }
       ]
     }

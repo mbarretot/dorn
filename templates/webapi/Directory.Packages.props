@@ -20,6 +20,7 @@
              No patched SQLitePCLRaw version exists yet (first_patched_version is null upstream); tracked, not fixable via override. -->
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
 
         <!-- Web -->
         <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
@@ -56,6 +57,7 @@
     <ItemGroup>
         <!-- Aspire orchestration / ServiceDefaults: telemetry, health checks, service discovery, resilience. -->
         <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
+        <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.4.6" />
         <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
         <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.7.0" />
         <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />

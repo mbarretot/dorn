@@ -53,11 +53,11 @@ public class WebApiTemplateGenerationTests
 
             var slnFiles = Directory.GetFiles(
                 outputDirectory,
-                "*.sln",
+                "*.slnx",
                 SearchOption.TopDirectoryOnly
             );
             Assert.Single(slnFiles);
-            Assert.Equal("DornIntegrationTestApp.sln", Path.GetFileName(slnFiles[0]));
+            Assert.Equal("DornIntegrationTestApp.slnx", Path.GetFileName(slnFiles[0]));
 
             var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
 
@@ -66,6 +66,98 @@ public class WebApiTemplateGenerationTests
                 $"dotnet build exited with {buildResult.ExitCode}."
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Generates with DatabaseProvider = "sqlserver" and builds the result. This is what
+    /// actually catches a migration namespace collision or a bad #if/Condition/rename
+    /// modifier: if both provider-specific migration folders ever landed in the same
+    /// output (or neither did), this build would fail with a duplicate/missing
+    /// ApplicationDbContextModelSnapshot, a missing Aspire.Hosting.SqlServer reference, or
+    /// a stray "//#if" left in appsettings.json.
+    /// </summary>
+    [Fact]
+    public async Task GenerateAndBuild_DornWebApiTemplateWithSqlServer_ProducesBuildableSolution()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-tests-{Guid.NewGuid():N}");
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornIntegrationTestSqlServerApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["DatabaseProvider"] = "sqlserver" }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+            Assert.NotEmpty(result.CreatedFiles);
+
+            var migrationsDirectory = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornIntegrationTestSqlServerApp.Infrastructure",
+                "Persistence",
+                "Migrations"
+            );
+            Assert.True(Directory.Exists(migrationsDirectory));
+            Assert.False(Directory.Exists(Path.Combine(migrationsDirectory, "Sqlite")));
+            Assert.False(Directory.Exists(Path.Combine(migrationsDirectory, "SqlServer")));
+            Assert.Single(
+                Directory.GetFiles(migrationsDirectory, "*ModelSnapshot.cs"),
+                path => Path.GetFileName(path) == "ApplicationDbContextModelSnapshot.cs"
+            );
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+
+            // The generated .slnx never references the AppHost project (pre-existing, not
+            // specific to SQL Server), so the build above doesn't touch the Aspire.Hosting.SqlServer
+            // reference or the #if (UseSqlServer) wiring in AppHost.cs/.csproj — build it directly.
+            var appHostCsproj = Directory
+                .GetFiles(outputDirectory, "*.AppHost.csproj", SearchOption.AllDirectories)
+                .Single();
+            var appHostBuildResult = await RunDotnetBuildAsync(appHostCsproj);
+
+            Assert.True(
+                appHostBuildResult.ExitCode == 0,
+                $"AppHost build exited with {appHostBuildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{appHostBuildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{appHostBuildResult.StdErr}"
             );
         }
         finally
@@ -90,6 +182,11 @@ public class WebApiTemplateGenerationTests
     /// the repo root's nuget.config "dorn-local" source that resolves Dorn.Messaging.Contracts/
     /// Dorn.Messaging/Dorn.SharedKernel. RestoreAdditionalProjectSources points restore at the
     /// same local feed explicitly, mirroring how TemplateLocator resolves the templates root.
+    ///
+    /// `-nodeReuse:false` on both invocations: a persisted MSBuild worker node from one nested
+    /// build can be reused by the next one (even across sequential test runs) and hang once its
+    /// cached state points at a since-deleted temp directory. These solutions are always deleted
+    /// right after the build, so there's no warm-cache benefit worth keeping node reuse for.
     /// </summary>
     private static async Task<(int ExitCode, string StdOut, string StdErr)> RunDotnetBuildAsync(
         string solutionPath
@@ -101,7 +198,8 @@ public class WebApiTemplateGenerationTests
             solutionPath,
             "restore",
             solutionPath,
-            $"-p:RestoreAdditionalProjectSources={localNuGetFeed}"
+            $"-p:RestoreAdditionalProjectSources={localNuGetFeed}",
+            "-nodeReuse:false"
         );
         if (restoreResult.ExitCode != 0)
         {
@@ -114,7 +212,8 @@ public class WebApiTemplateGenerationTests
             solutionPath,
             "-c",
             "Release",
-            "--no-restore"
+            "--no-restore",
+            "-nodeReuse:false"
         );
     }
 

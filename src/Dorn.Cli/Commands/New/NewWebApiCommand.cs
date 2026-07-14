@@ -18,20 +18,46 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
         var validation = ProjectNameValidator.Validate(settings.Name);
         if (!validation.IsValid)
         {
-            _console.Write(
-                new Panel(Markup.Escape(validation.ErrorMessage ?? "Invalid project name."))
-                    .Header("Invalid project name")
-                    .BorderColor(Color.Red)
-            );
+            WriteErrorPanel("Invalid project name", validation.ErrorMessage);
+            return 1;
+        }
+
+        var databaseValidation = DatabaseProviderValidator.Validate(settings.Database);
+        if (!databaseValidation.IsValid)
+        {
+            WriteErrorPanel("Invalid database provider", databaseValidation.ErrorMessage);
             return 1;
         }
 
         var outputDirectory = Path.GetFullPath(settings.Output ?? Path.Combine(".", settings.Name));
 
+        var databaseProvider =
+            settings.Database?.ToLowerInvariant()
+            ?? (
+                _console.Profile.Capabilities.Interactive
+                    ? _console.Prompt(
+                        new SelectionPrompt<string>()
+                            .Title("Select a [green]database provider[/]:")
+                            .AddChoices("sqlite", "sqlserver")
+                    )
+                    : "sqlite"
+            );
+
+        if (databaseProvider == "sqlserver")
+        {
+            var aspireNameValidation = AspireResourceNameValidator.Validate(settings.Name);
+            if (!aspireNameValidation.IsValid)
+            {
+                WriteErrorPanel("Invalid project name", aspireNameValidation.ErrorMessage);
+                return 1;
+            }
+        }
+
         var request = new GenerationRequest(
             TemplateShortName: TemplateShortName,
             ProjectName: settings.Name,
             OutputDirectory: outputDirectory,
+            Parameters: new Dictionary<string, string> { ["DatabaseProvider"] = databaseProvider },
             Force: settings.Force
         );
 
@@ -50,16 +76,26 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
                     )
                     : "Template generation failed for an unknown reason.";
 
-            _console.Write(
-                new Panel(diagnosticsText)
-                    .Header(Markup.Escape($"Failed to generate '{settings.Name}'"))
-                    .BorderColor(Color.Red)
+            WriteErrorPanel(
+                $"Failed to generate '{settings.Name}'",
+                diagnosticsText,
+                escapeMessage: false
             );
             return 1;
         }
 
         RenderSuccess(settings.Name, result);
         return 0;
+    }
+
+    private void WriteErrorPanel(string header, string? message, bool escapeMessage = true)
+    {
+        var content = message ?? "An unknown error occurred.";
+        _console.Write(
+            new Panel(escapeMessage ? Markup.Escape(content) : content)
+                .Header(Markup.Escape(header))
+                .BorderColor(Color.Red)
+        );
     }
 
     private void RenderSuccess(string projectName, GenerationResult result)

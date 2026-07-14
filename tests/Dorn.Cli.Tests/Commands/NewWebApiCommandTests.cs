@@ -10,6 +10,20 @@ using Xunit;
 namespace Dorn.Cli.Tests.Commands;
 
 /// <summary>
+/// Minimal <see cref="IRemainingArguments"/> stand-in for tests that construct a
+/// <see cref="CommandContext"/> directly instead of going through <see cref="CommandAppTester"/>
+/// (needed for the interactive-prompt case, since CommandAppTester 0.49.1 always creates its own
+/// internal <see cref="TestConsole"/> and offers no way to inject a pre-scripted one).
+/// </summary>
+file sealed class EmptyRemainingArguments : IRemainingArguments
+{
+    public ILookup<string, string?> Parsed { get; } =
+        Array.Empty<string>().ToLookup(x => x, x => (string?)null);
+
+    public IReadOnlyList<string> Raw { get; } = Array.Empty<string>();
+}
+
+/// <summary>
 /// Program.cs is top-level statements, which the compiler turns into an internal, largely
 /// unusable Program class — it is not something a test can construct or drive directly. So
 /// instead of invoking the real Program.Main, this test builds the same tiny "new webapi"
@@ -81,5 +95,135 @@ public class NewWebApiCommandTests
         var result = await app.RunAsync(["new", "webapi", "MyApp"]);
 
         Assert.NotEqual(0, result.ExitCode);
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithExplicitDatabaseOption_PassesThroughUntouched()
+    {
+        var (app, engine) = CreateApp();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
+
+        var result = await app.RunAsync(["new", "webapi", "MyApp", "--database", "sqlserver"]);
+
+        Assert.Equal(0, result.ExitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(
+                Arg.Is<GenerationRequest>(r =>
+                    r.Parameters != null && r.Parameters["DatabaseProvider"] == "sqlserver"
+                ),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithOmittedDatabaseAndNonInteractiveConsole_FallsBackToSqliteWithoutPrompting()
+    {
+        // CommandAppTester's default TestConsole has InteractionSupport.Detect, which resolves
+        // to non-interactive when there is no real TTY (true for `dotnet test` runs and CI).
+        var (app, engine) = CreateApp();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
+
+        var result = await app.RunAsync(["new", "webapi", "MyApp"]);
+
+        Assert.Equal(0, result.ExitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(
+                Arg.Is<GenerationRequest>(r =>
+                    r.Parameters != null && r.Parameters["DatabaseProvider"] == "sqlite"
+                ),
+                Arg.Any<CancellationToken>()
+            );
+        Assert.DoesNotContain("Select a", result.Output);
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithOmittedDatabaseAndInteractiveConsole_PromptsAndUsesSelection()
+    {
+        // CommandAppTester 0.49.1 does not expose a way to inject a pre-scripted TestConsole, so
+        // this case drives NewWebApiCommand directly instead of routing through CommandAppTester.
+        var engine = Substitute.For<IGenerationEngine>();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
+
+        using var console = new TestConsole().Width(int.MaxValue);
+        console.Profile.Capabilities.Interactive = true;
+        // Choices are added as "sqlite", "sqlserver" in that order; one Down arrow moves the
+        // selection to "sqlserver" before confirming with Enter.
+        console.Input.PushKey(ConsoleKey.DownArrow);
+        console.Input.PushKey(ConsoleKey.Enter);
+
+        var command = new NewWebApiCommand(engine, console);
+        var context = new CommandContext(
+            Array.Empty<string>(),
+            new EmptyRemainingArguments(),
+            "webapi",
+            null
+        );
+        var settings = new NewWebApiSettings { Name = "MyApp" };
+
+        var exitCode = await command.ExecuteAsync(context, settings);
+
+        Assert.Equal(0, exitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(
+                Arg.Is<GenerationRequest>(r =>
+                    r.Parameters != null && r.Parameters["DatabaseProvider"] == "sqlserver"
+                ),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithInvalidDatabaseOption_ReturnsExitCodeOneAndNeverCallsEngine()
+    {
+        var (app, engine) = CreateApp();
+
+        var result = await app.RunAsync(["new", "webapi", "MyApp", "--database", "postgres"]);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("Invalid database provider", result.Output);
+        await engine
+            .DidNotReceive()
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithSqlServerAndAspireUnsafeProjectName_ReturnsExitCodeOneAndNeverCallsEngine()
+    {
+        // "My.App" passes ProjectNameValidator but is invalid as an Aspire resource name (ASPIRE006).
+        var (app, engine) = CreateApp();
+
+        var result = await app.RunAsync(["new", "webapi", "My.App", "--database", "sqlserver"]);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("Invalid project name", result.Output);
+        await engine
+            .DidNotReceive()
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithSqlite_AllowsProjectNamesThatAreUnsafeForAspire()
+    {
+        // The Aspire resource-name constraint only applies to --database sqlserver.
+        var (app, engine) = CreateApp();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/My.App", ["Program.cs"], []));
+
+        var result = await app.RunAsync(["new", "webapi", "My.App", "--database", "sqlite"]);
+
+        Assert.Equal(0, result.ExitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>());
     }
 }

@@ -16,4 +16,10 @@ public sealed class NewWebApiSettings : CommandSettings
     [CommandOption("--force")]
     [Description("Overwrite existing files in the output directory.")]
     public bool Force { get; init; }
+
+    [CommandOption("--database")]
+    [Description(
+        "Database provider: sqlite (default) or sqlserver. Prompted interactively if omitted and the session is interactive."
+    )]
+    public string? Database { get; init; }
 }
