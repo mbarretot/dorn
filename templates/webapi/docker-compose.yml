@@ -1,0 +1,12 @@
+services:
+  webapi:
+    build:
+      context: .
+      dockerfile: src/CleanArchWebApi.WebApi/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+  # otel-collector:   # placeholder — compose-path observability is out of scope
+  #   image: otel/opentelemetry-collector-contrib:latest
+  #   ports: ["4317:4317", "4318:4318"]
