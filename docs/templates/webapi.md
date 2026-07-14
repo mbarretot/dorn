@@ -174,6 +174,23 @@ it through `dorn new webapi` is open for contribution (see
 `src/Dorn.Cli/Commands/New/NewWebApiSettings.cs`/`NewWebApiCommand.cs` for where
 `GenerationRequest.Parameters` would need to be populated from a new CLI option).
 
+## Code formatting
+
+The generated project ships a `.editorconfig` that is the single source of truth for
+layout, `var`, expression-bodied, `using`, and naming conventions. It's already
+respected by Visual Studio, Rider, and VS Code (enable format-on-save), and can be
+applied from the command line with the SDK-native `dotnet format` (no install, no tool
+manifest):
+
+    dotnet format                    # format the whole solution in place
+    dotnet format --verify-no-changes  # check only; non-zero exit if anything is unformatted
+
+`dotnet format` reads `.editorconfig` directly, so there is no second, conflicting
+formatter config to keep in sync. EF Core migration files under
+`src/<Name>.Infrastructure/Persistence/Migrations/` are marked `generated_code = true`
+and are left untouched. No build-time, git-hook, or CI enforcement is wired up — running
+`dotnet format` is opt-in and up to you.
+
 ## CQRS with the custom mediator
 
 Requests are records implementing `IRequest<TResponse>`; handlers implement

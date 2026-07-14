@@ -67,6 +67,15 @@ public class WebApiTemplateGenerationTests
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
             );
+
+            var formatResult = await RunDotnetFormatVerifyAsync(slnFiles[0]);
+
+            Assert.True(
+                formatResult.ExitCode == 0,
+                "dotnet format --verify-no-changes reported unformatted files."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{formatResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{formatResult.StdErr}"
+            );
         }
         finally
         {
@@ -149,6 +158,15 @@ public class WebApiTemplateGenerationTests
                 $"dotnet build exited with {buildResult.ExitCode}."
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+
+            var formatResult = await RunDotnetFormatVerifyAsync(slnFiles[0]);
+
+            Assert.True(
+                formatResult.ExitCode == 0,
+                "dotnet format --verify-no-changes reported unformatted files."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{formatResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{formatResult.StdErr}"
             );
         }
         finally
@@ -235,6 +253,15 @@ public class WebApiTemplateGenerationTests
                 $"dotnet build exited with {buildResult.ExitCode}."
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+
+            var formatResult = await RunDotnetFormatVerifyAsync(slnFiles[0]);
+
+            Assert.True(
+                formatResult.ExitCode == 0,
+                "dotnet format --verify-no-changes reported unformatted files."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{formatResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{formatResult.StdErr}"
             );
         }
         finally
@@ -327,6 +354,15 @@ public class WebApiTemplateGenerationTests
                 $"dotnet build exited with {buildResult.ExitCode}."
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+
+            var formatResult = await RunDotnetFormatVerifyAsync(slnFiles[0]);
+
+            Assert.True(
+                formatResult.ExitCode == 0,
+                "dotnet format --verify-no-changes reported unformatted files."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{formatResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{formatResult.StdErr}"
             );
         }
         finally
@@ -461,6 +497,34 @@ public class WebApiTemplateGenerationTests
                 + "eng/scripts/pack-packages.ps1), or run the tests from a repo checkout that already has one."
         );
     }
+
+    /// <summary>
+    /// Runs `dotnet format --verify-no-changes` against a generated project's solution.
+    /// Reuses <see cref="RunProcessAsync"/> the same way <see cref="RunDotnetBuildAsync"/>
+    /// does. `--no-restore` is safe here because the preceding <see cref="RunDotnetBuildAsync"/>
+    /// call already restored the solution (project.assets.json is present), so `dotnet format`
+    /// doesn't need to run its own implicit restore. `dotnet format` reads the generated
+    /// project's own renamed `.editorconfig` (the template engine renames `CleanArchWebApi` ->
+    /// `&lt;Name&gt;` inside it), so this also validates the `generated_code = true` EF Core
+    /// Migrations exclusion per generated project, not just against the raw template.
+    ///
+    /// NOTE: The `.editorconfig` deliberately does NOT specify `dotnet_sort_import_directives_alphabetically`
+    /// or `dotnet_sort_system_directives_first`. The template's import order (project namespaces first,
+    /// then third-party) is preserved as-is. Specifying alphabetical sorting would break the generated
+    /// output because `dotnet format` sorts lexicographically after substitution, and the resulting
+    /// order depends on the actual project name (e.g. `DornIntegrationTestApp.Application` sorts
+    /// differently than the literal `CleanArchWebApi.Application`).
+    /// </summary>
+    private static Task<(int ExitCode, string StdOut, string StdErr)> RunDotnetFormatVerifyAsync(
+        string solutionPath
+    ) =>
+        RunProcessAsync(
+            solutionPath,
+            "format",
+            solutionPath,
+            "--verify-no-changes",
+            "--no-restore"
+        );
 
     private static async Task<(int ExitCode, string StdOut, string StdErr)> RunProcessAsync(
         string solutionPath,
