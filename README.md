@@ -31,6 +31,19 @@ cd MyApp
 dotnet build
 ```
 
+Two independent choices are made at generation time: `--database sqlite|sqlserver` (see
+[`docs/templates/webapi.md`](./docs/templates/webapi.md#persistence-ef-core-database-provider-selection))
+and `--orchestrator aspire|docker-compose`:
+
+```bash
+dorn new webapi MyApp --orchestrator aspire           # default: run via `dotnet run --project src/MyApp.AppHost`
+dorn new webapi MyApp --orchestrator docker-compose    # no Aspire dependency; run via `docker compose up`
+```
+
+Omit `--orchestrator` in an interactive terminal to be prompted; a non-interactive session
+falls back to `aspire`. See [`docs/templates/webapi.md`](./docs/templates/webapi.md) for the
+full behavior of each orchestrator, including the generated `Dockerfile`/`docker-compose.yml`.
+
 ### Alternative: plain `dotnet new`, no `dorn` tool required
 
 The `webapi` template is also distributed as a standalone NuGet template package, so you can generate a project with vanilla `dotnet new`, no `dorn` install needed. This is also what makes the template discoverable in Visual Studio's "Create a new project" search.
