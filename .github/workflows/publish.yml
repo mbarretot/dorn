@@ -3,21 +3,26 @@ name: Publish to NuGet.org
 on:
   push:
     tags:
-      - "v*" # Trigger on version tags (e.g., v1.0.0)
+      - "v*"
 
 permissions:
-  id-token: write # Required for Trusted Publishing via OIDC
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-nuget-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish:
-    name: Pack and publish
+    name: Pack and Publish
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
@@ -30,32 +35,46 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      # Extract version from tag (remove 'v' prefix)
-      - name: Set version from tag
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+      - name: Restore
+        run: dotnet restore
 
-      # Pack all packages
+      - name: Extract version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
       - name: Pack library packages
         shell: pwsh
-        run: pwsh eng/scripts/pack-packages.ps1 -Version ${{ env.VERSION }}
+        run: ./eng/scripts/pack-packages.ps1 -Version $env:VERSION
 
       - name: Pack Dorn.Cli
-        run: dotnet pack src/Dorn.Cli/Dorn.Cli.csproj -c Release -p:PackageVersion=${{ env.VERSION }} -o ./artifacts
+        run: >
+          dotnet pack src/Dorn.Cli/Dorn.Cli.csproj
+          --configuration Release
+          --no-build
+          -p:PackageVersion=${{ env.VERSION }}
+          --output ./artifacts
 
       - name: Pack Dorn.Templates.WebApi
         shell: pwsh
-        run: ./eng/scripts/pack-templates.ps1 -Version ${{ env.VERSION }}
+        run: ./eng/scripts/pack-templates.ps1 -Version $env:VERSION
 
-      # Publish via Trusted Publishing (OIDC)
-      - name: NuGet login (Trusted Publishing)
+      - name: Verify generated packages
+        run: |
+          echo "Generated packages:"
+          find artifacts -name "*.nupkg"
+
+      - name: Login to NuGet.org (Trusted Publishing)
         id: login
-        uses: NuGet/login-action@v2
+        uses: NuGet/login@v1
         with:
           user: mbarretot
 
-      - name: Push all packages to NuGet.org
-        run: >
-          dotnet nuget push ./artifacts/*.nupkg
-          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
-          --source https://api.nuget.org/v3/index.json
-          --skip-duplicate
+      - name: Publish packages
+        run: |
+          dotnet nuget push "./artifacts/*.nupkg" \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+            --source "https://api.nuget.org/v3/index.json" \
+            --skip-duplicate \
+            --force-english-output
