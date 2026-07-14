@@ -4,7 +4,7 @@
         <PackageId>Dorn.Templates.WebApi</PackageId>
         <Title>Dorn Clean Architecture Web API Template</Title>
         <Authors>Dorn Contributors</Authors>
-        <Description>ASP.NET Core Minimal API scaffolded with Clean Architecture, a custom MIT-licensed mediator (no MediatR), and EF Core + SQLite persistence. Installable via `dotnet new install Dorn.Templates.WebApi`.</Description>
+        <Description>Production-ready Clean Architecture Web API with CQRS, layered structure, and Docker support. Install via `dotnet new install Dorn.Templates.WebApi`.</Description>
         <PackageTags>dotnet-new;templates;webapi;clean-architecture;aspnetcore</PackageTags>
         <TargetFramework>netstandard2.0</TargetFramework>
         <IncludeContentInPack>true</IncludeContentInPack>

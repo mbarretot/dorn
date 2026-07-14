@@ -4,7 +4,7 @@
   "classifications": ["Web", "WebAPI", "Clean Architecture"],
   "identity": "Dorn.Templates.WebApi",
   "name": "Dorn Clean Architecture Web API",
-  "description": "ASP.NET Core Minimal API scaffolded with Clean Architecture, a custom MIT-licensed mediator (no MediatR), and EF Core + SQLite persistence.",
+  "description": "Production-ready Clean Architecture Web API with CQRS, layered structure, and Docker support.",
   "shortName": "dorn-webapi",
   "sourceName": "CleanArchWebApi",
   "preferNameDirectory": true,
