@@ -23,8 +23,8 @@ followed by `dorn new webapi MyApp`, and isn't available yet; see the root `READ
 git clone https://github.com/mbarretot/dorn.git
 cd dorn
 pwsh eng/scripts/pack-packages.ps1
-dotnet restore Dorn.sln
-dotnet build Dorn.sln
+dotnet restore Dorn.slnx
+dotnet build Dorn.slnx
 ```
 
 `pack-packages.ps1` must run before `restore`: `templates/webapi` consumes
@@ -36,7 +36,7 @@ the three projects under `packages/` into it.
 
 This builds all of `src/` (`Dorn.Abstractions`, `Dorn.Core`, `Dorn.Cli`), all of `packages/`
 and `tests/`, and `templates/webapi` — the generated Clean Architecture Web API template is
-a normal project reference inside `Dorn.sln`, so building the solution also confirms the
+a normal project reference inside `Dorn.slnx`, so building the solution also confirms the
 template itself still compiles as a standalone project (see `docs/architecture.md` for why
 `templates/webapi` has its own, non-inherited `Directory.Build.props` /
 `Directory.Packages.props`).
@@ -44,7 +44,7 @@ template itself still compiles as a standalone project (see `docs/architecture.m
 For a Release build matching what CI runs:
 
 ```bash
-dotnet build Dorn.sln -c Release
+dotnet build Dorn.slnx -c Release
 ```
 
 ## Run the CLI locally during development
@@ -105,7 +105,7 @@ for details.
 ## Run the tests
 
 ```bash
-DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" dotnet test Dorn.sln
+DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" dotnet test Dorn.slnx
 ```
 
 `DORN_TEMPLATES_PATH` is required for `tests/Templates.Tests`, which generates a real

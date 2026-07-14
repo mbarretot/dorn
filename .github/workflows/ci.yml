@@ -39,17 +39,17 @@ jobs:
         run: pwsh eng/scripts/pack-packages.ps1
 
       - name: Restore
-        run: dotnet restore Dorn.sln
+        run: dotnet restore Dorn.slnx
 
       - name: Build
-        run: dotnet build Dorn.sln --no-restore -c Release
+        run: dotnet build Dorn.slnx --no-restore -c Release
 
       - name: Test
         env:
           DORN_TEMPLATES_PATH: ${{ github.workspace }}/templates
           DORN_LOCAL_NUGET_FEED: ${{ github.workspace }}/artifacts
         run: >
-          dotnet test Dorn.sln --no-build -c Release
+          dotnet test Dorn.slnx --no-build -c Release
           --collect:"XPlat Code Coverage"
 
       # TODO(eng): upload the coverage results produced above (coverlet + XPlat Code

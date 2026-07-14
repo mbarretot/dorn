@@ -1,0 +1,32 @@
+<Solution>
+    <Configurations>
+        <Platform Name="Any CPU" />
+        <Platform Name="x64" />
+        <Platform Name="x86" />
+    </Configurations>
+    <Folder Name="/packages/">
+        <Project Path="packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj" />
+        <Project Path="packages/Dorn.Messaging/Dorn.Messaging.csproj" />
+        <Project Path="packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj" />
+    </Folder>
+    <Folder Name="/src/">
+        <Project Path="src/Dorn.Abstractions/Dorn.Abstractions.csproj" />
+        <Project Path="src/Dorn.Cli/Dorn.Cli.csproj" />
+        <Project Path="src/Dorn.Core/Dorn.Core.csproj" />
+    </Folder>
+    <Folder Name="/templates/" />
+    <Folder Name="/templates/webapi/">
+        <Project Path="templates/webapi/src/CleanArchWebApi.AppHost/CleanArchWebApi.AppHost.csproj" />
+        <Project Path="templates/webapi/src/CleanArchWebApi.Application/CleanArchWebApi.Application.csproj" />
+        <Project Path="templates/webapi/src/CleanArchWebApi.Domain/CleanArchWebApi.Domain.csproj" />
+        <Project Path="templates/webapi/src/CleanArchWebApi.Infrastructure/CleanArchWebApi.Infrastructure.csproj" />
+        <Project Path="templates/webapi/src/CleanArchWebApi.ServiceDefaults/CleanArchWebApi.ServiceDefaults.csproj" />
+        <Project Path="templates/webapi/src/CleanArchWebApi.WebApi/CleanArchWebApi.WebApi.csproj" />
+        <Project Path="templates/webapi/tests/CleanArchWebApi.Application.Tests/CleanArchWebApi.Application.Tests.csproj" />
+    </Folder>
+    <Folder Name="/tests/">
+        <Project Path="tests/Dorn.Cli.Tests/Dorn.Cli.Tests.csproj" />
+        <Project Path="tests/Dorn.Core.Tests/Dorn.Core.Tests.csproj" />
+        <Project Path="tests/Templates.Tests/Templates.Tests.csproj" />
+    </Folder>
+</Solution>

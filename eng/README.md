@@ -10,7 +10,7 @@ end users of `dorn` or of a generated project.
 eng/
 ├── README.md
 ├── packaging/
-│   └── Dorn.Templates.WebApi/   # pack-only project, not part of Dorn.sln
+│   └── Dorn.Templates.WebApi/   # pack-only project, not part of Dorn.slnx
 │       └── Dorn.Templates.WebApi.csproj
 └── scripts/
     ├── pack-packages.ps1   # packages Dorn.Messaging.Contracts/Dorn.Messaging/Dorn.SharedKernel
@@ -31,7 +31,7 @@ Dorn's own first-party library packages that generated projects depend on at run
 own `Directory.Packages.props`. None of them are published to NuGet.org yet, so
 `eng/scripts/pack-packages.ps1` packs all three into `./artifacts`, which the root
 `nuget.config`'s `dorn-local` source resolves as a local package feed. Run it before
-`dotnet restore Dorn.sln` — otherwise `templates/webapi`'s restore fails to find these
+`dotnet restore Dorn.slnx` — otherwise `templates/webapi`'s restore fails to find these
 packages:
 
 ```bash
@@ -58,7 +58,7 @@ What it does:
 
 1. Runs `dotnet pack` against `eng/packaging/Dorn.Templates.WebApi/Dorn.Templates.WebApi.csproj`
    — a pack-only project **outside** `templates/webapi/`, so the packaging project itself
-   never gets instantiated into a generated user project. It is not part of `Dorn.sln`;
+   never gets instantiated into a generated user project. It is not part of `Dorn.slnx`;
    invoke it directly via `dotnet pack <path>` or through this script.
 2. Emits the `.nupkg` to `./artifacts`, versioned via an optional `-Version` parameter
    (default `0.1.0-dev`).

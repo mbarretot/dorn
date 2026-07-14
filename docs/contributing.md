@@ -25,7 +25,7 @@ next one on the roadmap is `ui`, currently just a placeholder at `templates/ui/R
    `Dorn.SharedKernel`/`Dorn.Messaging.Contracts`/`Dorn.Messaging` as needed (pin the
    version in the template's own `Directory.Packages.props`) — no copying required. See
    `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`.
-4. Add the new template's projects to `Dorn.sln` so `dotnet build Dorn.sln` builds it as
+4. Add the new template's projects to `Dorn.slnx` so `dotnet build Dorn.slnx` builds it as
    part of the normal solution build (this is how `templates/webapi` is wired in today).
 5. Add a `tests/<Name>Templates.Tests`-style integration test (or extend
    `tests/Templates.Tests`) that generates the template into a temp directory outside the
@@ -64,8 +64,8 @@ Run the same checks CI runs, locally, before pushing:
 
 ```bash
 pwsh eng/scripts/pack-packages.ps1
-dotnet build Dorn.sln -c Release
-DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" dotnet test Dorn.sln
+dotnet build Dorn.slnx -c Release
+DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" dotnet test Dorn.slnx
 ```
 
 `pack-packages.ps1` must run first: `templates/webapi` resolves `Dorn.Messaging.Contracts`/
