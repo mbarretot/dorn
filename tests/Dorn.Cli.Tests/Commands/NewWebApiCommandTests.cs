@@ -166,7 +166,9 @@ public class NewWebApiCommandTests
             "webapi",
             null
         );
-        var settings = new NewWebApiSettings { Name = "MyApp" };
+        // Orchestrator is pinned explicitly so only the database prompt consumes the scripted
+        // input above — leaving it null would trigger a second (unscripted) prompt.
+        var settings = new NewWebApiSettings { Name = "MyApp", Orchestrator = "aspire" };
 
         var exitCode = await command.ExecuteAsync(context, settings);
 
@@ -220,6 +222,136 @@ public class NewWebApiCommandTests
             .Returns(new GenerationResult(true, "/tmp/My.App", ["Program.cs"], []));
 
         var result = await app.RunAsync(["new", "webapi", "My.App", "--database", "sqlite"]);
+
+        Assert.Equal(0, result.ExitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithExplicitOrchestratorOption_PassesThroughUntouched()
+    {
+        var (app, engine) = CreateApp();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
+
+        var result = await app.RunAsync([
+            "new",
+            "webapi",
+            "MyApp",
+            "--orchestrator",
+            "docker-compose",
+        ]);
+
+        Assert.Equal(0, result.ExitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(
+                Arg.Is<GenerationRequest>(r =>
+                    r.Parameters != null && r.Parameters["Orchestrator"] == "docker-compose"
+                ),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithOmittedOrchestratorAndNonInteractiveConsole_FallsBackToAspireWithoutPrompting()
+    {
+        var (app, engine) = CreateApp();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
+
+        var result = await app.RunAsync(["new", "webapi", "MyApp"]);
+
+        Assert.Equal(0, result.ExitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(
+                Arg.Is<GenerationRequest>(r =>
+                    r.Parameters != null && r.Parameters["Orchestrator"] == "aspire"
+                ),
+                Arg.Any<CancellationToken>()
+            );
+        Assert.DoesNotContain("Select an", result.Output);
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithOmittedOrchestratorAndInteractiveConsole_PromptsAndUsesSelection()
+    {
+        // CommandAppTester 0.49.1 does not expose a way to inject a pre-scripted TestConsole, so
+        // this case drives NewWebApiCommand directly instead of routing through CommandAppTester.
+        var engine = Substitute.For<IGenerationEngine>();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
+
+        using var console = new TestConsole().Width(int.MaxValue);
+        console.Profile.Capabilities.Interactive = true;
+        // Choices are added as "aspire", "docker-compose" in that order; one Down arrow moves
+        // the selection to "docker-compose" before confirming with Enter.
+        console.Input.PushKey(ConsoleKey.DownArrow);
+        console.Input.PushKey(ConsoleKey.Enter);
+
+        var command = new NewWebApiCommand(engine, console);
+        var context = new CommandContext(
+            Array.Empty<string>(),
+            new EmptyRemainingArguments(),
+            "webapi",
+            null
+        );
+        // Database is pinned explicitly so only the orchestrator prompt consumes the scripted
+        // input above — leaving it null would trigger a second (unscripted) prompt.
+        var settings = new NewWebApiSettings { Name = "MyApp", Database = "sqlite" };
+
+        var exitCode = await command.ExecuteAsync(context, settings);
+
+        Assert.Equal(0, exitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(
+                Arg.Is<GenerationRequest>(r =>
+                    r.Parameters != null && r.Parameters["Orchestrator"] == "docker-compose"
+                ),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithInvalidOrchestratorOption_ReturnsExitCodeOneAndNeverCallsEngine()
+    {
+        var (app, engine) = CreateApp();
+
+        var result = await app.RunAsync(["new", "webapi", "MyApp", "--orchestrator", "kubernetes"]);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("Invalid orchestrator", result.Output);
+        await engine
+            .DidNotReceive()
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithSqlServerAndDockerComposeOrchestrator_SkipsAspireNameValidation()
+    {
+        // "My.App" fails ASPIRE006 (see the aspire+sqlserver case above) but the compose
+        // path never creates an Aspire resource, so the name gate must not apply here.
+        var (app, engine) = CreateApp();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/My.App", ["Program.cs"], []));
+
+        var result = await app.RunAsync([
+            "new",
+            "webapi",
+            "My.App",
+            "--database",
+            "sqlserver",
+            "--orchestrator",
+            "docker-compose",
+        ]);
 
         Assert.Equal(0, result.ExitCode);
         await engine
