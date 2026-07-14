@@ -29,6 +29,13 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
             return 1;
         }
 
+        var orchestratorValidation = OrchestratorValidator.Validate(settings.Orchestrator);
+        if (!orchestratorValidation.IsValid)
+        {
+            WriteErrorPanel("Invalid orchestrator", orchestratorValidation.ErrorMessage);
+            return 1;
+        }
+
         var outputDirectory = Path.GetFullPath(settings.Output ?? Path.Combine(".", settings.Name));
 
         var databaseProvider =
@@ -43,7 +50,20 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
                     : "sqlite"
             );
 
-        if (databaseProvider == "sqlserver")
+        var orchestrator =
+            settings.Orchestrator?.ToLowerInvariant()
+            ?? (
+                _console.Profile.Capabilities.Interactive
+                    ? _console.Prompt(
+                        new SelectionPrompt<string>()
+                            .Title("Select an [green]orchestrator[/]:")
+                            .AddChoices("aspire", "docker-compose")
+                            .UseConverter(o => o == "docker-compose" ? "Docker Compose" : "Aspire")
+                    )
+                    : "aspire"
+            );
+
+        if (orchestrator == "aspire" && databaseProvider == "sqlserver")
         {
             var aspireNameValidation = AspireResourceNameValidator.Validate(settings.Name);
             if (!aspireNameValidation.IsValid)
@@ -57,7 +77,11 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
             TemplateShortName: TemplateShortName,
             ProjectName: settings.Name,
             OutputDirectory: outputDirectory,
-            Parameters: new Dictionary<string, string> { ["DatabaseProvider"] = databaseProvider },
+            Parameters: new Dictionary<string, string>
+            {
+                ["DatabaseProvider"] = databaseProvider,
+                ["Orchestrator"] = orchestrator,
+            },
             Force: settings.Force
         );
 

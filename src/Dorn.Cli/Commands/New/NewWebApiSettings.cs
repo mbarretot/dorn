@@ -22,4 +22,10 @@ public sealed class NewWebApiSettings : CommandSettings
         "Database provider: sqlite (default) or sqlserver. Prompted interactively if omitted and the session is interactive."
     )]
     public string? Database { get; init; }
+
+    [CommandOption("--orchestrator")]
+    [Description(
+        "Orchestrator: aspire (default) or docker-compose. Prompted interactively if omitted and the session is interactive."
+    )]
+    public string? Orchestrator { get; init; }
 }
