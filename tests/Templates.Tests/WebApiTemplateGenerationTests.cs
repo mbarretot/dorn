@@ -136,6 +136,12 @@ public class WebApiTemplateGenerationTests
             );
             Assert.Single(slnFiles);
 
+            // The aspire .slnx now correctly references AppHost (Orchestrator symbol fix), so a
+            // single build via the solution already compiles AppHost + Aspire.Hosting.SqlServer +
+            // the #if (UseSqlServer) wiring in AppHost.cs/.csproj — no separate direct-csproj
+            // build is needed anymore.
+            Assert.Contains("AppHost", await File.ReadAllTextAsync(slnFiles[0]));
+
             var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
 
             Assert.True(
@@ -144,20 +150,183 @@ public class WebApiTemplateGenerationTests
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
             );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
 
-            // The generated .slnx never references the AppHost project (pre-existing, not
-            // specific to SQL Server), so the build above doesn't touch the Aspire.Hosting.SqlServer
-            // reference or the #if (UseSqlServer) wiring in AppHost.cs/.csproj — build it directly.
-            var appHostCsproj = Directory
-                .GetFiles(outputDirectory, "*.AppHost.csproj", SearchOption.AllDirectories)
-                .Single();
-            var appHostBuildResult = await RunDotnetBuildAsync(appHostCsproj);
+    /// <summary>
+    /// Completes the 2x2 {aspire, docker-compose} x {sqlite, sqlserver} matrix at the template
+    /// level (design section 8): docker-compose + sqlite has no AppHost/ServiceDefaults, gets a
+    /// Dockerfile + base docker-compose.yml, and its `.slnx` doesn't reference AppHost.
+    /// </summary>
+    [Fact]
+    public async Task GenerateAndBuild_DornWebApiTemplateWithDockerComposeAndSqlite_ProducesBuildableSolution()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-tests-{Guid.NewGuid():N}");
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornIntegrationTestComposeApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["Orchestrator"] = "docker-compose" }
+            );
+            var result = await engine.GenerateAsync(request);
 
             Assert.True(
-                appHostBuildResult.ExitCode == 0,
-                $"AppHost build exited with {appHostBuildResult.ExitCode}."
-                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{appHostBuildResult.StdOut}"
-                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{appHostBuildResult.StdErr}"
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+            Assert.NotEmpty(result.CreatedFiles);
+
+            Assert.False(
+                Directory.Exists(
+                    Path.Combine(outputDirectory, "src", "DornIntegrationTestComposeApp.AppHost")
+                )
+            );
+            Assert.False(
+                Directory.Exists(
+                    Path.Combine(
+                        outputDirectory,
+                        "src",
+                        "DornIntegrationTestComposeApp.ServiceDefaults"
+                    )
+                )
+            );
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        outputDirectory,
+                        "src",
+                        "DornIntegrationTestComposeApp.WebApi",
+                        "Dockerfile"
+                    )
+                )
+            );
+            Assert.True(File.Exists(Path.Combine(outputDirectory, "docker-compose.yml")));
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+            Assert.DoesNotContain("AppHost", await File.ReadAllTextAsync(slnFiles[0]));
+
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Completes the 2x2 matrix's remaining cell: docker-compose + sqlserver. Asserts the
+    /// generated docker-compose.yml carries the `sqlserver` service and the
+    /// `ConnectionStrings__` environment override (design section 5/ADR-3), and that the
+    /// generated appsettings.json has no stray `//#if` marker (proves the SQL Server branch of
+    /// the `.cs`/`.json` conditional processing was selected cleanly).
+    /// </summary>
+    [Fact]
+    public async Task GenerateAndBuild_DornWebApiTemplateWithDockerComposeAndSqlServer_ProducesBuildableSolution()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-tests-{Guid.NewGuid():N}");
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornIntegrationTestComposeSqlServerApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string>
+                {
+                    ["Orchestrator"] = "docker-compose",
+                    ["DatabaseProvider"] = "sqlserver",
+                }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+            Assert.NotEmpty(result.CreatedFiles);
+
+            var composeFile = Path.Combine(outputDirectory, "docker-compose.yml");
+            Assert.True(File.Exists(composeFile));
+            var composeContent = await File.ReadAllTextAsync(composeFile);
+            Assert.Contains("sqlserver:", composeContent);
+            Assert.Contains("ConnectionStrings__", composeContent);
+
+            var migrationsDirectory = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornIntegrationTestComposeSqlServerApp.Infrastructure",
+                "Persistence",
+                "Migrations"
+            );
+            Assert.True(Directory.Exists(migrationsDirectory));
+            Assert.False(Directory.Exists(Path.Combine(migrationsDirectory, "Sqlite")));
+            Assert.False(Directory.Exists(Path.Combine(migrationsDirectory, "SqlServer")));
+
+            var appSettingsContent = await File.ReadAllTextAsync(
+                Path.Combine(
+                    outputDirectory,
+                    "src",
+                    "DornIntegrationTestComposeSqlServerApp.WebApi",
+                    "appsettings.json"
+                )
+            );
+            Assert.DoesNotContain("//#if", appSettingsContent);
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
             );
         }
         finally
@@ -187,20 +356,19 @@ public class WebApiTemplateGenerationTests
     /// build can be reused by the next one (even across sequential test runs) and hang once its
     /// cached state points at a since-deleted temp directory. These solutions are always deleted
     /// right after the build, so there's no warm-cache benefit worth keeping node reuse for.
+    ///
+    /// Now that the aspire `.slnx` correctly references AppHost/ServiceDefaults (Orchestrator
+    /// symbol fix), the restore graph has more entry points that can transitively re-evaluate the
+    /// same shared project (e.g. AppHost -> WebApi -> ServiceDefaults vs. WebApi -> ServiceDefaults
+    /// directly), which can still race on a shared generated file even with `-maxCpuCount:1` on the
+    /// coordinating `dotnet restore` invocation. RestoreWithRetryAsync retries the restore step a
+    /// bounded number of times on that specific known-flaky failure signature.
     /// </summary>
     private static async Task<(int ExitCode, string StdOut, string StdErr)> RunDotnetBuildAsync(
         string solutionPath
     )
     {
-        var localNuGetFeed = ResolveLocalNuGetFeed();
-
-        var restoreResult = await RunProcessAsync(
-            solutionPath,
-            "restore",
-            solutionPath,
-            $"-p:RestoreAdditionalProjectSources={localNuGetFeed}",
-            "-nodeReuse:false"
-        );
+        var restoreResult = await RestoreWithRetryAsync(solutionPath);
         if (restoreResult.ExitCode != 0)
         {
             return restoreResult;
@@ -215,6 +383,50 @@ public class WebApiTemplateGenerationTests
             "--no-restore",
             "-nodeReuse:false"
         );
+    }
+
+    /// <summary>
+    /// Retries `dotnet restore` on the known-flaky "file already exists" NuGet race (a shared
+    /// generated file, e.g. *.nuget.g.props/project.assets.json, written concurrently by two
+    /// restore graph entry points that transitively reach the same project — see the remarks on
+    /// <see cref="RunDotnetBuildAsync"/>). Only that specific signature is retried; any other
+    /// restore failure returns immediately on the first attempt.
+    /// </summary>
+    private static async Task<(int ExitCode, string StdOut, string StdErr)> RestoreWithRetryAsync(
+        string solutionPath,
+        int maxAttempts = 3
+    )
+    {
+        var localNuGetFeed = ResolveLocalNuGetFeed();
+        (int ExitCode, string StdOut, string StdErr) result = (1, "", "");
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            result = await RunProcessAsync(
+                solutionPath,
+                "restore",
+                solutionPath,
+                $"-p:RestoreAdditionalProjectSources={localNuGetFeed}",
+                "-nodeReuse:false",
+                "-maxCpuCount:1"
+            );
+
+            if (result.ExitCode == 0)
+            {
+                return result;
+            }
+
+            // MSBuild writes this specific error to stdout (its console logger), not stderr.
+            var isKnownRace =
+                result.StdOut.Contains("already exists", StringComparison.OrdinalIgnoreCase)
+                || result.StdErr.Contains("already exists", StringComparison.OrdinalIgnoreCase);
+            if (!isKnownRace || attempt == maxAttempts)
+            {
+                return result;
+            }
+        }
+
+        return result;
     }
 
     /// <summary>
