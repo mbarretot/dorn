@@ -25,7 +25,24 @@
       "defaultValue": "sqlite",
       "description": "The EF Core database provider used for persistence."
     },
-    "UseSqlServer": { "type": "computed", "value": "(DatabaseProvider == \"sqlserver\")" }
+    "UseSqlServer": { "type": "computed", "value": "(DatabaseProvider == \"sqlserver\")" },
+    "Orchestrator": {
+      "type": "parameter",
+      "datatype": "choice",
+      "choices": [
+        {
+          "choice": "aspire",
+          "description": "Local orchestration via .NET Aspire AppHost (default)."
+        },
+        {
+          "choice": "docker-compose",
+          "description": "Docker Compose scaffolding; no Aspire dependency."
+        }
+      ],
+      "defaultValue": "aspire",
+      "description": "Local orchestration approach for the generated service."
+    },
+    "UseAspire": { "type": "computed", "value": "(Orchestrator == \"aspire\")" }
   },
   "sources": [
     {
@@ -47,6 +64,39 @@
             "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/": "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/"
           },
           "exclude": ["src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/**"]
+        },
+        {
+          "condition": "(!UseAspire)",
+          "exclude": [
+            "src/CleanArchWebApi.AppHost/**",
+            "src/CleanArchWebApi.ServiceDefaults/**"
+          ]
+        },
+        {
+          "condition": "(UseAspire)",
+          "exclude": [
+            "CleanArchWebApi.Compose.slnx",
+            "docker-compose.yml",
+            "docker-compose.SqlServer.yml"
+          ]
+        },
+        {
+          "condition": "(!UseAspire)",
+          "rename": {
+            "CleanArchWebApi.Compose.slnx": "CleanArchWebApi.slnx"
+          },
+          "exclude": ["CleanArchWebApi.slnx"]
+        },
+        {
+          "condition": "(!UseAspire && UseSqlServer)",
+          "rename": {
+            "docker-compose.SqlServer.yml": "docker-compose.yml"
+          },
+          "exclude": ["docker-compose.yml"]
+        },
+        {
+          "condition": "(!UseAspire && !UseSqlServer)",
+          "exclude": ["docker-compose.SqlServer.yml"]
         }
       ]
     }
