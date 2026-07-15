@@ -23,6 +23,9 @@
         <Project Path="templates/webapi/src/CleanArchWebApi.ServiceDefaults/CleanArchWebApi.ServiceDefaults.csproj" />
         <Project Path="templates/webapi/src/CleanArchWebApi.WebApi/CleanArchWebApi.WebApi.csproj" />
         <Project Path="templates/webapi/tests/CleanArchWebApi.Application.Tests/CleanArchWebApi.Application.Tests.csproj" />
+        <Project Path="templates/webapi/tests/CleanArchWebApi.Architecture.Tests/CleanArchWebApi.Architecture.Tests.csproj" />
+        <Project Path="templates/webapi/tests/CleanArchWebApi.Functional.Tests/CleanArchWebApi.Functional.Tests.csproj" />
+        <Project Path="templates/webapi/tests/CleanArchWebApi.Integration.Tests/CleanArchWebApi.Integration.Tests.csproj" />
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/Dorn.Cli.Tests/Dorn.Cli.Tests.csproj" />

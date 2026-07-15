@@ -17,9 +17,8 @@ public static class TemplateLocator
     /// 2. Walk up from AppContext.BaseDirectory looking for a "templates" directory that
     ///    contains at least one template (a subdirectory with .template.config). This
     ///    covers both `dotnet run`/`dotnet exec` from inside the repo (bin/.../net10.0 is
-    ///    several levels below the repo root) and a future packaged global tool layout
-    ///    that ships templates/ next to the tool. There is no packaging story yet for
-    ///    Dorn as an installed global tool, so this fallback is intentionally lenient.
+    ///    several levels below the repo root) and the packaged global tool layout, which
+    ///    ships templates/ next to the tool under tools/&lt;tfm&gt;/any/ (see Dorn.Cli.csproj).
     /// </summary>
     public static string ResolveTemplatesRoot()
     {

@@ -17,6 +17,12 @@ public sealed class NewWebApiSettings : CommandSettings
     [Description("Overwrite existing files in the output directory.")]
     public bool Force { get; init; }
 
+    [CommandOption("--orm")]
+    [Description(
+        "ORM: efcore (default) or dapper. Prompted interactively if omitted and the session is interactive."
+    )]
+    public string? Orm { get; init; }
+
     [CommandOption("--database")]
     [Description(
         "Database provider: sqlite (default) or sqlserver. Prompted interactively if omitted and the session is interactive."

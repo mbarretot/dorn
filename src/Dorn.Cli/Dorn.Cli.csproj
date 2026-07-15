@@ -9,6 +9,9 @@
         <ToolCommandName>dorn</ToolCommandName>
         <PackageId>Dorn.Cli</PackageId>
         <PackageOutputPath>$(MSBuildThisFileDirectory)nupkg</PackageOutputPath>
+        <!-- templates/ ships dotfiles (.template.config, .editorconfig, .dockerignore) that
+             NuGet excludes from packing by default; keep them. -->
+        <NoDefaultExcludes>true</NoDefaultExcludes>
     </PropertyGroup>
 
     <ItemGroup>
@@ -19,5 +22,19 @@
     <ItemGroup>
         <PackageReference Include="Spectre.Console.Cli" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    </ItemGroup>
+
+    <!--
+      Ship templates/ alongside the tool's build output so TemplateLocator finds it
+      when Dorn is installed as a global tool (tools/<tfm>/any/templates/...). Items with
+      CopyToOutputDirectory are included by PackAsTool's tool payload automatically.
+    -->
+    <ItemGroup>
+        <None
+            Include="..\..\templates\**\*"
+            Exclude="..\..\templates\**\bin\**;..\..\templates\**\obj\**;..\..\templates\**\TestResults\**;..\..\templates\**\*.user"
+            CopyToOutputDirectory="PreserveNewest"
+            Link="templates\%(RecursiveDir)%(Filename)%(Extension)"
+        />
     </ItemGroup>
 </Project>

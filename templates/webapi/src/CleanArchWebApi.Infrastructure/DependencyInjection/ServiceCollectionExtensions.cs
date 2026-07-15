@@ -1,4 +1,5 @@
-using CleanArchWebApi.Infrastructure.Persistence;
+using CleanArchWebApi.Application.Common.Persistence;
+using CleanArchWebApi.Domain.Common.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,6 +12,7 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration
     )
     {
+#if (UseEfCore)
         services.AddDbContext<ApplicationDbContext>(options =>
 #if (UseSqlServer)
             options.UseSqlServer(configuration.GetConnectionString("CleanArchWebApi"))
@@ -22,6 +24,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IApplicationDbContext>(sp =>
             sp.GetRequiredService<ApplicationDbContext>()
         );
+
+        services.AddScoped<ITodoItemRepository, Repositories.EfCore.TodoItemRepository>();
+#endif
+
+#if (UseDapper)
+        services.AddScoped<Repositories.Dapper.DapperContext>();
+
+        services.AddScoped<ITodoItemRepository, Repositories.Dapper.TodoItemRepository>();
+#endif
 
         return services;
     }

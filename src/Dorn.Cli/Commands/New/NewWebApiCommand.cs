@@ -22,6 +22,13 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
             return 1;
         }
 
+        var ormValidation = OrmValidator.Validate(settings.Orm);
+        if (!ormValidation.IsValid)
+        {
+            WriteErrorPanel("Invalid ORM", ormValidation.ErrorMessage);
+            return 1;
+        }
+
         var databaseValidation = DatabaseProviderValidator.Validate(settings.Database);
         if (!databaseValidation.IsValid)
         {
@@ -37,6 +44,19 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
         }
 
         var outputDirectory = Path.GetFullPath(settings.Output ?? Path.Combine(".", settings.Name));
+
+        var orm =
+            settings.Orm?.ToLowerInvariant()
+            ?? (
+                _console.Profile.Capabilities.Interactive
+                    ? _console.Prompt(
+                        new SelectionPrompt<string>()
+                            .Title("Select an [green]ORM[/]:")
+                            .AddChoices("efcore", "dapper")
+                            .UseConverter(o => o == "dapper" ? "Dapper" : "Entity Framework Core")
+                    )
+                    : "efcore"
+            );
 
         var databaseProvider =
             settings.Database?.ToLowerInvariant()
@@ -79,6 +99,7 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
             OutputDirectory: outputDirectory,
             Parameters: new Dictionary<string, string>
             {
+                ["Orm"] = orm,
                 ["DatabaseProvider"] = databaseProvider,
                 ["Orchestrator"] = orchestrator,
             },

@@ -1,35 +1,63 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    <ItemGroup>
-        <ProjectReference Include="..\CleanArchWebApi.Application\CleanArchWebApi.Application.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CleanArchWebApi.Domain\CleanArchWebApi.Domain.csproj" />
+    <ProjectReference Include="..\CleanArchWebApi.Application\CleanArchWebApi.Application.csproj" />
+  </ItemGroup>
 
-    <!--
-      Dorn.sln includes this un-generated csproj directly, where both Sqlite/ and
-      SqlServer/ migration folders exist side by side and would otherwise both compile,
-      producing duplicate ModelSnapshot symbols.
-    -->
-    <ItemGroup>
-        <Compile
-            Remove="Persistence\Migrations\SqlServer\**\*.cs"
-            Condition="'$(UseSqlServer)' != 'True'"
-        />
-        <Compile
-            Remove="Persistence\Migrations\Sqlite\**\*.cs"
-            Condition="'$(UseSqlServer)' == 'True'"
-        />
-    </ItemGroup>
+  <!-- Exclude ORM-specific files based on selected provider -->
+  <ItemGroup>
+    <!-- When UseEfCore is true, exclude Dapper files -->
+    <Compile Remove="Repositories\Dapper\**\*.cs" Condition="'$(UseEfCore)' == 'True'" />
+    <!-- When UseDapper is true, exclude EfCore files -->
+    <Compile Remove="Repositories\EfCore\**\*.cs" Condition="'$(UseDapper)' == 'True'" />
+    <!-- Exclude migrations when using Dapper -->
+    <Compile Remove="Persistence\Migrations\**\*.cs" Condition="'$(UseDapper)' == 'True'" />
+    <!-- Exclude ApplicationDbContext when using Dapper -->
+    <Compile Remove="Persistence\ApplicationDbContext.cs" Condition="'$(UseDapper)' == 'True'" />
+    <!-- Exclude SqlServer migrations when UseSqlServer is false -->
+    <Compile
+      Remove="Persistence\Migrations\SqlServer\**\*.cs"
+      Condition="'$(UseSqlServer)' != 'True'"
+    />
+    <!-- Exclude Sqlite migrations when UseSqlServer is true -->
+    <Compile
+      Remove="Persistence\Migrations\Sqlite\**\*.cs"
+      Condition="'$(UseSqlServer)' == 'True'"
+    />
+  </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Dorn.Messaging.Contracts" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" />
-        <PackageReference
-            Include="Microsoft.EntityFrameworkCore.Sqlite"
-            Condition="'$(UseSqlServer)' != 'True'"
-        />
-        <PackageReference
-            Include="Microsoft.EntityFrameworkCore.SqlServer"
-            Condition="'$(UseSqlServer)' == 'True'"
-        />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Dorn.Messaging.Contracts" />
+
+    <!-- EF Core packages — only when Orm=efcore -->
+    <PackageReference
+      Include="Microsoft.EntityFrameworkCore"
+      Condition="'$(UseEfCore)' == 'True'"
+    />
+    <PackageReference
+      Include="Microsoft.EntityFrameworkCore.Sqlite"
+      Condition="'$(UseEfCore)' == 'True' And '$(UseSqlServer)' != 'True'"
+    />
+    <PackageReference
+      Include="Microsoft.EntityFrameworkCore.SqlServer"
+      Condition="'$(UseEfCore)' == 'True' And '$(UseSqlServer)' == 'True'"
+    />
+    <PackageReference
+      Include="Microsoft.EntityFrameworkCore.Design"
+      Condition="'$(UseEfCore)' == 'True'"
+    />
+
+    <!-- Dapper packages — only when Orm=dapper -->
+    <PackageReference Include="Dapper" Condition="'$(UseDapper)' == 'True'" />
+    <PackageReference
+      Include="Microsoft.Data.Sqlite"
+      Condition="'$(UseDapper)' == 'True' And '$(UseSqlServer)' != 'True'"
+    />
+    <PackageReference
+      Include="Microsoft.Data.SqlClient"
+      Condition="'$(UseDapper)' == 'True' And '$(UseSqlServer)' == 'True'"
+    />
+
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+  </ItemGroup>
 </Project>

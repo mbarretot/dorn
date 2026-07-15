@@ -11,7 +11,10 @@ src/
 ├── ProjectName.Infrastructure/    # EF Core DbContext, migraciones
 └── ProjectName.WebApi/           # Minimal API endpoints, Program.cs
 tests/
-└── ProjectName.Application.Tests/  # xUnit + Nsubstitute
+├── ProjectName.Application.Tests/    # Unit: handlers, provider-agnostic (SQLite in-memory)
+├── ProjectName.Integration.Tests/    # Integration: real DatabaseProvider (Testcontainers para SQL Server)
+├── ProjectName.Architecture.Tests/   # Architecture: reglas de layering (NetArchTest.Rules)
+└── ProjectName.Functional.Tests/     # Functional: WebApplicationFactory, HTTP end-to-end
 ```
 
 Con `--orchestrator aspire` se agrega `ProjectName.AppHost/` y `ProjectName.ServiceDefaults/`.
@@ -130,10 +133,32 @@ public sealed class CreateTodoItemCommandValidator : AbstractValidator<CreateTod
 }
 ```
 
+## Estrategia de testing
+
+Cuatro niveles, cada uno con un objetivo distinto:
+
+| Proyecto             | Objetivo                                                                              | Base de datos                                | Docker                                           |
+| -------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------ |
+| `Application.Tests`  | Unit — handlers, validators, behaviors, rapido                                        | SQLite in-memory (`EnsureCreated`)           | No                                               |
+| `Integration.Tests`  | Persistencia real contra el `DatabaseProvider` elegido, via `Database.MigrateAsync()` | SQLite archivo o SQL Server real             | Solo con `--database sqlserver` (Testcontainers) |
+| `Architecture.Tests` | Fitness functions: Domain/Application/Infrastructure no se filtran entre capas        | —                                            | No                                               |
+| `Functional.Tests`   | Round-trip HTTP real via `WebApplicationFactory<Program>`                             | SQLite (forzado, independiente del provider) | No                                               |
+
+`Integration.Tests` es el unico nivel que puede requerir Docker, y solo cuando el proyecto
+se genero con `--database sqlserver`: usa `Testcontainers.MsSql` para levantar un SQL Server
+real y correr las migraciones EF Core reales contra el, en vez de `EnsureCreated()`. Con
+`--database sqlite` (default) no hay Docker involucrado en ningun nivel.
+
+`Functional.Tests` fuerza SQLite en un archivo temporal unico, sin importar el
+`DatabaseProvider` elegido — su objetivo es probar el pipeline HTTP (routing, validacion,
+serializacion), no la fidelidad del provider, que ya cubre `Integration.Tests`.
+
+Ver `docs/adr/0013-four-tier-test-strategy.md` para el detalle de esta decision.
+
 ## Options
 
-| Parametro | Default | Descripcion |
-|---|---|---|
+| Parametro          | Default  | Descripcion                                             |
+| ------------------ | -------- | ------------------------------------------------------- |
 | `DatabaseProvider` | `sqlite` | `sqlite` (zero-config) o `sqlserver` (Aspire container) |
-| `Orchestrator` | `aspire` | `aspire` (AppHost) o `docker-compose` |
-| `IncludeTests` | `true` | Incluir proyecto de tests |
+| `Orchestrator`     | `aspire` | `aspire` (AppHost) o `docker-compose`                   |
+| `IncludeTests`     | `true`   | Incluir proyecto de tests                               |

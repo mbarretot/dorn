@@ -6,15 +6,27 @@
   "name": "Dorn Clean Architecture Web API",
   "description": "Production-ready Clean Architecture Web API with CQRS, layered structure, and Docker support.",
   "shortName": "dorn-webapi",
-  "sourceName": "CleanArchWebApi",
   "preferNameDirectory": true,
+  "sourceName": "CleanArchWebApi",
   "symbols": {
     "IncludeTests": {
       "type": "parameter",
       "datatype": "bool",
       "defaultValue": "true",
-      "description": "Include the xUnit test project for the Application layer."
+      "description": "Include the xUnit test projects: Unit (Application), Integration (real DatabaseProvider), Architecture (layering rules), and Functional (HTTP endpoints)."
     },
+    "Orm": {
+      "type": "parameter",
+      "datatype": "choice",
+      "choices": [
+        { "choice": "efcore", "description": "Entity Framework Core — migrations, change tracking, DbContext (default)." },
+        { "choice": "dapper", "description": "Dapper — micro-ORM, raw SQL, maximum control and performance." }
+      ],
+      "defaultValue": "efcore",
+      "description": "The Object-Relational Mapper used for data access."
+    },
+    "UseEfCore": { "type": "computed", "value": "(Orm == \"efcore\")" },
+    "UseDapper": { "type": "computed", "value": "(Orm == \"dapper\")" },
     "DatabaseProvider": {
       "type": "parameter",
       "datatype": "choice",
@@ -50,6 +62,18 @@
         {
           "condition": "(!IncludeTests)",
           "exclude": ["tests/**"]
+        },
+        {
+          "condition": "(UseDapper)",
+          "exclude": [
+            "src/CleanArchWebApi.Infrastructure/Repositories/EfCore/**",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/**",
+            "src/CleanArchWebApi.Infrastructure/Persistence/ApplicationDbContext.cs"
+          ]
+        },
+        {
+          "condition": "(UseEfCore)",
+          "exclude": ["src/CleanArchWebApi.Infrastructure/Repositories/Dapper/**"]
         },
         {
           "condition": "(UseSqlServer)",
