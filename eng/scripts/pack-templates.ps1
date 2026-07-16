@@ -1,5 +1,5 @@
 # Pack templates/webapi as a NuGet template package to ./artifacts
-param([string]$Version = "0.1.0-dev")
+param([string]$Version = "1.0.1")
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "../..")
 $packagingProject = Join-Path $repoRoot "eng/packaging/Dorn.Templates.WebApi/Dorn.Templates.WebApi.csproj"

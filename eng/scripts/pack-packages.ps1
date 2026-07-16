@@ -1,5 +1,5 @@
 # Pack Dorn packages to ./artifacts for local dev/CI feed
-param([string]$Version = "0.1.0-dev")
+param([string]$Version = "1.0.1")
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "../..")
 $artifactsDir = Join-Path $repoRoot "artifacts"
