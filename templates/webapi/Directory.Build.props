@@ -1,19 +1,19 @@
 <Project>
-    <!--
+  <!--
     Self-contained on purpose: this template is copied outside the Dorn repo when
     generated, so it must build standalone without chaining to the Dorn root's
     Directory.Build.props (MSBuild only auto-imports the nearest one walking up
     the tree, it does not merge multiple).
   -->
 
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <LangVersion>latest</LangVersion>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
 
-    <!--
+  <!--
     Defaults that allow the template to compile when built IN PLACE inside the
     Dorn solution (`dotnet build Dorn.slnx`). The Template Engine replaces these
     via .template.config/template.json when generating a project; without them
@@ -26,9 +26,27 @@
     DatabaseProvider=sqlite) so the build that CI runs is the same shape a
     user gets when they run `dotnet new dorn-webapi` with no flags.
     -->
-    <PropertyGroup>
-        <UseEfCore Condition="'$(UseEfCore)' == ''">True</UseEfCore>
-        <UseDapper Condition="'$(UseDapper)' == ''">False</UseDapper>
-        <UseSqlServer Condition="'$(UseSqlServer)' == ''">False</UseSqlServer>
-    </PropertyGroup>
+  <PropertyGroup>
+    <UseEfCore Condition="'$(UseEfCore)' == ''">True</UseEfCore>
+    <UseDapper Condition="'$(UseDapper)' == ''">False</UseDapper>
+    <UseSqlServer Condition="'$(UseSqlServer)' == ''">False</UseSqlServer>
+  </PropertyGroup>
+
+  <!--
+    Translate MSBuild ORM flags into C# preprocessor symbols so #if (UseEfCore)
+    blocks (used in *.cs files for conditional imports/global usings) resolve
+    correctly when the template is built IN PLACE inside Dorn.slnx. The
+    Template Engine evaluates #if directives at generation time and emits the
+    correct version; for in-place builds we need the C# compiler to see the
+    symbols explicitly.
+    -->
+  <PropertyGroup Condition="'$(UseEfCore)' == 'True' OR '$(UseEfCore)' == 'true'">
+    <DefineConstants>$(DefineConstants);UseEfCore</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(UseDapper)' == 'True' OR '$(UseDapper)' == 'true'">
+    <DefineConstants>$(DefineConstants);UseDapper</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(UseSqlServer)' == 'True' OR '$(UseSqlServer)' == 'true'">
+    <DefineConstants>$(DefineConstants);UseSqlServer</DefineConstants>
+  </PropertyGroup>
 </Project>
