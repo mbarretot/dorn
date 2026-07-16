@@ -1,5 +1,6 @@
 using Dorn.Abstractions.Generation;
 using Dorn.Cli.Commands.New;
+using Dorn.Cli.Execution;
 using Dorn.Cli.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -32,12 +33,18 @@ file sealed class EmptyRemainingArguments : IRemainingArguments
 /// </summary>
 public class NewWebApiCommandTests
 {
-    private static (CommandAppTester App, IGenerationEngine Engine) CreateApp()
+    private static (
+        CommandAppTester App,
+        IGenerationEngine Engine,
+        IProcessRunner ProcessRunner
+    ) CreateApp()
     {
         var engine = Substitute.For<IGenerationEngine>();
+        var processRunner = Substitute.For<IProcessRunner>();
 
         var services = new ServiceCollection();
         services.AddSingleton(engine);
+        services.AddSingleton(processRunner);
 
         var registrar = new TypeRegistrar(services);
         var app = new CommandAppTester(registrar);
@@ -53,13 +60,13 @@ public class NewWebApiCommandTests
             );
         });
 
-        return (app, engine);
+        return (app, engine, processRunner);
     }
 
     [Fact]
     public async Task NewWebApi_WithSuccessfulGeneration_ReturnsExitCodeZeroAndCallsEngineWithExpectedRequest()
     {
-        var (app, engine) = CreateApp();
+        var (app, engine, _) = CreateApp();
         engine
             .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
@@ -80,7 +87,7 @@ public class NewWebApiCommandTests
     [Fact]
     public async Task NewWebApi_WithFailedGeneration_ReturnsNonZeroExitCode()
     {
-        var (app, engine) = CreateApp();
+        var (app, engine, _) = CreateApp();
         engine
             .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(
@@ -100,7 +107,7 @@ public class NewWebApiCommandTests
     [Fact]
     public async Task NewWebApi_WithExplicitDatabaseOption_PassesThroughUntouched()
     {
-        var (app, engine) = CreateApp();
+        var (app, engine, _) = CreateApp();
         engine
             .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
@@ -123,7 +130,7 @@ public class NewWebApiCommandTests
     {
         // CommandAppTester's default TestConsole has InteractionSupport.Detect, which resolves
         // to non-interactive when there is no real TTY (true for `dotnet test` runs and CI).
-        var (app, engine) = CreateApp();
+        var (app, engine, _) = CreateApp();
         engine
             .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
@@ -159,7 +166,7 @@ public class NewWebApiCommandTests
         console.Input.PushKey(ConsoleKey.DownArrow);
         console.Input.PushKey(ConsoleKey.Enter);
 
-        var command = new NewWebApiCommand(engine, console);
+        var command = new NewWebApiCommand(engine, Substitute.For<IProcessRunner>(), console);
         var context = new CommandContext(
             Array.Empty<string>(),
             new EmptyRemainingArguments(),
@@ -186,7 +193,7 @@ public class NewWebApiCommandTests
     [Fact]
     public async Task NewWebApi_WithInvalidDatabaseOption_ReturnsExitCodeOneAndNeverCallsEngine()
     {
-        var (app, engine) = CreateApp();
+        var (app, engine, _) = CreateApp();
 
         var result = await app.RunAsync(["new", "webapi", "MyApp", "--database", "postgres"]);
 
@@ -201,7 +208,7 @@ public class NewWebApiCommandTests
     public async Task NewWebApi_WithSqlServerAndAspireUnsafeProjectName_ReturnsExitCodeOneAndNeverCallsEngine()
     {
         // "My.App" passes ProjectNameValidator but is invalid as an Aspire resource name (ASPIRE006).
-        var (app, engine) = CreateApp();
+        var (app, engine, _) = CreateApp();
 
         var result = await app.RunAsync(["new", "webapi", "My.App", "--database", "sqlserver"]);
 
@@ -216,7 +223,7 @@ public class NewWebApiCommandTests
     public async Task NewWebApi_WithSqlite_AllowsProjectNamesThatAreUnsafeForAspire()
     {
         // The Aspire resource-name constraint only applies to --database sqlserver.
-        var (app, engine) = CreateApp();
+        var (app, engine, _) = CreateApp();
         engine
             .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new GenerationResult(true, "/tmp/My.App", ["Program.cs"], []));
@@ -232,7 +239,7 @@ public class NewWebApiCommandTests
     [Fact]
     public async Task NewWebApi_WithExplicitOrchestratorOption_PassesThroughUntouched()
     {
-        var (app, engine) = CreateApp();
+        var (app, engine, _) = CreateApp();
         engine
             .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
@@ -259,7 +266,7 @@ public class NewWebApiCommandTests
     [Fact]
     public async Task NewWebApi_WithOmittedOrchestratorAndNonInteractiveConsole_FallsBackToAspireWithoutPrompting()
     {
-        var (app, engine) = CreateApp();
+        var (app, engine, _) = CreateApp();
         engine
             .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
@@ -295,7 +302,7 @@ public class NewWebApiCommandTests
         console.Input.PushKey(ConsoleKey.DownArrow);
         console.Input.PushKey(ConsoleKey.Enter);
 
-        var command = new NewWebApiCommand(engine, console);
+        var command = new NewWebApiCommand(engine, Substitute.For<IProcessRunner>(), console);
         var context = new CommandContext(
             Array.Empty<string>(),
             new EmptyRemainingArguments(),
@@ -322,7 +329,7 @@ public class NewWebApiCommandTests
     [Fact]
     public async Task NewWebApi_WithInvalidOrchestratorOption_ReturnsExitCodeOneAndNeverCallsEngine()
     {
-        var (app, engine) = CreateApp();
+        var (app, engine, _) = CreateApp();
 
         var result = await app.RunAsync(["new", "webapi", "MyApp", "--orchestrator", "kubernetes"]);
 
@@ -338,7 +345,7 @@ public class NewWebApiCommandTests
     {
         // "My.App" fails ASPIRE006 (see the aspire+sqlserver case above) but the compose
         // path never creates an Aspire resource, so the name gate must not apply here.
-        var (app, engine) = CreateApp();
+        var (app, engine, _) = CreateApp();
         engine
             .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
             .Returns(new GenerationResult(true, "/tmp/My.App", ["Program.cs"], []));
@@ -357,5 +364,156 @@ public class NewWebApiCommandTests
         await engine
             .Received(1)
             .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    // -------------------------------------------------------------------------
+    // Post-generation `dotnet tool restore` (PR5)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task NewWebApi_WithSuccessfulGeneration_RunsDotnetToolRestore()
+    {
+        var (app, engine, processRunner) = CreateApp();
+        var tempDir = Path.Combine(Path.GetTempPath(), $"dorn-restore-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var request = callInfo.ArgAt<GenerationRequest>(0);
+                var manifestDir = Path.Combine(request.OutputDirectory, ".config");
+                Directory.CreateDirectory(manifestDir);
+                File.WriteAllText(Path.Combine(manifestDir, "dotnet-tools.json"), "{}");
+                return new GenerationResult(true, request.OutputDirectory, ["Program.cs"], []);
+            });
+
+        try
+        {
+            var result = await app.RunAsync(["new", "webapi", "MyApp", "--output", tempDir]);
+
+            Assert.Equal(0, result.ExitCode);
+            await processRunner
+                .Received(1)
+                .RunAsync(
+                    Arg.Is<ProcessSpec>(s =>
+                        s.FileName == "dotnet"
+                        && s.Arguments.Contains("tool")
+                        && s.Arguments.Contains("restore")
+                    ),
+                    Arg.Any<CancellationToken>()
+                );
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithNoRestoreFlag_SkipsDotnetToolRestore()
+    {
+        var (app, engine, processRunner) = CreateApp();
+        var tempDir = Path.Combine(Path.GetTempPath(), $"dorn-norestore-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var request = callInfo.ArgAt<GenerationRequest>(0);
+                var manifestDir = Path.Combine(request.OutputDirectory, ".config");
+                Directory.CreateDirectory(manifestDir);
+                File.WriteAllText(Path.Combine(manifestDir, "dotnet-tools.json"), "{}");
+                return new GenerationResult(true, request.OutputDirectory, ["Program.cs"], []);
+            });
+
+        try
+        {
+            var result = await app.RunAsync([
+                "new",
+                "webapi",
+                "MyApp",
+                "--output",
+                tempDir,
+                "--no-restore",
+            ]);
+
+            Assert.Equal(0, result.ExitCode);
+            await processRunner
+                .DidNotReceive()
+                .RunAsync(
+                    Arg.Is<ProcessSpec>(s =>
+                        s.FileName == "dotnet"
+                        && s.Arguments.Contains("tool")
+                        && s.Arguments.Contains("restore")
+                    ),
+                    Arg.Any<CancellationToken>()
+                );
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task NewWebApi_WhenToolRestoreFails_StillReturnsZeroWithWarning()
+    {
+        var (app, engine, processRunner) = CreateApp();
+        var tempDir = Path.Combine(Path.GetTempPath(), $"dorn-restore-fail-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var request = callInfo.ArgAt<GenerationRequest>(0);
+                var manifestDir = Path.Combine(request.OutputDirectory, ".config");
+                Directory.CreateDirectory(manifestDir);
+                File.WriteAllText(Path.Combine(manifestDir, "dotnet-tools.json"), "{}");
+                return new GenerationResult(true, request.OutputDirectory, ["Program.cs"], []);
+            });
+        processRunner.RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>()).Returns(1); // restore fails
+
+        try
+        {
+            var result = await app.RunAsync(["new", "webapi", "MyApp", "--output", tempDir]);
+
+            // Generation succeeded; restore is best-effort and must not fail the command.
+            Assert.Equal(0, result.ExitCode);
+            Assert.Contains("Warning", result.Output, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithoutManifestInOutput_SkipsDotnetToolRestore()
+    {
+        var (app, engine, processRunner) = CreateApp();
+        // Use a unique empty output dir; engine returns success without creating a manifest.
+        var tempDir = Path.Combine(Path.GetTempPath(), $"dorn-no-manifest-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, tempDir, ["Program.cs"], []));
+
+        try
+        {
+            var result = await app.RunAsync(["new", "webapi", "MyApp", "--output", tempDir]);
+
+            Assert.Equal(0, result.ExitCode);
+            await processRunner
+                .DidNotReceive()
+                .RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
     }
 }

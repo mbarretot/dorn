@@ -1,16 +1,21 @@
 using Dorn.Abstractions.Generation;
+using Dorn.Cli.Execution;
 using Dorn.Core.Validation;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Dorn.Cli.Commands.New;
 
-public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiConsole console)
-    : AsyncCommand<NewWebApiSettings>
+public sealed class NewWebApiCommand(
+    IGenerationEngine generationEngine,
+    IProcessRunner processRunner,
+    IAnsiConsole console
+) : AsyncCommand<NewWebApiSettings>
 {
     private const string TemplateShortName = "dorn-webapi";
 
     private readonly IGenerationEngine _generationEngine = generationEngine;
+    private readonly IProcessRunner _processRunner = processRunner;
     private readonly IAnsiConsole _console = console;
 
     public override async Task<int> ExecuteAsync(CommandContext context, NewWebApiSettings settings)
@@ -129,8 +134,51 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
             return 1;
         }
 
+        await TryRestoreLocalToolsAsync(outputDirectory, settings.NoRestore);
+
         RenderSuccess(settings.Name, result);
         return 0;
+    }
+
+    private async Task TryRestoreLocalToolsAsync(string outputDirectory, bool noRestore)
+    {
+        if (noRestore)
+        {
+            _console.MarkupLine("[grey]--no-restore set: skipping `dotnet tool restore`.[/]");
+            return;
+        }
+
+        var manifestPath = Path.Combine(outputDirectory, ".config", "dotnet-tools.json");
+        if (!File.Exists(manifestPath))
+        {
+            // No local manifest -> nothing to restore.
+            return;
+        }
+
+        _console.MarkupLine("[grey]Restoring local tools (dotnet tool restore)...[/]");
+
+        try
+        {
+            var exitCode = await _processRunner.RunAsync(
+                new ProcessSpec("dotnet", ["tool", "restore"], outputDirectory),
+                CancellationToken.None
+            );
+
+            if (exitCode != 0)
+            {
+                _console.MarkupLine(
+                    "[yellow]Warning:[/] `dotnet tool restore` failed (exit "
+                        + exitCode
+                        + "). The generated project is on disk, but local tools may not be available. Run `dotnet tool restore` manually inside the project to fix."
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            _console.MarkupLine(
+                "[yellow]Warning:[/] `dotnet tool restore` threw: " + Markup.Escape(ex.Message)
+            );
+        }
     }
 
     private void WriteErrorPanel(string header, string? message, bool escapeMessage = true)
@@ -157,7 +205,9 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
             _console.Write(table);
         }
 
-        var nextSteps = Markup.Escape($"cd {projectName}{Environment.NewLine}dotnet build");
+        var nextSteps = Markup.Escape(
+            $"cd {projectName}{Environment.NewLine}dotnet build{Environment.NewLine}dotnet dorn test"
+        );
         _console.Write(new Panel(nextSteps).Header("Next steps").BorderColor(Color.Green));
     }
 }
