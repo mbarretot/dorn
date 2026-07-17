@@ -60,8 +60,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: pwsh
         run: >
-          dotnet tool install --tool-path ./.tools/ reportgenerator;
-          ./.tools/reportgenerator/dotnet-reportgenerator
+          dotnet tool install --tool-path ./.tools/ dotnet-reportgenerator-globaltool;
+          ./.tools/reportgenerator
           -reports:"**/coverage.cobertura.xml"
           -targetdir:"./coverage-report"
           -reporttypes:"Html;Cobertura;Badges"
