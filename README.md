@@ -39,8 +39,10 @@ Características principales:
 ### Instalación
 
 ```bash
-dotnet new install Dorn.Templates.WebApi
+dotnet tool install --global Dorn.Cli
 ```
+
+El paquete publicado `Dorn.Cli` instala el ejecutable `dorn`.
 
 ### Uso básico
 
@@ -49,18 +51,36 @@ dorn new webapi MyApp
 cd MyApp && dotnet build
 ```
 
-O con `dotnet new`:
+O, opcionalmente, con el template publicado para `dotnet new`:
 
 ```bash
+dotnet new install Dorn.Templates.WebApi
 dotnet new dorn-webapi -n MyApp
 ```
 
-### Desarrollo local (desde source)
+### Verbos de conveniencia en el proyecto generado
+
+Una vez generado, el proyecto incluye tres verbos que operan sobre él desde la raíz
+(o cualquier padre con `--project <path>`):
 
 ```bash
-dotnet tool install -g dorn
-dorn new webapi MyApp
+dorn test              # corre los 4 tiers (Application / Integration / Architecture / Functional)
+dorn test --tier unit  # un solo tier
+dorn run               # auto-detecta AppHost → Aspire, docker-compose.yml → Compose, sino `dotnet run` plain
+dorn coverage          # tests + cobertura + gate fijo al 80%
 ```
+
+Las dos formas de invocación son equivalentes:
+
+- **`dorn <verbo>`** — global tool (PATH).
+- **`dotnet dorn <verbo>`** — local tool resuelta por `.config/dotnet-tools.json` que
+  `dorn new webapi` ya genera (pinned a `Dorn.Cli`, restaurado automáticamente).
+
+Ver [docs/templates/webapi.md](./docs/templates/webapi.md) para detalles.
+
+### Desarrollo local (desde source)
+
+Los flujos con paquetes `.nupkg` locales y feeds bajo `./artifacts` son solo para contributors y desarrollo local; para uso publicado, instala `Dorn.Cli` desde NuGet. Ver [Getting started](./docs/getting-started.md).
 
 ## Options
 
@@ -133,6 +153,7 @@ Infrastructure/Repositories/
 
 - **.NET 10** con C# 13 (latest)
 - **Microsoft.TemplateEngine.Edge** embebido (no toca cache global de `dotnet new`)
+- **Paquetes NuGet publicados** — `Dorn.Cli`, `Dorn.Templates.WebApi`, `Dorn.Messaging`, `Dorn.Messaging.Contracts` y `Dorn.SharedKernel` en versión `1.0.0`
 - **Mediator pattern** custom MIT (sin MediatR)
 - **EF Core 10** o **Dapper 2.1** según opción seleccionada
 - **xUnit + NSubstitute + ArchUnitNET** para tests

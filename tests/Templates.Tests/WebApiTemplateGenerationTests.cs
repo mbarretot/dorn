@@ -78,6 +78,61 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
+    /// Generated webapi projects MUST ship a .config/dotnet-tools.json manifest that
+    /// pins Dorn.Cli as a local tool — this is what makes <c>dotnet dorn &lt;verb&gt;</c>
+    /// work from inside a generated project without a global tool install.
+    /// </summary>
+    [Fact]
+    public async Task Generate_DornWebApiTemplate_ShipsLocalToolManifestWithDornCli()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-tools-manifest-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornIntegrationTestManifestApp",
+                outputDirectory
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var manifestPath = Path.Combine(outputDirectory, ".config", "dotnet-tools.json");
+            Assert.True(
+                File.Exists(manifestPath),
+                $"Expected local tool manifest at '{manifestPath}' but it was not generated."
+            );
+
+            var manifestJson = File.ReadAllText(manifestPath);
+            Assert.Contains("\"dorn.cli\"", manifestJson, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("\"dorn\"", manifestJson, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("\"rollForward\"", manifestJson, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
     /// Generates with DatabaseProvider = "sqlserver" and builds the result. This is what
     /// actually catches a migration namespace collision or a bad #if/Condition/rename
     /// modifier: if both provider-specific migration folders ever landed in the same

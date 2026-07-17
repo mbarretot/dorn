@@ -33,11 +33,8 @@ no `dorn` tool at all. This is the same mechanism Visual Studio's "Create a new 
 search uses to discover third-party templates.
 
 ```bash
-# Build the package locally (not yet published to NuGet.org — see below):
-pwsh eng/scripts/pack-templates.ps1
-
 # Install it, then generate a project exactly like `dorn new webapi` would:
-dotnet new install ./artifacts/Dorn.Templates.WebApi.*.nupkg
+dotnet new install Dorn.Templates.WebApi
 dotnet new dorn-webapi -n MyApp
 
 # Remove it when you're done:
@@ -49,12 +46,11 @@ This path is completely independent of the `dorn` CLI — it uses the global
 isolated host the `dorn` CLI uses under `~/.dorn/template-engine`. Both paths generate
 from the exact same `templates/webapi/` content.
 
-`Dorn.Templates.WebApi` isn't published to NuGet.org yet (same TODO status as the `dorn`
-CLI's own NuGet publishing — see `eng/README.md`), so for now `dotnet new install` above
-points at a locally built `.nupkg` under `./artifacts/`. Once published,
-`dotnet new install Dorn.Templates.WebApi` will work directly by package ID, without
-building anything locally first. See `docs/adr/0009-dual-distribution-dotnet-new-template-pack.md`
-for the full decision record.
+`Dorn.Templates.WebApi` is published as version `1.0.0` on NuGet, so first-time users
+install it directly by package ID, without building anything locally first. Contributors
+testing unpublished template changes can optionally run `pwsh eng/scripts/pack-templates.ps1`
+and install `./artifacts/Dorn.Templates.WebApi.*.nupkg` explicitly. See
+`docs/adr/0009-dual-distribution-dotnet-new-template-pack.md` for the full decision record.
 
 ## Layers
 
@@ -149,14 +145,11 @@ Omit `--orchestrator` in an interactive terminal to be prompted (labeled "Aspire
 "Docker Compose" in the prompt; the underlying value passed to the template engine is the
 kebab-case `docker-compose`); a non-interactive session falls back to `aspire`.
 
-**Known limitation, not introduced by `--orchestrator docker-compose`:** a generated project's
-`Dorn.Messaging`/`Dorn.Messaging.Contracts`/`Dorn.SharedKernel` package references resolve from
-a local dev NuGet feed, not NuGet.org yet (see ADR 0011,
-`docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`). Plain
-`docker build`/`docker compose build` by an end user outside this repo checkout will fail to
-restore those packages until they're published — the exact same limitation the host
-`dotnet build` already has today. Containerization doesn't fix or work around this; it's
-tracked as a pre-existing gap in ADR 0011 and `eng/README.md`'s TODO list.
+Generated projects reference the published `Dorn.Messaging`, `Dorn.Messaging.Contracts`,
+and `Dorn.SharedKernel` NuGet packages. Version `1.0.0` is available for all three, so
+end-user `dotnet build`, `docker build`, and `docker compose build` restore them from
+NuGet without requiring this repository's local `./artifacts` feed. The local feed remains
+an optional contributor workflow for testing unpublished package changes.
 
 ## The `IncludeTests` parameter
 
@@ -173,6 +166,48 @@ discovered by the Template Engine, or by editing the generated output afterward.
 it through `dorn new webapi` is open for contribution (see
 `src/Dorn.Cli/Commands/New/NewWebApiSettings.cs`/`NewWebApiCommand.cs` for where
 `GenerationRequest.Parameters` would need to be populated from a new CLI option).
+
+## Running the generated project: `dorn test`, `dorn run`, `dorn coverage`
+
+Generated webapi projects ship three convenience verbs that "just work" from the project
+root, with no extra setup beyond the local-tool restore below. They auto-detect
+project layout by file presence and use the right `dotnet test` filter / orchestrator
+for the configuration you chose at generation time.
+
+```bash
+dorn test              # runs all 4 tiers (Application / Integration / Architecture / Functional)
+dorn test --tier unit  # one tier only; also: integration, architecture, functional
+dorn run               # picks AppHost → Aspire, else docker-compose.yml → Compose, else plain `dotnet run`
+dorn coverage          # runs tests with coverage, applies the fixed 80% threshold gate
+```
+
+All three accept `--project <path>` (default: CWD) so they work identically whether you
+run them from inside the generated project or from a parent directory.
+
+`dorn new webapi` automatically runs `dotnet tool restore` after generation (skip with
+`--no-restore`) so the local tool manifest below resolves `dorn.cli` immediately — you
+can then run `dotnet dorn test` (note the `dotnet` prefix; it's local-tool resolution,
+not PATH) with identical behavior.
+
+## Local tool manifest
+
+Every generated webapi project ships `.config/dotnet-tools.json` pinning `dorn.cli` at
+the same `1.0.1` token the rest of the `Dorn.*` packages use. This is what enables
+`dotnet dorn <verb>` from inside a generated project without a global tool install:
+
+```bash
+cd MyApp
+dotnet tool restore    # one-time per clone (dorn new webapi does this automatically)
+dotnet dorn test       # equivalent to `dorn test` from any directory on PATH
+```
+
+If you installed `templates/webapi` via plain `dotnet new install` (no `dorn` CLI
+involved), run `dotnet tool restore` manually — `dorn new webapi` only runs it on its
+own code path.
+
+The manifest is pinned (`rollForward: false`) so a generated project does not silently
+float to a newer major `dorn.cli` version. Upgrade by editing `.config/dotnet-tools.json`
+and re-running `dotnet tool restore`.
 
 ## Code formatting
 

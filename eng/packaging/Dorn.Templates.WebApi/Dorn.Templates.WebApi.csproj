@@ -14,7 +14,7 @@
         <NoWarn>$(NoWarn);NU5128</NoWarn>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageOutputPath>$(MSBuildThisFileDirectory)../../../artifacts</PackageOutputPath>
-        <PackageVersion Condition="'$(PackageVersion)'==''">0.1.0-dev</PackageVersion>
+        <PackageVersion Condition="'$(PackageVersion)'==''">1.0.1</PackageVersion>
     </PropertyGroup>
     <ItemGroup>
         <Content

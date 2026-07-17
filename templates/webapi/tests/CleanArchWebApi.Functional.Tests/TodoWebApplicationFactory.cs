@@ -42,6 +42,10 @@ public sealed class TodoWebApplicationFactory : WebApplicationFactory<Program>
     {
         base.Dispose(disposing);
 
+        // Microsoft.Data.Sqlite pools the native connection by file path — disposing the host
+        // returns it to the pool instead of closing the OS handle, which leaves the file locked
+        // on Windows (Unix allows deleting an open file, masking the issue there).
+        SqliteConnection.ClearAllPools();
         if (File.Exists(_databasePath))
         {
             File.Delete(_databasePath);

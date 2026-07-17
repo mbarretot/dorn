@@ -34,4 +34,10 @@ public sealed class NewWebApiSettings : CommandSettings
         "Orchestrator: aspire (default) or docker-compose. Prompted interactively if omitted and the session is interactive."
     )]
     public string? Orchestrator { get; init; }
+
+    [CommandOption("--no-restore")]
+    [Description(
+        "Skip the automatic `dotnet tool restore` after generation. By default, dorn restores local tools (e.g. dorn.cli) so `dotnet dorn <verb>` works immediately."
+    )]
+    public bool NoRestore { get; init; }
 }

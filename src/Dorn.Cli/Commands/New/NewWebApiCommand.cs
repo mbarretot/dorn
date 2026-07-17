@@ -1,19 +1,40 @@
 using Dorn.Abstractions.Generation;
+using Dorn.Cli.Execution;
 using Dorn.Core.Validation;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Dorn.Cli.Commands.New;
 
-public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiConsole console)
-    : AsyncCommand<NewWebApiSettings>
+public sealed class NewWebApiCommand(
+    IGenerationEngine generationEngine,
+    IProcessRunner processRunner,
+    IAnsiConsole console
+) : AsyncCommand<NewWebApiSettings>
 {
     private const string TemplateShortName = "dorn-webapi";
 
     private readonly IGenerationEngine _generationEngine = generationEngine;
+    private readonly IProcessRunner _processRunner = processRunner;
     private readonly IAnsiConsole _console = console;
 
-    public override async Task<int> ExecuteAsync(CommandContext context, NewWebApiSettings settings)
+    // Note: Spectre.Console.Cli 0.55.0 changed this virtual method from `public` to
+    // `protected` (and added the CancellationToken parameter). Since C# forbids widening
+    // visibility on override, the actual logic lives in the public `RunAsync` method
+    // below; the framework's protected override just delegates to it. Unit tests call
+    // `RunAsync` directly to avoid invoking the command through the full CommandApp
+    // pipeline (CommandAppTester was removed in 0.55.0).
+    protected override Task<int> ExecuteAsync(
+        CommandContext context,
+        NewWebApiSettings settings,
+        CancellationToken cancellationToken
+    ) => RunAsync(settings, cancellationToken);
+
+    /// <summary>
+    /// Runs the new webapi command logic. Public so unit tests can drive the command
+    /// directly without going through the Spectre.Console.Cli command pipeline.
+    /// </summary>
+    public async Task<int> RunAsync(NewWebApiSettings settings, CancellationToken cancellationToken)
     {
         var validation = ProjectNameValidator.Validate(settings.Name);
         if (!validation.IsValid)
@@ -129,8 +150,55 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
             return 1;
         }
 
+        await TryRestoreLocalToolsAsync(outputDirectory, settings.NoRestore, cancellationToken);
+
         RenderSuccess(settings.Name, result);
         return 0;
+    }
+
+    private async Task TryRestoreLocalToolsAsync(
+        string outputDirectory,
+        bool noRestore,
+        CancellationToken cancellationToken
+    )
+    {
+        if (noRestore)
+        {
+            _console.MarkupLine("[grey]--no-restore set: skipping `dotnet tool restore`.[/]");
+            return;
+        }
+
+        var manifestPath = Path.Combine(outputDirectory, ".config", "dotnet-tools.json");
+        if (!File.Exists(manifestPath))
+        {
+            // No local manifest -> nothing to restore.
+            return;
+        }
+
+        _console.MarkupLine("[grey]Restoring local tools (dotnet tool restore)...[/]");
+
+        try
+        {
+            var exitCode = await _processRunner.RunAsync(
+                new ProcessSpec("dotnet", ["tool", "restore"], outputDirectory),
+                cancellationToken
+            );
+
+            if (exitCode != 0)
+            {
+                _console.MarkupLine(
+                    "[yellow]Warning:[/] `dotnet tool restore` failed (exit "
+                        + exitCode
+                        + "). The generated project is on disk, but local tools may not be available. Run `dotnet tool restore` manually inside the project to fix."
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            _console.MarkupLine(
+                "[yellow]Warning:[/] `dotnet tool restore` threw: " + Markup.Escape(ex.Message)
+            );
+        }
     }
 
     private void WriteErrorPanel(string header, string? message, bool escapeMessage = true)
@@ -157,7 +225,9 @@ public sealed class NewWebApiCommand(IGenerationEngine generationEngine, IAnsiCo
             _console.Write(table);
         }
 
-        var nextSteps = Markup.Escape($"cd {projectName}{Environment.NewLine}dotnet build");
+        var nextSteps = Markup.Escape(
+            $"cd {projectName}{Environment.NewLine}dotnet build{Environment.NewLine}dotnet dorn test"
+        );
         _console.Write(new Panel(nextSteps).Header("Next steps").BorderColor(Color.Green));
     }
 }

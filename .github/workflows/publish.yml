@@ -65,6 +65,10 @@ jobs:
           echo "Generated packages:"
           find artifacts -name "*.nupkg"
 
+      - name: Smoke-test packed Dorn.Cli
+        shell: pwsh
+        run: ./eng/scripts/smoke-test-cli.ps1 -ArtifactsDirectory ${{ github.workspace }}/artifacts
+
       - name: Login to NuGet.org (Trusted Publishing)
         id: login
         uses: NuGet/login@v1

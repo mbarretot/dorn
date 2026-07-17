@@ -6,11 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Dorn's own packages - not yet published to NuGet.org, resolved from a local feed during development.
-             See nuget.config, eng/scripts/pack-packages.ps1, and docs/adr/0011-*.md. -->
-    <PackageVersion Include="Dorn.Messaging.Contracts" Version="0.1.0-dev" />
-    <PackageVersion Include="Dorn.Messaging" Version="0.1.0-dev" />
-    <PackageVersion Include="Dorn.SharedKernel" Version="0.1.0-dev" />
+    <!-- Dorn's own packages - resolved from a local feed during development, from NuGet.org
+             for end-user installs. See nuget.config, eng/scripts/pack-packages.ps1, and
+             docs/adr/0011-*.md. -->
+    <PackageVersion Include="Dorn.Messaging.Contracts" Version="1.0.1" />
+    <PackageVersion Include="Dorn.Messaging" Version="1.0.1" />
+    <PackageVersion Include="Dorn.SharedKernel" Version="1.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,13 +23,12 @@
              DatabaseProvider, since tests run against SQLite even when the app targets SQL Server. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
-    <!-- Only Infrastructure references this, and only when DatabaseProvider=sqlserver (see its
-             conditional PackageReference) — safe to exclude the version entry otherwise. -->
-    <PackageVersion
-      Include="Microsoft.EntityFrameworkCore.SqlServer"
-      Version="10.0.9"
-      Condition="'$(UseSqlServer)' == 'True'"
-    />
+    <!-- Always declared (no condition) so Central Package Management can validate the
+             conditional PackageReference in CleanArchWebApi.Infrastructure.csproj regardless
+             of whether UseSqlServer is True or False at template-generation time. Whether the
+             package is actually restored is controlled by the Condition on the
+             <PackageReference> in CleanArchWebApi.Infrastructure.csproj. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
 
     <!-- Micro-ORM: Only Infrastructure references this, and only when Orm=dapper. -->
     <PackageVersion Include="Dapper" Version="2.1.35" />
