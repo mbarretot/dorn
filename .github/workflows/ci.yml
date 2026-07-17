@@ -76,9 +76,16 @@ jobs:
           retention-days: 30
 
       # Packaging smoke test: only needs to run once, not once per OS in the matrix.
+      # Packs at the version pinned in the template's checked-in dotnet-tools.json (the
+      # single source of truth — that's the version generated projects will request via
+      # `dotnet tool restore`), so this stays in sync automatically whenever that pin is
+      # bumped for a release, instead of drifting from the NuGet SDK's silent 1.0.0 default.
       - name: Pack Dorn.Cli (smoke test)
         if: matrix.os == 'ubuntu-latest'
-        run: dotnet pack src/Dorn.Cli/Dorn.Cli.csproj -c Release -o ./artifacts
+        shell: pwsh
+        run: |
+          $version = (Get-Content templates/webapi/.config/dotnet-tools.json | ConvertFrom-Json).tools.'dorn.cli'.version
+          dotnet pack src/Dorn.Cli/Dorn.Cli.csproj -c Release -o ./artifacts -p:PackageVersion=$version
 
       - name: Smoke-test packed Dorn.Cli
         if: matrix.os == 'ubuntu-latest'
