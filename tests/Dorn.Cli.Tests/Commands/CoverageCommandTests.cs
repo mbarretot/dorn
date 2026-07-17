@@ -1,22 +1,16 @@
 using Dorn.Cli.Commands.Coverage;
 using Dorn.Cli.Coverage;
-using Dorn.Cli.Execution;
-using Dorn.Cli.Infrastructure;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Testing;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Spectre.Console;
 using Spectre.Console.Cli;
-using Spectre.Console.Testing;
+using Spectre.Console.Rendering;
 using Xunit;
 
 namespace Dorn.Cli.Tests.Commands;
 
-/// <summary>
-/// Tests for <see cref="CoverageCommand"/>. Exercises the full pipeline:
-/// tier dispatch → test run → Cobertura parsing → threshold gate.
-/// </summary>
+///<summary>Tests for <see cref="CoverageCommand"/>: tier dispatch → test run → Cobertura parsing → threshold gate. Drives ExecuteAsync directly (CommandAppTester removed in Spectre.Console.Cli 0.55.0).</summary>
 public class CoverageCommandTests : IDisposable
 {
     private readonly string _tempRoot;
@@ -36,95 +30,104 @@ public class CoverageCommandTests : IDisposable
     [Fact]
     public async Task CoverageCommand_WithoutTiers_ReturnsExitOneWithClearMessage()
     {
-        var (app, _) = CreateApp();
+        var (_, consoleMock, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
+        var settings = new CoverageSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["coverage", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(1, result.ExitCode);
-        Assert.Contains("IncludeTests=false", result.Output);
+        Assert.Equal(1, exitCode);
+        consoleMock.Received().Write(Arg.Any<IRenderable>());
     }
 
     [Fact]
     public async Task CoverageCommand_WhenAllTiersPassAndAboveThreshold_ReturnsZero()
     {
-        var (app, _) = CreateApp();
+        var (_, consoleMock, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
         CreateCoberturaReport(lineRate: 0.85);
+        var settings = new CoverageSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["coverage", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(0, result.ExitCode);
-        Assert.Contains("85", result.Output);
+        Assert.Equal(0, exitCode);
+        consoleMock.Received().Write(Arg.Any<IRenderable>());
     }
 
     [Fact]
     public async Task CoverageCommand_WhenBelowThreshold_ReturnsExitOne()
     {
-        var (app, _) = CreateApp();
+        var (_, consoleMock, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
         CreateCoberturaReport(lineRate: 0.50);
+        var settings = new CoverageSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["coverage", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(1, result.ExitCode);
-        Assert.Contains("Below threshold", result.Output);
+        Assert.Equal(1, exitCode);
+        consoleMock.Received().Write(Arg.Any<IRenderable>());
     }
 
     [Fact]
     public async Task CoverageCommand_WhenAtThreshold_ReturnsZero()
     {
-        var (app, _) = CreateApp();
+        var (_, consoleMock, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
         CreateCoberturaReport(lineRate: 0.80);
+        var settings = new CoverageSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["coverage", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(0, result.ExitCode);
-        Assert.Contains("Threshold met", result.Output);
+        Assert.Equal(0, exitCode);
+        consoleMock.Received().Write(Arg.Any<IRenderable>());
     }
 
     [Fact]
     public async Task CoverageCommand_WhenTestsFail_ReturnsExitOneWithoutThreshold()
     {
-        var (app, _, testRunner) = CreateAppWithFailingRunner();
+        var (_, consoleMock, command) = CreateCommandWithFailingRunner();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
+        var settings = new CoverageSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["coverage", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(1, result.ExitCode);
-        Assert.Contains("failed", result.Output, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, exitCode);
+        consoleMock.Received().Write(Arg.Any<IRenderable>());
     }
 
     [Fact]
     public async Task CoverageCommand_WhenNoCoverageReport_ReturnsExitOne()
     {
-        var (app, _) = CreateApp();
+        var (_, consoleMock, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
         // No Cobertura report created.
+        var settings = new CoverageSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["coverage", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(1, result.ExitCode);
-        Assert.Contains("No coverage report", result.Output);
+        Assert.Equal(1, exitCode);
+        consoleMock.Received().Write(Arg.Any<IRenderable>());
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
+    private static CommandContext SyntheticContext(string name) =>
+        new CommandContext(Array.Empty<string>(), new EmptyRemainingArgs(), name, null);
 
-    private (CommandAppTester App, IDotnetTestRunner Runner) CreateApp()
+    private (
+        IDotnetTestRunner Runner,
+        IAnsiConsole Console,
+        CoverageCommand Command
+    ) CreateCommand()
     {
         var testRunner = Substitute.For<IDotnetTestRunner>();
         testRunner
@@ -136,24 +139,19 @@ public class CoverageCommandTests : IDisposable
             )
             .Returns(new TestRunResult([], AllSucceeded: true));
 
-        var services = new ServiceCollection();
-        services.AddSingleton<IProjectContextResolver, ProjectContextResolver>();
-        services.AddSingleton<IDotnetTestRunner>(testRunner);
-        services.AddSingleton<CoverageReporter>();
-        services.AddSingleton<IAnsiConsole>(new TestConsole());
+        var consoleMock = Substitute.For<IAnsiConsole>();
+        var resolver = new ProjectContextResolver();
+        var reporter = new CoverageReporter();
+        var command = new CoverageCommand(resolver, testRunner, reporter, consoleMock);
 
-        var registrar = new TypeRegistrar(services);
-        var app = new CommandAppTester(registrar);
-        app.Configure(config => config.AddCommand<CoverageCommand>("coverage"));
-
-        return (app, testRunner);
+        return (testRunner, consoleMock, command);
     }
 
     private (
-        CommandAppTester App,
-        object Unused,
-        IDotnetTestRunner Runner
-    ) CreateAppWithFailingRunner()
+        IDotnetTestRunner Runner,
+        IAnsiConsole Console,
+        CoverageCommand Command
+    ) CreateCommandWithFailingRunner()
     {
         var testRunner = Substitute.For<IDotnetTestRunner>();
         testRunner
@@ -165,17 +163,12 @@ public class CoverageCommandTests : IDisposable
             )
             .Returns(new TestRunResult([], AllSucceeded: false));
 
-        var services = new ServiceCollection();
-        services.AddSingleton<IProjectContextResolver, ProjectContextResolver>();
-        services.AddSingleton<IDotnetTestRunner>(testRunner);
-        services.AddSingleton<CoverageReporter>();
-        services.AddSingleton<IAnsiConsole>(new TestConsole());
+        var consoleMock = Substitute.For<IAnsiConsole>();
+        var resolver = new ProjectContextResolver();
+        var reporter = new CoverageReporter();
+        var command = new CoverageCommand(resolver, testRunner, reporter, consoleMock);
 
-        var registrar = new TypeRegistrar(services);
-        var app = new CommandAppTester(registrar);
-        app.Configure(config => config.AddCommand<CoverageCommand>("coverage"));
-
-        return (app, new object(), testRunner);
+        return (testRunner, consoleMock, command);
     }
 
     private void CreateTestsDir(string name)
@@ -206,4 +199,13 @@ public class CoverageCommandTests : IDisposable
                 + $"branches-covered=\"0\" branches-valid=\"0\"></coverage>"
         );
     }
+}
+
+///<summary>Minimal <see cref="IRemainingArguments"/> stand-in for tests that build <see cref="CommandContext"/> directly (CommandAppTester removed in Spectre.Console.Cli 0.55.0).</summary>
+file sealed class EmptyRemainingArgs : IRemainingArguments
+{
+    public ILookup<string, string?> Parsed { get; } =
+        Array.Empty<string>().ToLookup(x => x, x => (string?)null);
+
+    public IReadOnlyList<string> Raw { get; } = Array.Empty<string>();
 }

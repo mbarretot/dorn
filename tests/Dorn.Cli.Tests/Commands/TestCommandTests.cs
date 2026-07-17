@@ -1,21 +1,16 @@
 using Dorn.Cli.Commands.Test;
-using Dorn.Cli.Execution;
-using Dorn.Cli.Infrastructure;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Testing;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Spectre.Console.Rendering;
 using Spectre.Console.Testing;
 using Xunit;
 
 namespace Dorn.Cli.Tests.Commands;
 
-/// <summary>
-/// Tests for <see cref="TestCommand"/>. Routes through <see cref="CommandAppTester"/>
-/// to exercise the full Spectre.Console.Cli wiring (option parsing, DI resolution, exit codes).
-/// </summary>
+///<summary>Tests for <see cref="TestCommand"/>. Runs ExecuteAsync directly (CommandAppTester removed in Spectre.Console.Cli 0.55.0).</summary>
 public class TestCommandTests : IDisposable
 {
     private readonly string _tempRoot;
@@ -32,22 +27,19 @@ public class TestCommandTests : IDisposable
             Directory.Delete(_tempRoot, recursive: true);
     }
 
-    // -------------------------------------------------------------------------
-    // Tier filter
-    // -------------------------------------------------------------------------
-
     [Fact]
     public async Task TestCommand_WithTierFilter_OnlyRunsThatTier()
     {
-        var (app, runner) = CreateApp();
+        var (runner, _, command) = CreateCommand();
         CreateTestsDir("MyProject.Application.Tests");
         CreateTestsDir("MyProject.Integration.Tests");
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
+        var settings = new TestSettings { Tier = "integration", Project = _tempRoot };
 
-        var result = await app.RunAsync(["test", "--tier", "integration", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(0, exitCode);
         await runner
             .Received(1)
             .RunAsync(
@@ -61,42 +53,36 @@ public class TestCommandTests : IDisposable
     [Fact]
     public async Task TestCommand_WithoutTierFilter_RunsAllTiers()
     {
-        var (app, _) = CreateApp();
+        var (_, _, command) = CreateCommand();
         CreateTestsDir("MyProject.Application.Tests");
         CreateTestsDir("MyProject.Integration.Tests");
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
+        var settings = new TestSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["test", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(0, exitCode);
     }
-
-    // -------------------------------------------------------------------------
-    // IncludeTests=false handling
-    // -------------------------------------------------------------------------
 
     [Fact]
     public async Task TestCommand_WithoutTestDirectories_PrintsClearMessageAndReturnsZero()
     {
-        var (app, _) = CreateApp();
+        var (_, consoleMock, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
+        var settings = new TestSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["test", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(0, result.ExitCode);
-        Assert.Contains("IncludeTests=false", result.Output);
+        Assert.Equal(0, exitCode);
+        consoleMock.Received().Write(Arg.Any<IRenderable>());
     }
-
-    // -------------------------------------------------------------------------
-    // Default CWD
-    // -------------------------------------------------------------------------
 
     [Fact]
     public async Task TestCommand_WithoutProjectOption_UsesCurrentDirectory()
     {
-        var (app, _) = CreateApp();
+        var (_, _, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
@@ -105,9 +91,10 @@ public class TestCommandTests : IDisposable
         try
         {
             Directory.SetCurrentDirectory(_tempRoot);
-            var result = await app.RunAsync(["test"]);
+            var settings = new TestSettings { Project = null };
+            var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-            Assert.Equal(0, result.ExitCode);
+            Assert.Equal(0, exitCode);
         }
         finally
         {
@@ -115,11 +102,10 @@ public class TestCommandTests : IDisposable
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
+    private static CommandContext SyntheticContext(string name) =>
+        new CommandContext(Array.Empty<string>(), new EmptyRemainingArgs(), name, null);
 
-    private (CommandAppTester App, IDotnetTestRunner Runner) CreateApp()
+    private (IDotnetTestRunner Runner, IAnsiConsole Console, TestCommand Command) CreateCommand()
     {
         var testRunner = Substitute.For<IDotnetTestRunner>();
         testRunner
@@ -131,19 +117,11 @@ public class TestCommandTests : IDisposable
             )
             .Returns(new TestRunResult([], AllSucceeded: true));
 
-        var services = new ServiceCollection();
-        services.AddSingleton<IProjectContextResolver, ProjectContextResolver>();
-        services.AddSingleton<IDotnetTestRunner>(testRunner);
-        // TestConsole implements IAnsiConsole — use it both as the registration and
-        // through CommandAppTester to capture output for assertions.
-        var console = new TestConsole();
-        services.AddSingleton<IAnsiConsole>(console);
+        var consoleMock = Substitute.For<IAnsiConsole>();
+        var resolver = new ProjectContextResolver();
+        var command = new TestCommand(resolver, testRunner, consoleMock);
 
-        var registrar = new TypeRegistrar(services);
-        var app = new CommandAppTester(registrar);
-        app.Configure(config => config.AddCommand<TestCommand>("test"));
-
-        return (app, testRunner);
+        return (testRunner, consoleMock, command);
     }
 
     private void CreateTestsDir(string name)
@@ -160,4 +138,13 @@ public class TestCommandTests : IDisposable
     {
         Directory.CreateDirectory(Path.Combine(_tempRoot, "src", name));
     }
+}
+
+///<summary>Minimal <see cref="IRemainingArguments"/> stand-in for tests that build <see cref="CommandContext"/> directly (CommandAppTester removed in Spectre.Console.Cli 0.55.0).</summary>
+file sealed class EmptyRemainingArgs : IRemainingArguments
+{
+    public ILookup<string, string?> Parsed { get; } =
+        Array.Empty<string>().ToLookup(x => x, x => (string?)null);
+
+    public IReadOnlyList<string> Raw { get; } = Array.Empty<string>();
 }

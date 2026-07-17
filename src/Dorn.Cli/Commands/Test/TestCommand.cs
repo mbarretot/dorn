@@ -25,7 +25,23 @@ public sealed class TestCommand : AsyncCommand<TestSettings>
         _console = console;
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, TestSettings settings)
+    // Note: Spectre.Console.Cli 0.55.0 changed this virtual method from `public` to
+    // `protected` (and added the CancellationToken parameter). Since C# forbids widening
+    // visibility on override, the actual logic lives in the public `RunAsync` method
+    // below; the framework's protected override just delegates to it. Unit tests call
+    // `RunAsync` directly to avoid invoking the command through the full CommandApp
+    // pipeline (CommandAppTester was removed in 0.55.0).
+    protected override Task<int> ExecuteAsync(
+        CommandContext context,
+        TestSettings settings,
+        CancellationToken cancellationToken
+    ) => RunAsync(settings, cancellationToken);
+
+    /// <summary>
+    /// Runs the test command logic. Public so unit tests can drive the command directly
+    /// without going through the Spectre.Console.Cli command pipeline.
+    /// </summary>
+    public async Task<int> RunAsync(TestSettings settings, CancellationToken cancellationToken)
     {
         var root = settings.Project ?? Directory.GetCurrentDirectory();
         var projectContext = _resolver.Resolve(root);
@@ -46,7 +62,7 @@ public sealed class TestCommand : AsyncCommand<TestSettings>
             projectContext,
             DatabaseProvider.Sqlite,
             tiers,
-            CancellationToken.None
+            cancellationToken
         );
 
         if (!result.AllSucceeded)

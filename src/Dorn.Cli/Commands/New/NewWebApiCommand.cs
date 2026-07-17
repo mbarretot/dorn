@@ -18,7 +18,23 @@ public sealed class NewWebApiCommand(
     private readonly IProcessRunner _processRunner = processRunner;
     private readonly IAnsiConsole _console = console;
 
-    public override async Task<int> ExecuteAsync(CommandContext context, NewWebApiSettings settings)
+    // Note: Spectre.Console.Cli 0.55.0 changed this virtual method from `public` to
+    // `protected` (and added the CancellationToken parameter). Since C# forbids widening
+    // visibility on override, the actual logic lives in the public `RunAsync` method
+    // below; the framework's protected override just delegates to it. Unit tests call
+    // `RunAsync` directly to avoid invoking the command through the full CommandApp
+    // pipeline (CommandAppTester was removed in 0.55.0).
+    protected override Task<int> ExecuteAsync(
+        CommandContext context,
+        NewWebApiSettings settings,
+        CancellationToken cancellationToken
+    ) => RunAsync(settings, cancellationToken);
+
+    /// <summary>
+    /// Runs the new webapi command logic. Public so unit tests can drive the command
+    /// directly without going through the Spectre.Console.Cli command pipeline.
+    /// </summary>
+    public async Task<int> RunAsync(NewWebApiSettings settings, CancellationToken cancellationToken)
     {
         var validation = ProjectNameValidator.Validate(settings.Name);
         if (!validation.IsValid)
@@ -134,13 +150,17 @@ public sealed class NewWebApiCommand(
             return 1;
         }
 
-        await TryRestoreLocalToolsAsync(outputDirectory, settings.NoRestore);
+        await TryRestoreLocalToolsAsync(outputDirectory, settings.NoRestore, cancellationToken);
 
         RenderSuccess(settings.Name, result);
         return 0;
     }
 
-    private async Task TryRestoreLocalToolsAsync(string outputDirectory, bool noRestore)
+    private async Task TryRestoreLocalToolsAsync(
+        string outputDirectory,
+        bool noRestore,
+        CancellationToken cancellationToken
+    )
     {
         if (noRestore)
         {
@@ -161,7 +181,7 @@ public sealed class NewWebApiCommand(
         {
             var exitCode = await _processRunner.RunAsync(
                 new ProcessSpec("dotnet", ["tool", "restore"], outputDirectory),
-                CancellationToken.None
+                cancellationToken
             );
 
             if (exitCode != 0)

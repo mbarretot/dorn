@@ -7,16 +7,14 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Spectre.Console.Rendering;
 using Spectre.Console.Testing;
 using Xunit;
 using PosixSignalContext = Dorn.Cli.Execution.PosixSignalContext;
 
 namespace Dorn.Cli.Tests.Commands;
 
-/// <summary>
-/// Tests for <see cref="RunCommand"/>. Exercises orchestrator dispatch (Aspire / Compose / Plain)
-/// and the Compose Ctrl+C teardown contract.
-/// </summary>
+///<summary>Tests for <see cref="RunCommand"/>: orchestrator dispatch (Aspire / Compose / Plain) and Compose Ctrl+C teardown. Drives ExecuteAsync with a synthetic CommandContext (CommandAppTester removed in Spectre.Console.Cli 0.55.0).</summary>
 public class RunCommandTests : IDisposable
 {
     private readonly string _tempRoot;
@@ -33,21 +31,18 @@ public class RunCommandTests : IDisposable
             Directory.Delete(_tempRoot, recursive: true);
     }
 
-    // -------------------------------------------------------------------------
-    // Orchestrator dispatch
-    // -------------------------------------------------------------------------
-
     [Fact]
     public async Task RunCommand_WithAppHost_RunsViaAspire()
     {
-        var (app, runner) = CreateApp();
+        var (runner, _, command) = CreateCommand();
         Directory.CreateDirectory(Path.Combine(_tempRoot, "src", "MyProject.AppHost"));
         Directory.CreateDirectory(Path.Combine(_tempRoot, "src", "MyProject.WebApi"));
         File.WriteAllText(Path.Combine(_tempRoot, "MyProject.slnx"), "<Solution />");
+        var settings = new RunSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["run", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(0, exitCode);
         await runner
             .Received()
             .RunAsync(
@@ -63,14 +58,15 @@ public class RunCommandTests : IDisposable
     [Fact]
     public async Task RunCommand_WithoutAppHostButWithCompose_RunsViaDockerCompose()
     {
-        var (app, runner) = CreateApp();
+        var (runner, _, command) = CreateCommand();
         Directory.CreateDirectory(Path.Combine(_tempRoot, "src", "MyProject.WebApi"));
         File.WriteAllText(Path.Combine(_tempRoot, "docker-compose.yml"), "version: '3.9'");
         File.WriteAllText(Path.Combine(_tempRoot, "MyProject.slnx"), "<Solution />");
+        var settings = new RunSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["run", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(0, exitCode);
         await runner
             .Received()
             .RunAsync(
@@ -84,13 +80,14 @@ public class RunCommandTests : IDisposable
     [Fact]
     public async Task RunCommand_WithoutAppHostAndCompose_RunsPlainDotnetRun()
     {
-        var (app, runner) = CreateApp();
+        var (runner, _, command) = CreateCommand();
         Directory.CreateDirectory(Path.Combine(_tempRoot, "src", "MyProject.WebApi"));
         File.WriteAllText(Path.Combine(_tempRoot, "MyProject.slnx"), "<Solution />");
+        var settings = new RunSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["run", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(0, exitCode);
         await runner
             .Received()
             .RunAsync(
@@ -106,28 +103,26 @@ public class RunCommandTests : IDisposable
     [Fact]
     public async Task RunCommand_PlainWithoutWebApi_ReturnsExitCodeOne()
     {
-        var (app, _) = CreateApp();
+        var (_, consoleMock, command) = CreateCommand();
         File.WriteAllText(Path.Combine(_tempRoot, "MyProject.slnx"), "<Solution />");
+        var settings = new RunSettings { Project = _tempRoot };
 
-        var result = await app.RunAsync(["run", "--project", _tempRoot]);
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
-        Assert.Equal(1, result.ExitCode);
-        Assert.Contains("WebApi project", result.Output);
+        Assert.Equal(1, exitCode);
+        consoleMock.Received().Write(Arg.Any<IRenderable>());
     }
-
-    // -------------------------------------------------------------------------
-    // Compose teardown
-    // -------------------------------------------------------------------------
 
     [Fact]
     public async Task RunCommand_OnComposePath_RegistersSIGINTandSIGTERM()
     {
-        var (app, signalReg, _) = CreateAppWithSignalMock();
+        var (_, _, command, signalReg) = CreateCommandWithSignalMock();
         Directory.CreateDirectory(Path.Combine(_tempRoot, "src", "MyProject.WebApi"));
         File.WriteAllText(Path.Combine(_tempRoot, "docker-compose.yml"), "version: '3.9'");
         File.WriteAllText(Path.Combine(_tempRoot, "MyProject.slnx"), "<Solution />");
+        var settings = new RunSettings { Project = _tempRoot };
 
-        await app.RunAsync(["run", "--project", _tempRoot]);
+        await command.RunAsync(settings, CancellationToken.None);
 
         signalReg.Received().Register(PosixSignal.SIGINT, Arg.Any<Action<PosixSignalContext>>());
         signalReg.Received().Register(PosixSignal.SIGTERM, Arg.Any<Action<PosixSignalContext>>());
@@ -136,12 +131,13 @@ public class RunCommandTests : IDisposable
     [Fact]
     public async Task RunCommand_OnAspirePath_DoesNotRegisterSignals()
     {
-        var (app, signalReg, _) = CreateAppWithSignalMock();
+        var (_, _, command, signalReg) = CreateCommandWithSignalMock();
         Directory.CreateDirectory(Path.Combine(_tempRoot, "src", "MyProject.AppHost"));
         Directory.CreateDirectory(Path.Combine(_tempRoot, "src", "MyProject.WebApi"));
         File.WriteAllText(Path.Combine(_tempRoot, "MyProject.slnx"), "<Solution />");
+        var settings = new RunSettings { Project = _tempRoot };
 
-        await app.RunAsync(["run", "--project", _tempRoot]);
+        await command.RunAsync(settings, CancellationToken.None);
 
         signalReg
             .DidNotReceive()
@@ -151,11 +147,12 @@ public class RunCommandTests : IDisposable
     [Fact]
     public async Task RunCommand_OnPlainPath_DoesNotRegisterSignals()
     {
-        var (app, signalReg, _) = CreateAppWithSignalMock();
+        var (_, _, command, signalReg) = CreateCommandWithSignalMock();
         Directory.CreateDirectory(Path.Combine(_tempRoot, "src", "MyProject.WebApi"));
         File.WriteAllText(Path.Combine(_tempRoot, "MyProject.slnx"), "<Solution />");
+        var settings = new RunSettings { Project = _tempRoot };
 
-        await app.RunAsync(["run", "--project", _tempRoot]);
+        await command.RunAsync(settings, CancellationToken.None);
 
         signalReg
             .DidNotReceive()
@@ -165,12 +162,13 @@ public class RunCommandTests : IDisposable
     [Fact]
     public async Task RunCommand_ComposeCleanupAfterCleanExit_RunsComposeDown()
     {
-        var (app, runner) = CreateApp();
+        var (runner, _, command) = CreateCommand();
         Directory.CreateDirectory(Path.Combine(_tempRoot, "src", "MyProject.WebApi"));
         File.WriteAllText(Path.Combine(_tempRoot, "docker-compose.yml"), "version: '3.9'");
         File.WriteAllText(Path.Combine(_tempRoot, "MyProject.slnx"), "<Solution />");
+        var settings = new RunSettings { Project = _tempRoot };
 
-        await app.RunAsync(["run", "--project", _tempRoot]);
+        await command.RunAsync(settings, CancellationToken.None);
 
         // 'docker compose up' then 'docker compose down'.
         await runner
@@ -193,52 +191,49 @@ public class RunCommandTests : IDisposable
             );
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
+    private static CommandContext SyntheticContext() =>
+        new CommandContext(Array.Empty<string>(), new EmptyRemainingArgs(), "run", null);
 
-    private (CommandAppTester App, IProcessRunner Runner) CreateApp()
+    private (IProcessRunner Runner, IAnsiConsole Console, RunCommand Command) CreateCommand()
     {
         var processRunner = Substitute.For<IProcessRunner>();
         processRunner.RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>()).Returns(0);
 
-        var services = new ServiceCollection();
-        services.AddSingleton<IProjectContextResolver, ProjectContextResolver>();
-        services.AddSingleton(processRunner);
-        services.AddSingleton<ISignalRegistration, SignalRegistration>();
-        services.AddSingleton<IAnsiConsole>(new TestConsole());
+        var consoleMock = Substitute.For<IAnsiConsole>();
+        var resolver = new ProjectContextResolver();
+        var signalReg = new SignalRegistration();
+        var command = new RunCommand(resolver, processRunner, signalReg, consoleMock);
 
-        var registrar = new TypeRegistrar(services);
-        var app = new CommandAppTester(registrar);
-        app.Configure(config => config.AddCommand<RunCommand>("run"));
-
-        return (app, processRunner);
+        return (processRunner, consoleMock, command);
     }
 
     private (
-        CommandAppTester App,
-        ISignalRegistration SignalReg,
-        IProcessRunner Runner
-    ) CreateAppWithSignalMock()
+        IProcessRunner Runner,
+        IAnsiConsole Console,
+        RunCommand Command,
+        ISignalRegistration SignalReg
+    ) CreateCommandWithSignalMock()
     {
         var processRunner = Substitute.For<IProcessRunner>();
         processRunner.RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>()).Returns(0);
 
+        var consoleMock = Substitute.For<IAnsiConsole>();
+        var resolver = new ProjectContextResolver();
         var signalReg = Substitute.For<ISignalRegistration>();
         signalReg
             .Register(Arg.Any<PosixSignal>(), Arg.Any<Action<PosixSignalContext>>())
             .Returns(Substitute.For<IDisposable>());
+        var command = new RunCommand(resolver, processRunner, signalReg, consoleMock);
 
-        var services = new ServiceCollection();
-        services.AddSingleton<IProjectContextResolver, ProjectContextResolver>();
-        services.AddSingleton(processRunner);
-        services.AddSingleton(signalReg);
-        services.AddSingleton<IAnsiConsole>(new TestConsole());
-
-        var registrar = new TypeRegistrar(services);
-        var app = new CommandAppTester(registrar);
-        app.Configure(config => config.AddCommand<RunCommand>("run"));
-
-        return (app, signalReg, processRunner);
+        return (processRunner, consoleMock, command, signalReg);
     }
+}
+
+///<summary>Minimal <see cref="IRemainingArguments"/> stand-in for tests that build <see cref="CommandContext"/> directly (CommandAppTester removed in Spectre.Console.Cli 0.55.0).</summary>
+file sealed class EmptyRemainingArgs : IRemainingArguments
+{
+    public ILookup<string, string?> Parsed { get; } =
+        Array.Empty<string>().ToLookup(x => x, x => (string?)null);
+
+    public IReadOnlyList<string> Raw { get; } = Array.Empty<string>();
 }

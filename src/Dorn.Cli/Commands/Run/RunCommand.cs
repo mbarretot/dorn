@@ -30,23 +30,39 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
         _console = console;
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, RunSettings settings)
+    // Note: Spectre.Console.Cli 0.55.0 changed this virtual method from `public` to
+    // `protected` (and added the CancellationToken parameter). Since C# forbids widening
+    // visibility on override, the actual logic lives in the public `RunAsync` method
+    // below; the framework's protected override just delegates to it. Unit tests call
+    // `RunAsync` directly to avoid invoking the command through the full CommandApp
+    // pipeline (CommandAppTester was removed in 0.55.0).
+    protected override Task<int> ExecuteAsync(
+        CommandContext context,
+        RunSettings settings,
+        CancellationToken cancellationToken
+    ) => RunAsync(settings, cancellationToken);
+
+    /// <summary>
+    /// Runs the run command logic. Public so unit tests can drive the command directly
+    /// without going through the Spectre.Console.Cli command pipeline.
+    /// </summary>
+    public async Task<int> RunAsync(RunSettings settings, CancellationToken cancellationToken)
     {
         var root = settings.Project ?? Directory.GetCurrentDirectory();
         var projectContext = _resolver.Resolve(root);
 
         return projectContext.Orchestrator switch
         {
-            Orchestrator.Aspire => await RunAspire(projectContext),
-            Orchestrator.Compose => await RunCompose(projectContext),
-            Orchestrator.Plain => await RunPlain(projectContext),
+            Orchestrator.Aspire => await RunAspire(projectContext, cancellationToken),
+            Orchestrator.Compose => await RunCompose(projectContext, cancellationToken),
+            Orchestrator.Plain => await RunPlain(projectContext, cancellationToken),
             _ => throw new InvalidOperationException(
                 $"Unknown orchestrator: {projectContext.Orchestrator}"
             ),
         };
     }
 
-    private async Task<int> RunAspire(ProjectContext ctx)
+    private async Task<int> RunAspire(ProjectContext ctx, CancellationToken cancellationToken)
     {
         var appHost = ResolveAppHost(ctx);
         if (string.IsNullOrEmpty(appHost))
@@ -60,16 +76,18 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
         _console.MarkupLine($"[green]Starting[/] via Aspire AppHost: {Markup.Escape(appHost)}");
 
         var spec = new ProcessSpec("dotnet", ["run", "--project", appHost], ctx.Root);
-        var exitCode = await _processRunner.RunAsync(spec, CancellationToken.None);
+        var exitCode = await _processRunner.RunAsync(spec, cancellationToken);
         return exitCode;
     }
 
-    private async Task<int> RunCompose(ProjectContext ctx)
+    private async Task<int> RunCompose(ProjectContext ctx, CancellationToken cancellationToken)
     {
         _console.MarkupLine("[green]Starting[/] via Docker Compose");
 
         // SIGINT/SIGTERM teardown — only the Compose path gets this treatment.
         // Aspire and plain dotnet run self-handle shutdown via their own hosts.
+        // Signal handlers run on a thread-pool thread, so they cannot capture the
+        // async cancellationToken — they fire a best-effort teardown independently.
         using var sigintReg = _signalRegistration.Register(
             PosixSignal.SIGINT,
             _ => OnCancel(ctx, "SIGINT")
@@ -80,15 +98,15 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
         );
 
         var spec = new ProcessSpec("docker", ["compose", "up"], ctx.Root);
-        var exitCode = await _processRunner.RunAsync(spec, CancellationToken.None);
+        var exitCode = await _processRunner.RunAsync(spec, cancellationToken);
 
         // Compose child exited cleanly — defensive down in case any orphan remains.
-        await TeardownCompose(ctx);
+        await TeardownCompose(ctx, cancellationToken);
 
         return exitCode;
     }
 
-    private async Task<int> RunPlain(ProjectContext ctx)
+    private async Task<int> RunPlain(ProjectContext ctx, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(ctx.WebApiProject))
         {
@@ -99,7 +117,7 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
         _console.MarkupLine($"[green]Starting[/] plain: {Markup.Escape(ctx.WebApiProject)}");
 
         var spec = new ProcessSpec("dotnet", ["run", "--project", ctx.WebApiProject], ctx.Root);
-        var exitCode = await _processRunner.RunAsync(spec, CancellationToken.None);
+        var exitCode = await _processRunner.RunAsync(spec, cancellationToken);
         return exitCode;
     }
 
@@ -107,6 +125,8 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
     {
         _console.MarkupLine($"[yellow]{signalName} received.[/] Tearing down compose stack...");
         // Best-effort synchronous shutdown — RunAsync is blocking at this point.
+        // Signal handlers run on a thread-pool thread and cannot propagate the
+        // async cancellationToken; CancellationToken.None is correct here.
         try
         {
             var downSpec = new ProcessSpec("docker", ["compose", "down"], ctx.Root);
@@ -118,12 +138,12 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
         }
     }
 
-    private async Task TeardownCompose(ProjectContext ctx)
+    private async Task TeardownCompose(ProjectContext ctx, CancellationToken cancellationToken)
     {
         try
         {
             var downSpec = new ProcessSpec("docker", ["compose", "down"], ctx.Root);
-            await _processRunner.RunAsync(downSpec, CancellationToken.None);
+            await _processRunner.RunAsync(downSpec, cancellationToken);
         }
         catch (Exception ex)
         {
