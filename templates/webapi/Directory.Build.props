@@ -1,10 +1,5 @@
 <Project>
-  <!--
-    Self-contained on purpose: this template is copied outside the Dorn repo when
-    generated, so it must build standalone without chaining to the Dorn root's
-    Directory.Build.props (MSBuild only auto-imports the nearest one walking up
-    the tree, it does not merge multiple).
-  -->
+  <!-- Self-contained so generated projects build outside Dorn; MSBuild imports only the nearest props file. -->
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -13,33 +8,14 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
-  <!--
-    Defaults that allow the template to compile when built IN PLACE inside the
-    Dorn solution (`dotnet build Dorn.slnx`). The Template Engine replaces these
-    via .template.config/template.json when generating a project; without them
-    the conditional PackageReferences in CleanArchWebApi.Infrastructure never
-    match (UseEfCore/UseDapper/UseSqlServer don't exist as MSBuild properties
-    during in-place compilation) and the C# files that reference those packages
-    fail to compile.
-
-    These values mirror the template.json parameter defaults (Orm=efcore,
-    DatabaseProvider=sqlite) so the build that CI runs is the same shape a
-    user gets when they run `dotnet new dorn-webapi` with no flags.
-    -->
+  <!-- In-place defaults mirror template.json so the checked-in template builds with the default efcore/sqlite shape. -->
   <PropertyGroup>
     <UseEfCore Condition="'$(UseEfCore)' == ''">True</UseEfCore>
     <UseDapper Condition="'$(UseDapper)' == ''">False</UseDapper>
     <UseSqlServer Condition="'$(UseSqlServer)' == ''">False</UseSqlServer>
   </PropertyGroup>
 
-  <!--
-    Translate MSBuild ORM flags into C# preprocessor symbols so #if (UseEfCore)
-    blocks (used in *.cs files for conditional imports/global usings) resolve
-    correctly when the template is built IN PLACE inside Dorn.slnx. The
-    Template Engine evaluates #if directives at generation time and emits the
-    correct version; for in-place builds we need the C# compiler to see the
-    symbols explicitly.
-    -->
+  <!-- In-place builds need C# symbols because generation-time #if directives are not evaluated by MSBuild. -->
   <PropertyGroup Condition="'$(UseEfCore)' == 'True' OR '$(UseEfCore)' == 'true'">
     <DefineConstants>$(DefineConstants);UseEfCore</DefineConstants>
   </PropertyGroup>

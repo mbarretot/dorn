@@ -10,12 +10,7 @@ public static class TemplateLocator
     private const string TemplatesFolderName = "templates";
     private const string TemplateConfigFolderName = ".template.config";
 
-    /// <summary>
-    /// Resolution order: (1) DORN_TEMPLATES_PATH env var (dev/tests), (2) walk up from
-    /// AppContext.BaseDirectory looking for a "templates" directory containing at least one
-    /// template (subdirectory with .template.config) — covers `dotnet run` from the repo
-    /// and the packaged global tool layout (templates/ next to the tool, per Dorn.Cli.csproj).
-    /// </summary>
+    /// <summary>Resolves templates from DORN_TEMPLATES_PATH or the packaged/repository directory layout.</summary>
     public static string ResolveTemplatesRoot()
     {
         var envOverride = Environment.GetEnvironmentVariable(EnvironmentVariableName);

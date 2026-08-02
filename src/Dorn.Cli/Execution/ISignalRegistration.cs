@@ -3,9 +3,7 @@ using System.Runtime.InteropServices;
 namespace Dorn.Cli.Execution;
 
 /// <summary>
-/// Abstraction over <see cref="PosixSignalRegistration"/> for the Compose Ctrl+C
-/// teardown path. Production implementation forwards SIGINT/SIGTERM to a handler;
-/// tests substitute a no-op or signal-emitting stub.
+/// Abstracts <see cref="PosixSignalRegistration"/> for Compose Ctrl+C teardown; production forwards signals and tests use stubs.
 /// </summary>
 public interface ISignalRegistration
 {

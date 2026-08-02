@@ -5,9 +5,7 @@ using Spectre.Console;
 namespace Dorn.Cli.Testing;
 
 /// <summary>
-/// Runs <c>dotnet test</c> against one or more test tiers of a generated webapi project.
-/// Pure orchestration: it does not parse test output, it only invokes the process and
-/// tracks exit codes per tier.
+/// Runs <c>dotnet test</c> for generated webapi test tiers without parsing output; exit codes are tracked per tier.
 /// </summary>
 public sealed class DotnetTestRunner : IDotnetTestRunner
 {

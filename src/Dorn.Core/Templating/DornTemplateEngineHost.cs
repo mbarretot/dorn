@@ -4,12 +4,7 @@ using Microsoft.TemplateEngine.Edge;
 namespace Dorn.Core.Templating;
 
 /// <summary>
-/// Builds an isolated <see cref="EngineEnvironmentSettings"/> for Dorn under
-/// ~/.dorn/template-engine (not ~/.templateengine) so it does not pollute the user's global
-/// <c>dotnet new</c> cache. Microsoft.TemplateEngine.Edge 10.0.301 (matches .NET 10 SDK)
-/// dropped the <c>Bootstrapper</c> façade — entry points are EngineEnvironmentSettings,
-/// Scanner, and TemplateCreator; all wiring is kept behind this class + the templating
-/// classes so the public API surface can be narrowed later without rippling beyond Dorn.Core.
+/// Builds isolated <see cref="EngineEnvironmentSettings"/> for Dorn. Microsoft.TemplateEngine.Edge 10.0.301 removed <c>Bootstrapper</c>, so the engine is wired directly with isolated settings.
 /// </summary>
 public static class DornTemplateEngineHost
 {

@@ -8,9 +8,7 @@ using Xunit;
 namespace Dorn.Cli.Tests.Testing;
 
 /// <summary>
-/// Unit tests for <see cref="DotnetTestRunner"/>. Exercises the tier-to-project
-/// mapping, default-all behavior, IncludeTests=false handling, and Docker
-/// preflight warning logic without spawning real processes.
+/// Tests tier mapping, default-all and IncludeTests=false behavior, and Docker preflight warnings without real processes.
 /// </summary>
 public class DotnetTestRunnerTests : IDisposable
 {
@@ -28,9 +26,7 @@ public class DotnetTestRunnerTests : IDisposable
             Directory.Delete(_tempRoot, recursive: true);
     }
 
-    // -------------------------------------------------------------------------
     // Tier-to-project mapping
-    // -------------------------------------------------------------------------
 
     [Fact]
     public async Task RunAsync_WithApplicationTier_InvokesDotnetTestOnApplicationProject()
@@ -131,9 +127,7 @@ public class DotnetTestRunnerTests : IDisposable
         Assert.Empty(result.Specs);
     }
 
-    // -------------------------------------------------------------------------
     // Working directory + dotnet arguments
-    // -------------------------------------------------------------------------
 
     [Fact]
     public async Task RunAsync_SetsWorkingDirectoryToProjectRoot()
@@ -205,9 +199,7 @@ public class DotnetTestRunnerTests : IDisposable
         Assert.Contains("XPlat Code Coverage", args);
     }
 
-    // -------------------------------------------------------------------------
     // Failure propagation
-    // -------------------------------------------------------------------------
 
     [Fact]
     public async Task RunAsync_WhenProcessReturnsNonZero_ReturnsFailedResult()
@@ -248,9 +240,7 @@ public class DotnetTestRunnerTests : IDisposable
         );
     }
 
-    // -------------------------------------------------------------------------
     // Helpers
-    // -------------------------------------------------------------------------
 
     private DotnetTestRunner CreateRunner(int processExitCode = 0)
     {

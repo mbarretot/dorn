@@ -1,9 +1,7 @@
 namespace Dorn.Cli.Projects;
 
 /// <summary>
-/// Default implementation of <see cref="IProjectContextResolver"/> that uses
-/// suffix-based glob patterns to detect the project layout produced by
-/// <c>templates/webapi</c>.
+/// Resolves generated project layouts using suffix-based glob patterns.
 /// </summary>
 public sealed class ProjectContextResolver : IProjectContextResolver
 {

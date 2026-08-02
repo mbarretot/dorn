@@ -8,9 +8,7 @@ namespace Dorn.Core.DependencyInjection;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers Dorn's generation engine and template catalog. Everything here is a
-    /// singleton: the Template Engine environment (host, settings, scanned template
-    /// cache) is expensive to set up and safe to share for the lifetime of the process.
+    /// Registers the generation engine and template catalog as singletons because template scanning is expensive and safely shared.
     /// </summary>
     public static IServiceCollection AddDornCore(this IServiceCollection services)
     {
