@@ -136,12 +136,8 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Generates with DatabaseProvider = "sqlserver" and builds the result. This is what
-    /// actually catches a migration namespace collision or a bad #if/Condition/rename
-    /// modifier: if both provider-specific migration folders ever landed in the same
-    /// output (or neither did), this build would fail with a duplicate/missing
-    /// ApplicationDbContextModelSnapshot, a missing Aspire.Hosting.SqlServer reference, or
-    /// a stray "//#if" left in appsettings.json.
+    /// Generates with sqlserver and builds. Catches migration namespace collisions, bad
+    /// #if/Condition/rename modifiers, and stray //#if markers in appsettings.json.
     /// </summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithSqlServer_ProducesBuildableSolution()
@@ -305,11 +301,9 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Covers the third orchestrator value (design section "The critical change: compose-file
-    /// modifier re-gating"): none + sqlite has no AppHost/ServiceDefaults (still gated on
-    /// !UseAspire) and no docker-compose ymls (now gated on !UseCompose), but still ships a
-    /// Dockerfile/.dockerignore (unconditional) and reuses the orchestrator-agnostic
-    /// CleanArchWebApi.Compose.slnx renamed to &lt;Name&gt;.slnx (still gated on !UseAspire).
+    /// Covers the 'none' orchestrator: no AppHost/ServiceDefaults, no docker-compose ymls
+    /// (gated on !UseCompose), but keeps Dockerfile/.dockerignore and the
+    /// orchestrator-agnostic .slnx.
     /// </summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithNoneOrchestrator_ProducesBuildableSolution()
@@ -397,11 +391,9 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Completes the 2x2 matrix's remaining cell: docker-compose + sqlserver. Asserts the
-    /// generated docker-compose.yml carries the `sqlserver` service and the
-    /// `ConnectionStrings__` environment override (design section 5/ADR-3), and that the
-    /// generated appsettings.json has no stray `//#if` marker (proves the SQL Server branch of
-    /// the `.cs`/`.json` conditional processing was selected cleanly).
+    /// Completes the 2x2 matrix: docker-compose + sqlserver. Asserts docker-compose.yml
+    /// carries the sqlserver service + ConnectionStrings__ override, and appsettings.json
+    /// has no stray //#if marker.
     /// </summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithDockerComposeAndSqlServer_ProducesBuildableSolution()
@@ -489,10 +481,9 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Design "Global SDK Pin Emission" requirement: the template must emit a static
-    /// `global.json` at the generated repository root (not nested under any project
-    /// subfolder), independent of Orm/Orchestrator/DatabaseProvider, whose `sdk.version`
-    /// matches dorn's own root `global.json` pin.
+    /// Requirement 'Global SDK Pin Emission': template emits global.json at the generated
+    /// repo root, independent of Orm/Orchestrator/DatabaseProvider, with sdk.version
+    /// matching dorn's own root pin.
     /// </summary>
     [Fact]
     public async Task GlobalJson_IsEmittedAtRepositoryRootWithPinnedSdkVersion()
@@ -551,10 +542,9 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement "Workflow File Emission": the webapi template must emit
-    /// `.github/workflows/ci.yml` for every generation regardless of Orm/Orchestrator/
-    /// DatabaseProvider, and it must be valid YAML with `on:`, `jobs.`, and `name:` keys.
-    /// Covers efcore x {aspire, none} x sqlite per the design's Strict TDD Scenario Map.
+    /// Requirement 'Workflow File Emission': template emits .github/workflows/ci.yml for
+    /// every generation regardless of Orm/Orchestrator/DatabaseProvider, parseable as YAML
+    /// with `on:`, `jobs:`, `name:` keys. Covers efcore × {aspire, none} × sqlite.
     /// </summary>
     [Theory]
     [InlineData("aspire")]
@@ -816,12 +806,10 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement "DatabaseProvider Conditional Steps" (Windows + SQL Server): a `#
-    /// best-effort:` comment naming the Docker-host requirement precedes the Windows SQL
-    /// Server branch, and no step's executed command invokes Testcontainers as a CLI tool
-    /// (Testcontainers.MsSql is a .NET library the Integration tier's PersistenceTestFixture
-    /// consumes internally — the spec permits explaining that in a comment, e.g. this
-    /// workflow's own caveat step text, so this checks `run:` command bodies only).
+    /// Requirement 'DatabaseProvider Conditional Steps' (Windows + SQL Server): the
+    /// best-effort comment precedes the Windows branch, and no step's run command invokes
+    /// Testcontainers CLI (it's a .NET library consumed by PersistenceTestFixture
+    /// internally).
     /// </summary>
     [Fact]
     public async Task CiWorkflow_WindowsSqlServerIsBestEffort()
@@ -936,10 +924,9 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement "Out-of-Scope Guards": no `dotnet pack`, `dotnet nuget push`, Dependabot
-    /// configuration, or README badge-injection step anywhere in the workflow. Case-sensitive:
-    /// ReportGenerator's own `-reporttypes:"Html;Cobertura;Badges"` output-type value
-    /// (capitalized "Badges") is a legitimate coverage artifact, not a forbidden README badge.
+    /// Requirement 'Out-of-Scope Guards': no dotnet pack/nuget push, Dependabot, or README
+    /// badge injection. Case-sensitive (avoids flagging ReportGenerator's 'Badges'
+    /// output-type).
     /// </summary>
     [Fact]
     public async Task CiWorkflow_ContainsNoOutOfScopeSteps()
@@ -959,10 +946,9 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Aggregate structural contract across the parametrized matrix (design's Strict TDD
-    /// Scenario Map "CiWorkflow_StructuralContract_HoldsAcrossMatrix"): re-runs every prior
-    /// structural assertion — including global.json — against an (efcore, aspire, sqlite)
-    /// generation, proving the whole contract holds together, not just individually.
+    /// Aggregate structural contract: re-runs every prior structural assertion (including
+    /// global.json) against (efcore, aspire, sqlite), proving the whole contract holds
+    /// together.
     /// </summary>
     [Fact]
     public async Task CiWorkflow_StructuralContract_HoldsAcrossMatrix()
@@ -1214,30 +1200,12 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Runs restore and build as two separate dotnet invocations rather than a single
-    /// `dotnet build` (which does an implicit restore). A brand-new solution graph like the
-    /// one just generated here has no project.assets.json yet, and MSBuild's parallel
-    /// project build nodes can each trigger the Restore target on a shared dependency (e.g.
-    /// every layer references Domain) at the same time, racing to write the same generated
-    /// `*.csproj.nuget.g.props` file and failing with "file already exists". Restoring the
-    /// whole solution up front as one coordinated NuGet operation avoids that race.
-    ///
-    /// The generated solution lives outside the repo (Path.GetTempPath()), so it doesn't see
-    /// the repo root's nuget.config "dorn-local" source that resolves Dorn.Messaging.Contracts/
-    /// Dorn.Messaging/Dorn.SharedKernel. RestoreAdditionalProjectSources points restore at the
-    /// same local feed explicitly, mirroring how TemplateLocator resolves the templates root.
-    ///
-    /// `-nodeReuse:false` on both invocations: a persisted MSBuild worker node from one nested
-    /// build can be reused by the next one (even across sequential test runs) and hang once its
-    /// cached state points at a since-deleted temp directory. These solutions are always deleted
-    /// right after the build, so there's no warm-cache benefit worth keeping node reuse for.
-    ///
-    /// Now that the aspire `.slnx` correctly references AppHost/ServiceDefaults (Orchestrator
-    /// symbol fix), the restore graph has more entry points that can transitively re-evaluate the
-    /// same shared project (e.g. AppHost -> WebApi -> ServiceDefaults vs. WebApi -> ServiceDefaults
-    /// directly), which can still race on a shared generated file even with `-maxCpuCount:1` on the
-    /// coordinating `dotnet restore` invocation. RestoreWithRetryAsync retries the restore step a
-    /// bounded number of times on that specific known-flaky failure signature.
+    /// Restore+build split (vs single `dotnet build`) avoids *.csproj.nuget.g.props races
+    /// from MSBuild's parallel build nodes each triggering Restore on a shared dependency.
+    /// `-nodeReuse:false` prevents MSBuild worker nodes from hanging on deleted temp dirs.
+    /// RestoreAdditionalProjectSources = local NuGet feed (generated solution is outside the
+    /// repo and doesn't see its nuget.config). RestoreWithRetryAsync retries on the known
+    /// race signature since the aspire `.slnx` adds more shared-project entry points.
     /// </summary>
     private static async Task<(int ExitCode, string StdOut, string StdErr)> RunDotnetBuildAsync(
         string solutionPath
@@ -1261,11 +1229,10 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Retries `dotnet restore` on the known-flaky "file already exists" NuGet race (a shared
-    /// generated file, e.g. *.nuget.g.props/project.assets.json, written concurrently by two
-    /// restore graph entry points that transitively reach the same project — see the remarks on
-    /// <see cref="RunDotnetBuildAsync"/>). Only that specific signature is retried; any other
-    /// restore failure returns immediately on the first attempt.
+    /// Retries dotnet restore on the known 'file already exists' NuGet race (shared
+    /// generated file written by concurrent restore graph entry points — see
+    /// <see cref="RunDotnetBuildAsync"/>). Only that signature; other failures return
+    /// immediately.
     /// </summary>
     private static async Task<(int ExitCode, string StdOut, string StdErr)> RestoreWithRetryAsync(
         string solutionPath,
@@ -1305,10 +1272,8 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Resolves the absolute path of Dorn's local NuGet feed (./artifacts, populated by
-    /// eng/scripts/pack-packages.ps1), the same way TemplateLocator.ResolveTemplatesRoot
-    /// resolves the templates root: an environment variable first, then a directory walk
-    /// fallback from this test assembly's own location.
+    /// Resolves dorn's local NuGet feed (./artifacts) via env var or directory walk
+    /// fallback — same pattern as TemplateLocator.ResolveTemplatesRoot.
     /// </summary>
     private static string ResolveLocalNuGetFeed()
     {
@@ -1366,10 +1331,9 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Generates the dorn-webapi template into a fresh temp directory with the given symbol
-    /// values (omitted values fall back to the template's own defaults: Orm=efcore,
-    /// Orchestrator=aspire, DatabaseProvider=sqlite). Shared by every scaffolded-CI-workflow
-    /// test below so each scenario only asserts, instead of re-implementing generation.
+    /// Generates the dorn-webapi template into a fresh temp directory; omitted symbols fall
+    /// back to template defaults. Shared by every scaffolded-CI-workflow test to avoid
+    /// re-implementing generation.
     /// </summary>
     private static async Task<string> GenerateWebApiProjectAsync(
         string projectName,
@@ -1419,10 +1383,9 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Generates a project via <see cref="GenerateWebApiProjectAsync"/>, runs <paramref
-    /// name="body"/> against its output directory, then always deletes the temp directory —
-    /// consolidating the generate/assert/cleanup shape used by every CI-workflow scenario
-    /// below (strict TDD REFACTOR step: one generation+cleanup helper for all new facts).
+    /// Generates, runs body, always cleans up the temp directory. Consolidates the
+    /// generate/assert/cleanup shape for all CI-workflow tests (one helper instead of
+    /// per-fact duplication).
     /// </summary>
     private static async Task WithGeneratedWebApiProjectAsync(
         string projectName,
