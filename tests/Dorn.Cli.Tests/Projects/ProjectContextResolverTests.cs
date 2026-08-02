@@ -1,4 +1,3 @@
-using System.Reflection;
 using Dorn.Cli.Projects;
 using Xunit;
 
@@ -137,11 +136,10 @@ public class ProjectContextResolverTests : IDisposable
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void Resolve_WithAllFiveTierProjects_ReturnsAllFiveTiers()
+    public void Resolve_WithAllFourTierProjects_ReturnsAllFourTiers()
     {
         CreateFile(_tempRoot, "src/MyProject.WebApi/Program.cs");
         CreateSolution(_tempRoot, "MyProject.sln");
-        CreateFile(_tempRoot, "tests/MyProject.Unit.Tests/UnitTest1.cs");
         CreateFile(_tempRoot, "tests/MyProject.Application.Tests/ApplicationTest1.cs");
         CreateFile(_tempRoot, "tests/MyProject.Integration.Tests/IntegrationTest1.cs");
         CreateFile(_tempRoot, "tests/MyProject.Architecture.Tests/ArchitectureTest1.cs");
@@ -150,8 +148,7 @@ public class ProjectContextResolverTests : IDisposable
         var resolver = new ProjectContextResolver();
         var ctx = resolver.Resolve(_tempRoot);
 
-        Assert.Equal(5, ctx.Tiers.Count);
-        Assert.Contains(TestTier.Unit, ctx.Tiers);
+        Assert.Equal(4, ctx.Tiers.Count);
         Assert.Contains(TestTier.Application, ctx.Tiers);
         Assert.Contains(TestTier.Integration, ctx.Tiers);
         Assert.Contains(TestTier.Architecture, ctx.Tiers);
@@ -159,7 +156,21 @@ public class ProjectContextResolverTests : IDisposable
     }
 
     [Fact]
-    public void Resolve_WithOnlyUnitTier_ReturnsOnlyUnit()
+    public void Resolve_WithOnlyApplicationTier_ReturnsOnlyApplication()
+    {
+        CreateFile(_tempRoot, "src/MyProject.WebApi/Program.cs");
+        CreateSolution(_tempRoot, "MyProject.sln");
+        CreateFile(_tempRoot, "tests/MyProject.Application.Tests/ApplicationTest1.cs");
+
+        var resolver = new ProjectContextResolver();
+        var ctx = resolver.Resolve(_tempRoot);
+
+        Assert.Single(ctx.Tiers);
+        Assert.Contains(TestTier.Application, ctx.Tiers);
+    }
+
+    [Fact]
+    public void Resolve_WithUnitTestsDirectory_IgnoresIt()
     {
         CreateFile(_tempRoot, "src/MyProject.WebApi/Program.cs");
         CreateSolution(_tempRoot, "MyProject.sln");
@@ -168,8 +179,7 @@ public class ProjectContextResolverTests : IDisposable
         var resolver = new ProjectContextResolver();
         var ctx = resolver.Resolve(_tempRoot);
 
-        Assert.Single(ctx.Tiers);
-        Assert.Contains(TestTier.Unit, ctx.Tiers);
+        Assert.Empty(ctx.Tiers);
     }
 
     [Fact]
@@ -190,15 +200,15 @@ public class ProjectContextResolverTests : IDisposable
     {
         CreateFile(_tempRoot, "src/MyProject.WebApi/Program.cs");
         CreateSolution(_tempRoot, "MyProject.sln");
-        // Only Unit and Integration, no Architecture or Functional.
-        CreateFile(_tempRoot, "tests/MyProject.Unit.Tests/UnitTest1.cs");
+        // Only Application and Integration, no Architecture or Functional.
+        CreateFile(_tempRoot, "tests/MyProject.Application.Tests/ApplicationTest1.cs");
         CreateFile(_tempRoot, "tests/MyProject.Integration.Tests/IntegrationTest1.cs");
 
         var resolver = new ProjectContextResolver();
         var ctx = resolver.Resolve(_tempRoot);
 
         Assert.Equal(2, ctx.Tiers.Count);
-        Assert.Contains(TestTier.Unit, ctx.Tiers);
+        Assert.Contains(TestTier.Application, ctx.Tiers);
         Assert.Contains(TestTier.Integration, ctx.Tiers);
         Assert.DoesNotContain(TestTier.Architecture, ctx.Tiers);
         Assert.DoesNotContain(TestTier.Functional, ctx.Tiers);

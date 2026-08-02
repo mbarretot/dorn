@@ -37,7 +37,7 @@ Armar un proyecto .NET con Clean Architecture desde cero significa resolver, una
 - **Arquitectura limpia real** — Domain, Application, Infrastructure, WebApi completamente cableadas, con la regla de dependencias validada por tests (ArchUnitNET)
 - **CQRS nativo** — Commands y Queries separados con un mediator pattern propio, MIT, sin depender de MediatR
 - **ORM flexible** — EF Core o Dapper, elegís según tu caso de uso
-- **Testing de cuatro tiers** — Unit, Integration, Architecture y Functional tests generados junto con el proyecto
+- **Testing de cuatro tiers** — Application, Integration, Architecture y Functional tests generados junto con el proyecto
 - **CLI interactiva** — te pregunta por wizard las opciones que no pasaste como flags
 
 ## Instalación
@@ -67,7 +67,7 @@ dotnet new dorn-webapi -n MyApp
 Una vez generado, el proyecto incluye verbos que operan sobre él desde la raíz (o cualquier padre con `--project <path>`):
 
 ```bash
-dorn test              # corre los 4 tiers (Unit / Integration / Architecture / Functional)
+dorn test              # corre los 4 tiers (Application / Integration / Architecture / Functional)
 dorn test --tier unit  # un solo tier
 dorn run               # auto-detecta AppHost → Aspire, docker-compose.yml → Compose, sino `dotnet run` plain
 dorn coverage          # tests + cobertura + gate fijo al 80%
