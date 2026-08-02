@@ -49,12 +49,17 @@
         {
           "choice": "docker-compose",
           "description": "Docker Compose scaffolding; no Aspire dependency."
+        },
+        {
+          "choice": "none",
+          "description": "No orchestration scaffolding; run the API directly."
         }
       ],
       "defaultValue": "aspire",
       "description": "Local orchestration approach for the generated service."
     },
-    "UseAspire": { "type": "computed", "value": "(Orchestrator == \"aspire\")" }
+    "UseAspire": { "type": "computed", "value": "(Orchestrator == \"aspire\")" },
+    "UseCompose": { "type": "computed", "value": "(Orchestrator == \"docker-compose\")" }
   },
   "sources": [
     {
@@ -98,11 +103,11 @@
         },
         {
           "condition": "(UseAspire)",
-          "exclude": [
-            "CleanArchWebApi.Compose.slnx",
-            "docker-compose.yml",
-            "docker-compose.SqlServer.yml"
-          ]
+          "exclude": ["CleanArchWebApi.Compose.slnx"]
+        },
+        {
+          "condition": "(!UseCompose)",
+          "exclude": ["docker-compose.yml", "docker-compose.SqlServer.yml"]
         },
         {
           "condition": "(!UseAspire)",
@@ -112,14 +117,14 @@
           "exclude": ["CleanArchWebApi.slnx"]
         },
         {
-          "condition": "(!UseAspire && UseSqlServer)",
+          "condition": "(UseCompose && UseSqlServer)",
           "rename": {
             "docker-compose.SqlServer.yml": "docker-compose.yml"
           },
           "exclude": ["docker-compose.yml"]
         },
         {
-          "condition": "(!UseAspire && !UseSqlServer)",
+          "condition": "(UseCompose && !UseSqlServer)",
           "exclude": ["docker-compose.SqlServer.yml"]
         }
       ]

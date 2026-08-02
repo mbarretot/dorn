@@ -188,6 +188,30 @@ public class NewWebApiCommandTests
     }
 
     [Fact]
+    public async Task NewWebApi_WithNoneOrchestratorOption_PassesThroughUntouched()
+    {
+        var (engine, _, command) = CreateCommand();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
+
+        var exitCode = await command.RunAsync(
+            new NewWebApiSettings { Name = "MyApp", Orchestrator = "none" },
+            CancellationToken.None
+        );
+
+        Assert.Equal(0, exitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(
+                Arg.Is<GenerationRequest>(r =>
+                    r.Parameters != null && r.Parameters["Orchestrator"] == "none"
+                ),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
     public async Task NewWebApi_WithOmittedOrchestratorAndNonInteractiveConsole_FallsBackToAspireWithoutPrompting()
     {
         var (engine, _, command) = CreateCommand();
