@@ -167,6 +167,7 @@ Infrastructure/Repositories/
 - **Soporte Docker** — Docker Compose o Aspire para desarrollo local
 - **SQLite zero-config** — funciona out-of-the-box sin base de datos externa
 - **Validación type-safe** — FluentValidation para commands y queries
+- **CI lista para usar** — cada proyecto generado incluye un workflow de GitHub Actions (`.github/workflows/ci.yml`) y un `global.json` con el SDK pineado, listos desde el primer push
 
 ## Roadmap
 
