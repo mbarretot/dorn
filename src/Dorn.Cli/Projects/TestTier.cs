@@ -5,7 +5,6 @@ namespace Dorn.Cli.Projects;
 /// </summary>
 public enum TestTier
 {
-    Unit,
     Application,
     Integration,
     Architecture,

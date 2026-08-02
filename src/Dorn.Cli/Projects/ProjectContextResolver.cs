@@ -86,11 +86,9 @@ public sealed class ProjectContextResolver : IProjectContextResolver
         {
             var name = Path.GetFileName(subDir);
 
-            // Matches *.Unit.Tests, *.Application.Tests, *.Integration.Tests,
+            // Matches *.Application.Tests, *.Integration.Tests,
             //          *.Architecture.Tests, *.Functional.Tests
-            if (name.EndsWith(".Unit.Tests", StringComparison.OrdinalIgnoreCase))
-                tiers.Add(TestTier.Unit);
-            else if (name.EndsWith(".Application.Tests", StringComparison.OrdinalIgnoreCase))
+            if (name.EndsWith(".Application.Tests", StringComparison.OrdinalIgnoreCase))
                 tiers.Add(TestTier.Application);
             else if (name.EndsWith(".Integration.Tests", StringComparison.OrdinalIgnoreCase))
                 tiers.Add(TestTier.Integration);

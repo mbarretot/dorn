@@ -83,7 +83,6 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
 
         var suffix = tier switch
         {
-            TestTier.Unit => ".Unit.Tests",
             TestTier.Application => ".Application.Tests",
             TestTier.Integration => ".Integration.Tests",
             TestTier.Architecture => ".Architecture.Tests",

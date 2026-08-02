@@ -5,7 +5,6 @@ using NSubstitute;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using Spectre.Console.Rendering;
-using Spectre.Console.Testing;
 using Xunit;
 
 namespace Dorn.Cli.Tests.Commands;
@@ -46,6 +45,62 @@ public class TestCommandTests : IDisposable
                 Arg.Any<ProjectContext>(),
                 Arg.Any<DatabaseProvider>(),
                 Arg.Any<IReadOnlyList<TestTier>>(),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Theory]
+    [InlineData("unit")]
+    [InlineData("application")]
+    public async Task TestCommand_WithUnitOrApplicationTierFilter_ResolvesOnlyApplicationTier(
+        string tierFilter
+    )
+    {
+        var (runner, _, command) = CreateCommand();
+        CreateTestsDir("MyProject.Application.Tests");
+        CreateTestsDir("MyProject.Integration.Tests");
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        var settings = new TestSettings { Tier = tierFilter, Project = _tempRoot };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        await runner
+            .Received(1)
+            .RunAsync(
+                Arg.Any<ProjectContext>(),
+                Arg.Any<DatabaseProvider>(),
+                Arg.Is<IReadOnlyList<TestTier>>(t =>
+                    t.SequenceEqual(new[] { TestTier.Application })
+                ),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task TestCommand_WithUnknownTierFilter_FallsBackToAllTiers()
+    {
+        var (runner, _, command) = CreateCommand();
+        CreateTestsDir("MyProject.Application.Tests");
+        CreateTestsDir("MyProject.Integration.Tests");
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        var settings = new TestSettings { Tier = "bogus", Project = _tempRoot };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        await runner
+            .Received(1)
+            .RunAsync(
+                Arg.Any<ProjectContext>(),
+                Arg.Any<DatabaseProvider>(),
+                Arg.Is<IReadOnlyList<TestTier>>(t =>
+                    t.Count == 2
+                    && t.Contains(TestTier.Application)
+                    && t.Contains(TestTier.Integration)
+                ),
                 Arg.Any<CancellationToken>()
             );
     }

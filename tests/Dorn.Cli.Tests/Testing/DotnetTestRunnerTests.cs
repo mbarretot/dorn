@@ -1,9 +1,7 @@
-using System.Text.RegularExpressions;
 using Dorn.Cli.Execution;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Testing;
 using NSubstitute;
-using Spectre.Console;
 using Spectre.Console.Testing;
 using Xunit;
 
@@ -73,13 +71,12 @@ public class DotnetTestRunnerTests : IDisposable
     }
 
     [Fact]
-    public async Task RunAsync_WithAllFiveTiers_InvokesDotnetTestFiveTimes()
+    public async Task RunAsync_WithAllFourTiers_InvokesDotnetTestFourTimes()
     {
         CreateTestsDir("MyProject.Application.Tests");
         CreateTestsDir("MyProject.Integration.Tests");
         CreateTestsDir("MyProject.Architecture.Tests");
         CreateTestsDir("MyProject.Functional.Tests");
-        CreateTestsDir("MyProject.Unit.Tests");
         var runner = CreateRunner();
         var ctx = CreateContextWithAllTiers("MyProject");
 
@@ -87,7 +84,6 @@ public class DotnetTestRunnerTests : IDisposable
             ctx,
             DatabaseProvider.Sqlite,
             [
-                TestTier.Unit,
                 TestTier.Application,
                 TestTier.Integration,
                 TestTier.Architecture,
@@ -97,7 +93,7 @@ public class DotnetTestRunnerTests : IDisposable
         );
 
         Assert.True(result.AllSucceeded);
-        Assert.Equal(5, result.Specs.Count);
+        Assert.Equal(4, result.Specs.Count);
     }
 
     [Fact]
@@ -275,7 +271,6 @@ public class DotnetTestRunnerTests : IDisposable
         var webApi = Path.Combine(_tempRoot, "src", $"{projectName}.WebApi");
         var tiers = new List<TestTier>
         {
-            TestTier.Unit,
             TestTier.Application,
             TestTier.Integration,
             TestTier.Architecture,
