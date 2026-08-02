@@ -7,16 +7,9 @@ namespace Dorn.Core.Templating;
 
 /// <summary>
 /// Discovers Dorn templates by scanning the templates/ folder directly with
-/// Microsoft.TemplateEngine.Edge.Settings.Scanner, rather than "installing" it as a
-/// managed template package (Microsoft.TemplateEngine.Edge.Settings.TemplatePackageManager
-/// + InstallRequest). Dorn ships its templates as source alongside the tool; it does not
-/// need the package/version/update machinery that Template Engine exposes for
-/// NuGet-installed `dotnet new` templates.
-///
-/// The scan result's mount point must stay open for the lifetime of the process: template
-/// instantiation later reads file contents lazily from that same mount point. This class is
-/// registered as a singleton and disposes the mount point when the process/DI container
-/// shuts down.
+/// Microsoft.TemplateEngine.Edge.Settings.Scanner (Dorn ships templates as source, so the
+/// package/version/update machinery is unnecessary). Singleton because the scan mount point
+/// must stay open for the process: template instantiation reads files lazily from it.
 /// </summary>
 public sealed class FileSystemTemplateCatalog : ITemplateCatalog, IDisposable
 {

@@ -30,12 +30,9 @@ public sealed class CoverageCommand : AsyncCommand<CoverageSettings>
         _console = console;
     }
 
-    // Note: Spectre.Console.Cli 0.55.0 changed this virtual method from `public` to
-    // `protected` (and added the CancellationToken parameter). Since C# forbids widening
-    // visibility on override, the actual logic lives in the public `RunAsync` method
-    // below; the framework's protected override just delegates to it. Unit tests call
-    // `RunAsync` directly to avoid invoking the command through the full CommandApp
-    // pipeline (CommandAppTester was removed in 0.55.0).
+    // Spectre.Console.Cli 0.55.0 changed ExecuteAsync from public to protected (and added
+    // CancellationToken); logic lives in the public RunAsync below, and tests call it
+    // directly (CommandAppTester was removed in 0.55.0).
     protected override Task<int> ExecuteAsync(
         CommandContext context,
         CoverageSettings settings,

@@ -11,14 +11,10 @@ public static class TemplateLocator
     private const string TemplateConfigFolderName = ".template.config";
 
     /// <summary>
-    /// Resolution order:
-    /// 1. DORN_TEMPLATES_PATH environment variable — used in dev and by tests to point
-    ///    directly at the repo checkout's templates/ directory.
-    /// 2. Walk up from AppContext.BaseDirectory looking for a "templates" directory that
-    ///    contains at least one template (a subdirectory with .template.config). This
-    ///    covers both `dotnet run`/`dotnet exec` from inside the repo (bin/.../net10.0 is
-    ///    several levels below the repo root) and the packaged global tool layout, which
-    ///    ships templates/ next to the tool under tools/&lt;tfm&gt;/any/ (see Dorn.Cli.csproj).
+    /// Resolution order: (1) DORN_TEMPLATES_PATH env var (dev/tests), (2) walk up from
+    /// AppContext.BaseDirectory looking for a "templates" directory containing at least one
+    /// template (subdirectory with .template.config) — covers `dotnet run` from the repo
+    /// and the packaged global tool layout (templates/ next to the tool, per Dorn.Cli.csproj).
     /// </summary>
     public static string ResolveTemplatesRoot()
     {

@@ -3,12 +3,9 @@ using Xunit;
 
 namespace Dorn.Core.Tests.Templating;
 
-// TemplateLocator is a static class with a single resolution entry point that reads
-// DORN_TEMPLATES_PATH directly from the process environment — there is no constructor or
-// method parameter to inject an override, so these tests mutate the real environment
-// variable and restore it in a finally block per test. That is safe here because assembly-
-// level parallelization is disabled (see AssemblyInfo.cs), so no other test class can read
-// or write DORN_TEMPLATES_PATH concurrently with these.
+// TemplateLocator reads DORN_TEMPLATES_PATH directly from the process environment (no
+// constructor/method injection), so tests mutate the real env var and restore it in a
+// finally block. Safe because assembly-level parallelization is disabled (AssemblyInfo.cs).
 public class TemplateLocatorTests
 {
     private const string EnvironmentVariableName = "DORN_TEMPLATES_PATH";
@@ -61,11 +58,10 @@ public class TemplateLocatorTests
         {
             Environment.SetEnvironmentVariable(EnvironmentVariableName, null);
 
-            // The test host runs from tests/Dorn.Core.Tests/bin/<config>/net10.0, several
-            // levels below this repo's root, which itself contains a real templates/
-            // folder (templates/webapi has a .template.config). The directory-walk
-            // fallback should find it without needing DORN_TEMPLATES_PATH set — this is
-            // exactly the "sensible fallback" the fallback path is meant to provide.
+            // Test host runs from tests/Dorn.Core.Tests/bin/<config>/net10.0, several levels
+            // below the repo root which contains a real templates/ folder (templates/webapi
+            // has .template.config). The directory-walk fallback should find it without
+            // DORN_TEMPLATES_PATH set.
             var resolved = TemplateLocator.ResolveTemplatesRoot();
 
             Assert.True(Directory.Exists(resolved));

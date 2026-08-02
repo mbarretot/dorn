@@ -51,11 +51,10 @@ public sealed class TemplateEngineGenerationEngine : IGenerationEngine
             );
         }
 
-        // The embedded host's default destructive-change handling (ITemplateEngineHost.
-        // OnPotentiallyDestructiveChangesDetected) is permissive regardless of
-        // forceCreation, so TemplateCreator.InstantiateAsync alone will happily overwrite
-        // an existing non-empty output directory even when Force is false. Enforce the
-        // --force contract ourselves with an explicit pre-check instead.
+        // The embedded host's OnPotentiallyDestructiveChangesDetected is permissive
+        // regardless of forceCreation, so TemplateCreator.InstantiateAsync overwrites
+        // non-empty output directories even when Force is false. Enforce the --force
+        // contract here with an explicit pre-check.
         if (
             !request.Force
             && Directory.Exists(request.OutputDirectory)

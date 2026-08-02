@@ -35,13 +35,12 @@ public static class ServiceCollectionExtensions
                     || openGenericType == typeof(INotificationHandler<>)
                 )
                 {
-                    // For an open-generic implementation (e.g. a pipeline behavior like
-                    // ValidationBehavior<TRequest, TResponse>), `implementedInterface` is
-                    // parameterized by the implementation's own generic parameters, not a
-                    // true unbound generic type definition - registering it as-is makes the
-                    // container treat it as a closed service mapped to an open implementation,
-                    // which throws at ServiceProvider build time. Register against the true
-                    // open generic definition instead so both sides stay unbound.
+                    // For open-generic implementations (e.g. ValidationBehavior<TRequest, TResponse>),
+                    // `implementedInterface` is parameterized by the implementation's own generic
+                    // parameters, not a true unbound generic type definition. Registering it as-is
+                    // makes the container treat it as a closed service mapped to an open implementation
+                    // (throws at ServiceProvider build time). Register against the true open generic
+                    // definition so both sides stay unbound.
                     var serviceType = type.IsGenericTypeDefinition
                         ? openGenericType
                         : implementedInterface;
