@@ -4,9 +4,7 @@ using System.Xml.Linq;
 namespace Dorn.Cli.Coverage;
 
 /// <summary>
-/// Parses Cobertura XML coverage reports and decides whether the fixed 80% line-rate
-/// threshold has been met. HTML rendering via ReportGenerator is orchestrated here
-/// (installed ephemerally via <c>--tool-path</c>) but the gate logic does not depend on it.
+/// Parses Cobertura coverage reports and applies the fixed 80% line-rate gate; HTML rendering is delegated to ReportGenerator.
 /// </summary>
 public sealed class CoverageReporter
 {

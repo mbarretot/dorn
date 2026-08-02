@@ -11,12 +11,7 @@ using YamlDotNet.RepresentationModel;
 namespace Templates.Tests;
 
 /// <summary>
-/// Confidence-building integration test (plan section 5): generates the real dorn-webapi
-/// template into a temp directory deliberately OUTSIDE the repo checkout, then runs a real
-/// nested `dotnet build` on the generated solution as a subprocess. This is the only test
-/// that proves templates/webapi's Directory.Build.props/Directory.Packages.props are truly
-/// self-contained (see the MSBuild note in the plan) rather than only building because it
-/// happens to sit inside the repo tree.
+/// Generates the real webapi template outside the repo and builds it to verify the template's build isolation.
 /// </summary>
 [Trait("Category", "Integration")]
 public class WebApiTemplateGenerationTests
@@ -81,9 +76,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Generated webapi projects MUST ship a .config/dotnet-tools.json manifest that
-    /// pins Dorn.Cli as a local tool — this is what makes <c>dotnet dorn &lt;verb&gt;</c>
-    /// work from inside a generated project without a global tool install.
+    /// Verifies generated projects include the local Dorn CLI manifest needed for <c>dotnet dorn</c> without a global install.
     /// </summary>
     [Fact]
     public async Task Generate_DornWebApiTemplate_ShipsLocalToolManifestWithDornCli()
@@ -215,9 +208,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Completes the 2x2 {aspire, docker-compose} x {sqlite, sqlserver} matrix at the template
-    /// level (design section 8): docker-compose + sqlite has no AppHost/ServiceDefaults, gets a
-    /// Dockerfile + base docker-compose.yml, and its `.slnx` doesn't reference AppHost.
+    /// Builds the docker-compose/sqlite matrix cell and verifies it omits Aspire projects while retaining Docker assets.
     /// </summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithDockerComposeAndSqlite_ProducesBuildableSolution()
@@ -301,9 +292,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Covers the 'none' orchestrator: no AppHost/ServiceDefaults, no docker-compose ymls
-    /// (gated on !UseCompose), but keeps Dockerfile/.dockerignore and the
-    /// orchestrator-agnostic .slnx.
+    /// Covers the plain orchestrator by verifying it omits orchestration files but retains the Docker assets and solution.
     /// </summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithNoneOrchestrator_ProducesBuildableSolution()
@@ -391,9 +380,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Completes the 2x2 matrix: docker-compose + sqlserver. Asserts docker-compose.yml
-    /// carries the sqlserver service + ConnectionStrings__ override, and appsettings.json
-    /// has no stray //#if marker.
+    /// Builds the docker-compose/sqlserver cell and verifies its SQL Server connection override and clean generated settings.
     /// </summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithDockerComposeAndSqlServer_ProducesBuildableSolution()
@@ -481,9 +468,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement 'Global SDK Pin Emission': template emits global.json at the generated
-    /// repo root, independent of Orm/Orchestrator/DatabaseProvider, with sdk.version
-    /// matching dorn's own root pin.
+    /// Verifies global.json is emitted at the generated repository root with Dorn's pinned SDK version.
     /// </summary>
     [Fact]
     public async Task GlobalJson_IsEmittedAtRepositoryRootWithPinnedSdkVersion()
@@ -518,9 +503,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Walks up from this test assembly's own location to find dorn's own repo-root
-    /// `global.json` — the same directory-walk shape <see cref="ResolveLocalNuGetFeed"/> uses
-    /// for the local NuGet feed, so this test keeps working from any repo checkout.
+    /// Finds Dorn's root global.json by walking upward so the test works from any checkout.
     /// </summary>
     private static string ResolveDornRootGlobalJsonPath()
     {
@@ -542,9 +525,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement 'Workflow File Emission': template emits .github/workflows/ci.yml for
-    /// every generation regardless of Orm/Orchestrator/DatabaseProvider, parseable as YAML
-    /// with `on:`, `jobs:`, `name:` keys. Covers efcore × {aspire, none} × sqlite.
+    /// Verifies every generation emits a parseable CI workflow with the expected top-level keys.
     /// </summary>
     [Theory]
     [InlineData("aspire")]
@@ -664,9 +645,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement "Test Execution Across All Tiers" (default path): with no
-    /// workflow_dispatch input supplied, exactly one solution-wide `dotnet test` command is
-    /// active — no `--filter`.
+    /// Verifies the default workflow runs one solution-wide test command across all tiers without filtering.
     /// </summary>
     [Fact]
     public async Task CiWorkflow_DefaultTestRunsAllTiersOnce()
@@ -696,9 +675,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement "Test Execution Across All Tiers" (exclusion path): with
-    /// `exclude_tiers=Integration`, three per-tier `dotnet test` commands are active (one per
-    /// non-excluded tier), each gated by an `if:` guard.
+    /// Verifies excluding Integration activates exactly the remaining three per-tier test commands.
     /// </summary>
     [Fact]
     public async Task CiWorkflow_ExclusionRunsRemainingTiers()
@@ -728,9 +705,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement "DatabaseProvider Conditional Steps" (SQLite): every step referencing the
-    /// SQL Server image is gated by an `if:` that evaluates false for a `sqlite` marker — no
-    /// SQL Server container step runs.
+    /// Verifies SQLite workflow cells skip every SQL Server container step.
     /// </summary>
     [Fact]
     public async Task CiWorkflow_SqliteStartsNoService()
@@ -765,9 +740,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement "DatabaseProvider Conditional Steps" (Linux + SQL Server): the
-    /// azure-sql-edge step is active for a Linux + sqlserver cell, and its `sqlcmd -Q
-    /// "select 1"` health check precedes the test step.
+    /// Verifies the Linux SQL Server cell starts Azure SQL Edge and health-checks it before testing.
     /// </summary>
     [Fact]
     public async Task CiWorkflow_LinuxSqlServerUsesHealthyEdge()
@@ -806,10 +779,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement 'DatabaseProvider Conditional Steps' (Windows + SQL Server): the
-    /// best-effort comment precedes the Windows branch, and no step's run command invokes
-    /// Testcontainers CLI (it's a .NET library consumed by PersistenceTestFixture
-    /// internally).
+    /// Verifies the Windows SQL Server branch is best-effort and uses Testcontainers as a .NET library, not a CLI.
     /// </summary>
     [Fact]
     public async Task CiWorkflow_WindowsSqlServerIsBestEffort()
@@ -858,9 +828,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement "Coverage Aggregation on Ubuntu": the ReportGenerator step is gated on
-    /// `matrix.os == 'ubuntu-latest'`, collects `**/coverage.cobertura.xml`, and excludes test
-    /// assemblies via `-assemblyfilters:+:-*.Tests`.
+    /// Verifies coverage aggregation runs only on Ubuntu and excludes test assemblies.
     /// </summary>
     [Fact]
     public async Task CiWorkflow_AggregatesCoverageOnUbuntuOnly()
@@ -924,9 +892,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement 'Out-of-Scope Guards': no dotnet pack/nuget push, Dependabot, or README
-    /// badge injection. Case-sensitive (avoids flagging ReportGenerator's 'Badges'
-    /// output-type).
+    /// Verifies the generated workflow contains no out-of-scope packaging, Dependabot, or README badge steps.
     /// </summary>
     [Fact]
     public async Task CiWorkflow_ContainsNoOutOfScopeSteps()
@@ -946,9 +912,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Aggregate structural contract: re-runs every prior structural assertion (including
-    /// global.json) against (efcore, aspire, sqlite), proving the whole contract holds
-    /// together.
+    /// Re-runs the structural workflow contract for the representative efcore/aspire/sqlite cell.
     /// </summary>
     [Fact]
     public async Task CiWorkflow_StructuralContract_HoldsAcrossMatrix()
@@ -992,9 +956,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Design "GeneratedCheapestCell_BuildsTestsAndHasValidWorkflow" smoke fact: the cheapest
-    /// representative cell (efcore x none x sqlite) actually builds and tests, and its ci.yml
-    /// is structurally valid YAML — not just plausible-looking text.
+    /// Builds and tests the representative efcore/none/sqlite cell while validating its workflow YAML.
     /// </summary>
     [Fact]
     public async Task GeneratedCheapestCell_BuildsTestsAndHasValidWorkflow()
@@ -1063,10 +1025,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Minimal evaluator for the small subset of GitHub Actions `if:` expression syntax this
-    /// workflow uses (`==`/`!=` string comparison, `contains(...)`, `!` negation, `&&`
-    /// combination) — lets tests assert which steps would actually run for a given symbolic
-    /// context (e.g. a `sqlite` marker) without needing to execute the workflow on GitHub.
+    /// Evaluates the subset of GitHub Actions <c>if:</c> expressions used by the workflow without running GitHub Actions.
     /// </summary>
     private static bool EvaluateGithubActionsExpression(
         string expression,
@@ -1200,12 +1159,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Restore+build split (vs single `dotnet build`) avoids *.csproj.nuget.g.props races
-    /// from MSBuild's parallel build nodes each triggering Restore on a shared dependency.
-    /// `-nodeReuse:false` prevents MSBuild worker nodes from hanging on deleted temp dirs.
-    /// RestoreAdditionalProjectSources = local NuGet feed (generated solution is outside the
-    /// repo and doesn't see its nuget.config). RestoreWithRetryAsync retries on the known
-    /// race signature since the aspire `.slnx` adds more shared-project entry points.
+    /// Restores before building to avoid MSBuild restore races; retries the known race signature and uses the local feed for generated projects.
     /// </summary>
     private static async Task<(int ExitCode, string StdOut, string StdErr)> RunDotnetBuildAsync(
         string solutionPath
@@ -1229,10 +1183,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Retries dotnet restore on the known 'file already exists' NuGet race (shared
-    /// generated file written by concurrent restore graph entry points — see
-    /// <see cref="RunDotnetBuildAsync"/>). Only that signature; other failures return
-    /// immediately.
+    /// Retries restore only for the known concurrent generated-file race; other failures return immediately.
     /// </summary>
     private static async Task<(int ExitCode, string StdOut, string StdErr)> RestoreWithRetryAsync(
         string solutionPath,
@@ -1331,9 +1282,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Generates the dorn-webapi template into a fresh temp directory; omitted symbols fall
-    /// back to template defaults. Shared by every scaffolded-CI-workflow test to avoid
-    /// re-implementing generation.
+    /// Generates a fresh webapi project with optional symbols, using template defaults for omitted values.
     /// </summary>
     private static async Task<string> GenerateWebApiProjectAsync(
         string projectName,
@@ -1383,9 +1332,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Generates, runs body, always cleans up the temp directory. Consolidates the
-    /// generate/assert/cleanup shape for all CI-workflow tests (one helper instead of
-    /// per-fact duplication).
+    /// Generates a project, runs the test body, and always cleans up its temporary directory.
     /// </summary>
     private static async Task WithGeneratedWebApiProjectAsync(
         string projectName,

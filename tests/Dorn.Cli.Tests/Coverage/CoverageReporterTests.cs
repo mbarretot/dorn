@@ -6,9 +6,7 @@ using Xunit;
 namespace Dorn.Cli.Tests.Coverage;
 
 /// <summary>
-/// Unit tests for <see cref="CoverageReporter"/>. Exercises Cobertura XML parsing,
-/// the fixed 80% threshold gate, and graceful degradation when ReportGenerator
-/// cannot be invoked.
+/// Tests Cobertura parsing, the fixed 80% gate, and graceful ReportGenerator failure handling.
 /// </summary>
 public class CoverageReporterTests : IDisposable
 {
@@ -26,9 +24,7 @@ public class CoverageReporterTests : IDisposable
             Directory.Delete(_tempRoot, recursive: true);
     }
 
-    // -------------------------------------------------------------------------
     // Cobertura XML parsing
-    // -------------------------------------------------------------------------
 
     [Fact]
     public void ParseCobertura_AboveThreshold_ReturnsAboveThreshold()
@@ -96,9 +92,7 @@ public class CoverageReporterTests : IDisposable
         );
     }
 
-    // -------------------------------------------------------------------------
     // Threshold gate
-    // -------------------------------------------------------------------------
 
     [Fact]
     public void EvaluateThreshold_AtEightyPercent_Passes()
@@ -130,9 +124,7 @@ public class CoverageReporterTests : IDisposable
         Assert.Equal(75.0, decision.Percentage, precision: 1);
     }
 
-    // -------------------------------------------------------------------------
     // Helpers
-    // -------------------------------------------------------------------------
 
     private static string BuildCobertura(double lineRate) =>
         $"<?xml version=\"1.0\" encoding=\"utf-8\"?>"

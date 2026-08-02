@@ -25,9 +25,7 @@ public class ProcessRunnerTests : IDisposable
             Directory.Delete(_tempRoot, recursive: true);
     }
 
-    // -------------------------------------------------------------------------
     // ProcessSpec construction
-    // -------------------------------------------------------------------------
 
     [Fact]
     public void ProcessSpec_WithAllParameters_StoresAllValues()
@@ -49,9 +47,7 @@ public class ProcessRunnerTests : IDisposable
         Assert.Equal(Directory.GetCurrentDirectory(), spec.WorkingDirectory);
     }
 
-    // -------------------------------------------------------------------------
     // ProcessRunner integration (real process, no mock)
-    // -------------------------------------------------------------------------
 
     [Fact]
     public async Task RunAsync_DotnetVersion_ReturnsZeroExitCode()

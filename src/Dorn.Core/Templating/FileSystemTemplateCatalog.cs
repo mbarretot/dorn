@@ -6,10 +6,7 @@ using Microsoft.TemplateEngine.Utils;
 namespace Dorn.Core.Templating;
 
 /// <summary>
-/// Discovers Dorn templates by scanning the templates/ folder directly with
-/// Microsoft.TemplateEngine.Edge.Settings.Scanner (Dorn ships templates as source, so the
-/// package/version/update machinery is unnecessary). Singleton because the scan mount point
-/// must stay open for the process: template instantiation reads files lazily from it.
+/// Scans Dorn's source templates directly; the singleton keeps the lazy-read scan mount point open.
 /// </summary>
 public sealed class FileSystemTemplateCatalog : ITemplateCatalog, IDisposable
 {
@@ -43,11 +40,7 @@ public sealed class FileSystemTemplateCatalog : ITemplateCatalog, IDisposable
         return templates.TryGetValue(shortName, out var entry) ? entry.Descriptor : null;
     }
 
-    /// <summary>
-    /// Not part of ITemplateCatalog: TemplateEngineGenerationEngine needs the raw
-    /// ITemplateInfo (not just our TemplateDescriptor projection) to call
-    /// TemplateCreator.InstantiateAsync.
-    /// </summary>
+    /// <summary>Returns raw template metadata needed by <see cref="TemplateCreator.InstantiateAsync"/>.</summary>
     public async Task<ITemplateInfo?> FindTemplateInfoByShortNameAsync(
         string shortName,
         CancellationToken ct = default

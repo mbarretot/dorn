@@ -23,9 +23,7 @@ public class ProjectContextResolverTests : IDisposable
             Directory.Delete(_tempRoot, recursive: true);
     }
 
-    // -------------------------------------------------------------------------
     // Orchestrator detection
-    // -------------------------------------------------------------------------
 
     [Fact]
     public void Resolve_WithAppHostSubdirectory_ReturnsAspire()
@@ -77,9 +75,7 @@ public class ProjectContextResolverTests : IDisposable
         Assert.Equal(Orchestrator.Plain, ctx.Orchestrator);
     }
 
-    // -------------------------------------------------------------------------
     // Solution path
-    // -------------------------------------------------------------------------
 
     [Fact]
     public void Resolve_WithSolutionFile_ReturnsSolutionPath()
@@ -104,9 +100,7 @@ public class ProjectContextResolverTests : IDisposable
         Assert.Empty(ctx.SolutionPath);
     }
 
-    // -------------------------------------------------------------------------
     // WebApi project
-    // -------------------------------------------------------------------------
 
     [Fact]
     public void Resolve_WithWebApiSubdirectory_ReturnsWebApiProject()
@@ -131,9 +125,7 @@ public class ProjectContextResolverTests : IDisposable
         Assert.Null(ctx.WebApiProject);
     }
 
-    // -------------------------------------------------------------------------
     // Tier detection
-    // -------------------------------------------------------------------------
 
     [Fact]
     public void Resolve_WithAllFourTierProjects_ReturnsAllFourTiers()
@@ -214,9 +206,7 @@ public class ProjectContextResolverTests : IDisposable
         Assert.DoesNotContain(TestTier.Functional, ctx.Tiers);
     }
 
-    // -------------------------------------------------------------------------
     // Root
-    // -------------------------------------------------------------------------
 
     [Fact]
     public void Resolve_ReturnsGivenRoot()
@@ -229,9 +219,7 @@ public class ProjectContextResolverTests : IDisposable
         Assert.Equal(_tempRoot, ctx.Root);
     }
 
-    // -------------------------------------------------------------------------
     // Helpers
-    // -------------------------------------------------------------------------
 
     private static void CreateSolution(string root, string name)
     {

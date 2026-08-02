@@ -5,9 +5,7 @@ using Testcontainers.MsSql;
 namespace CleanArchWebApi.Integration.Tests.Todos;
 
 /// <summary>
-/// Boots a real database — a SQL Server container via Testcontainers when
-/// DatabaseProvider=sqlserver, a unique SQLite file otherwise — and applies the actual EF Core
-/// migrations via Database.MigrateAsync(), proving they apply cleanly against the real provider.
+/// Boots the selected real provider (Testcontainers SQL Server or temp-file SQLite) and applies EF Core migrations.
 /// </summary>
 public sealed class PersistenceTestFixture : IAsyncLifetime
 {
@@ -50,9 +48,8 @@ public sealed class PersistenceTestFixture : IAsyncLifetime
 #if (UseSqlServer)
         await _container.DisposeAsync();
 #else
-        // Microsoft.Data.Sqlite pools the native connection by file path — disposing DbContext
-        // returns it to the pool instead of closing the OS handle, which leaves the file locked
-        // on Windows (Unix allows deleting an open file, masking the issue there).
+        // Microsoft.Data.Sqlite pools native connections by file path, so disposing DbContext can leave
+        // the database locked on Windows until SqliteConnection.ClearAllPools() is called.
         SqliteConnection.ClearAllPools();
         if (File.Exists(_databasePath))
         {

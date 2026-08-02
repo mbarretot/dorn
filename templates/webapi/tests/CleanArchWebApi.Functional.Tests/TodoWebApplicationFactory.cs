@@ -1,11 +1,7 @@
 namespace CleanArchWebApi.Functional.Tests;
 
 /// <summary>
-/// Points ApplicationDbContext at a unique temp-file SQLite database instead of the raw
-/// appsettings.json "Data Source=app.db" path, which would race across parallel test runs
-/// (SQLite file locking is stricter on Windows). Always SQLite regardless of the generated
-/// DatabaseProvider — this tier proves the HTTP pipeline, not provider fidelity (that's
-/// CleanArchWebApi.Integration.Tests's job).
+/// Uses a unique SQLite temp file for the HTTP pipeline tier; this avoids Windows locking races and stays provider-independent.
 /// </summary>
 public sealed class TodoWebApplicationFactory : WebApplicationFactory<Program>
 {
@@ -42,9 +38,8 @@ public sealed class TodoWebApplicationFactory : WebApplicationFactory<Program>
     {
         base.Dispose(disposing);
 
-        // Microsoft.Data.Sqlite pools the native connection by file path — disposing the host
-        // returns it to the pool instead of closing the OS handle, which leaves the file locked
-        // on Windows (Unix allows deleting an open file, masking the issue there).
+        // Microsoft.Data.Sqlite pools native connections by file path, so disposing the host can leave
+        // the database locked on Windows until SqliteConnection.ClearAllPools() is called.
         SqliteConnection.ClearAllPools();
         if (File.Exists(_databasePath))
         {
