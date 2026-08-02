@@ -155,6 +155,27 @@ serializacion), no la fidelidad del provider, que ya cubre `Integration.Tests`.
 
 Ver `docs/adr/0013-four-tier-test-strategy.md` para el detalle de esta decision.
 
+## CI
+
+El proyecto generado incluye `.github/workflows/ci.yml` listo para usar, mas un
+`global.json` estatico en la raiz que pinea la misma version del SDK de .NET que dorn
+usa internamente (asi el paso `setup-dotnet` de la matriz no apunta a un archivo
+inexistente). Ambos se generan siempre, sin flag ni symbol condicional. Detalle completo
+en `docs/adr/0014-scaffolded-ci-workflow.md`.
+
+- **Triggers**: `push`, `pull_request` y `workflow_dispatch` manual (con el input opcional
+  `exclude_tiers` para saltear tiers puntuales). Sin `schedule` ni filtros de paths.
+- **Matriz de seis celdas**: `os` (`ubuntu-latest`, `windows-latest`) x `orchestrator`
+  (`aspire`, `docker-compose`, `none`). El proveedor de base de datos no es un eje de la
+  matriz — se resuelve via un marker `.github/config/db-provider.txt` que un job de
+  `configuration` lee antes de arrancar la matriz.
+- **SQL Server best-effort en Windows**: los runners `windows-latest` de GitHub no
+  proveen un host Docker, asi que `PersistenceTestFixture` (tier `Integration.Tests`, ver
+  seccion "Estrategia de testing" arriba) no puede levantar SQL Server ahi. La celda
+  Linux + `sqlserver` si levanta un contenedor real (`azure-sql-edge`) con health check
+  antes de correr los tests; la celda Windows queda documentada como caveat conocido, no
+  como bug.
+
 ## Options
 
 | Parametro          | Default  | Descripcion                                             |
