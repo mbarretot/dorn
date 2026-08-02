@@ -239,6 +239,46 @@ formatter config to keep in sync. EF Core migration files under
 and are left untouched. No build-time, git-hook, or CI enforcement is wired up — running
 `dotnet format` is opt-in and up to you.
 
+## Continuous Integration
+
+Every generated project ships a working `.github/workflows/ci.yml`, plus a static
+`global.json` at the repository root pinning the same .NET SDK version dorn itself builds
+against (`setup-dotnet`'s `global-json-file` step reads it). Both are generated
+unconditionally — no flag or symbol controls them. See
+`docs/adr/0014-scaffolded-ci-workflow.md` for the full decision record.
+
+- **Triggers** — `push`, `pull_request`, and a manual `workflow_dispatch` with one
+  optional input, `exclude_tiers` (comma-separated tier names). No `schedule` and no path
+  filters.
+- **Matrix** — six cells: `os` (`ubuntu-latest`, `windows-latest`) x `orchestrator`
+  (`aspire`, `docker-compose`, `none`). Database provider is not a matrix axis — a
+  generated repository only ever contains the one provider chosen at `dorn new webapi`
+  time, represented by a committed `.github/config/db-provider.txt` marker that a
+  `configuration` job reads before the matrix job starts.
+- **Test execution** — one solution-wide `dotnet test` per cell by default. Supplying
+  `exclude_tiers` on a manual run switches to one `dotnet test` invocation per
+  non-excluded tier project (`Application`, `Integration`, `Functional`, `Architecture`)
+  instead.
+- **Database-provider conditional steps** — when the marker is `sqlserver` and the runner
+  is Linux, two ordinary steps run before the test step: "Start SQL Server (Linux)"
+  (`docker run mcr.microsoft.com/azure-sql-edge`) and "Wait for SQL Server to be healthy
+  (Linux)" (polls with `sqlcmd -Q "select 1"` until the container responds). Neither step
+  runs for the `sqlite` marker, and neither runs on Windows — see the Windows caveat
+  below. This is two plain, `if:`-gated steps rather than a `services:` block, because
+  GitHub Actions service containers don't support a per-service `if:` and only start on
+  Linux runners.
+- **Windows + SQL Server is best-effort** — GitHub-hosted `windows-latest` runners provide
+  no Docker host, so `Integration.Tests`' `PersistenceTestFixture` (see the "Estrategia de
+  testing" table in `templates/webapi/README.md` / ADR 0013) fails to start SQL Server
+  there. A comment on the matching step documents this; the Windows matrix cell still
+  builds and runs the non-database-dependent tiers.
+- **Coverage** — `dotnet test --collect:"XPlat Code Coverage"` on every cell; a
+  ReportGenerator aggregation step runs only on `ubuntu-latest`, producing
+  `Html;Cobertura;Badges` output filtered to exclude `*.Tests` assemblies.
+- **Out of scope** — no `dotnet ef`, `dotnet pack`, `dotnet nuget push`, Dependabot, or
+  badge automation. `actionlint` is intentionally omitted (optional per design; dorn's own
+  CI doesn't run it either).
+
 ## CQRS with the custom mediator
 
 Requests are records implementing `IRequest<TResponse>`; handlers implement
