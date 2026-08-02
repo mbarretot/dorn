@@ -19,6 +19,7 @@ public static class OrchestratorValidator
     {
         "aspire",
         "docker-compose",
+        "none",
     };
 
     public static OrchestratorValidationResult Validate(string? value)
@@ -31,7 +32,7 @@ public static class OrchestratorValidator
         if (!ValidOrchestrators.Contains(value))
         {
             return OrchestratorValidationResult.Invalid(
-                $"Unknown orchestrator '{value}'. Valid values are 'aspire', 'docker-compose'."
+                $"Unknown orchestrator '{value}'. Valid values are 'aspire', 'docker-compose', 'none'."
             );
         }
 

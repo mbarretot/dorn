@@ -160,5 +160,5 @@ Ver `docs/adr/0013-four-tier-test-strategy.md` para el detalle de esta decision.
 | Parametro          | Default  | Descripcion                                             |
 | ------------------ | -------- | ------------------------------------------------------- |
 | `DatabaseProvider` | `sqlite` | `sqlite` (zero-config) o `sqlserver` (Aspire container) |
-| `Orchestrator`     | `aspire` | `aspire` (AppHost) o `docker-compose`                   |
+| `Orchestrator`     | `aspire` | `aspire` (AppHost), `docker-compose` o `none` (sin orquestador) |
 | `IncludeTests`     | `true`   | Incluir proyecto de tests                               |

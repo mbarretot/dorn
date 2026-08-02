@@ -302,6 +302,98 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
+    /// Covers the third orchestrator value (design section "The critical change: compose-file
+    /// modifier re-gating"): none + sqlite has no AppHost/ServiceDefaults (still gated on
+    /// !UseAspire) and no docker-compose ymls (now gated on !UseCompose), but still ships a
+    /// Dockerfile/.dockerignore (unconditional) and reuses the orchestrator-agnostic
+    /// CleanArchWebApi.Compose.slnx renamed to &lt;Name&gt;.slnx (still gated on !UseAspire).
+    /// </summary>
+    [Fact]
+    public async Task GenerateAndBuild_DornWebApiTemplateWithNoneOrchestrator_ProducesBuildableSolution()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-tests-{Guid.NewGuid():N}");
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornIntegrationTestNoneApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["Orchestrator"] = "none" }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+            Assert.NotEmpty(result.CreatedFiles);
+
+            Assert.False(
+                Directory.Exists(
+                    Path.Combine(outputDirectory, "src", "DornIntegrationTestNoneApp.AppHost")
+                )
+            );
+            Assert.False(
+                Directory.Exists(
+                    Path.Combine(
+                        outputDirectory,
+                        "src",
+                        "DornIntegrationTestNoneApp.ServiceDefaults"
+                    )
+                )
+            );
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        outputDirectory,
+                        "src",
+                        "DornIntegrationTestNoneApp.WebApi",
+                        "Dockerfile"
+                    )
+                )
+            );
+            Assert.True(File.Exists(Path.Combine(outputDirectory, ".dockerignore")));
+            Assert.False(File.Exists(Path.Combine(outputDirectory, "docker-compose.yml")));
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "docker-compose.SqlServer.yml"))
+            );
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+            Assert.DoesNotContain("AppHost", await File.ReadAllTextAsync(slnFiles[0]));
+
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
     /// Completes the 2x2 matrix's remaining cell: docker-compose + sqlserver. Asserts the
     /// generated docker-compose.yml carries the `sqlserver` service and the
     /// `ConnectionStrings__` environment override (design section 5/ADR-3), and that the

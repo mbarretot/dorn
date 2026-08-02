@@ -98,8 +98,15 @@ public sealed class NewWebApiCommand(
                     ? _console.Prompt(
                         new SelectionPrompt<string>()
                             .Title("Select an [green]orchestrator[/]:")
-                            .AddChoices("aspire", "docker-compose")
-                            .UseConverter(o => o == "docker-compose" ? "Docker Compose" : "Aspire")
+                            .AddChoices("aspire", "docker-compose", "none")
+                            .UseConverter(o =>
+                                o switch
+                                {
+                                    "docker-compose" => "Docker Compose",
+                                    "none" => "None (run directly)",
+                                    _ => "Aspire",
+                                }
+                            )
                     )
                     : "aspire"
             );

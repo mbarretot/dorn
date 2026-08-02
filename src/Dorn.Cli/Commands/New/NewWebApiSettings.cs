@@ -31,7 +31,7 @@ public sealed class NewWebApiSettings : CommandSettings
 
     [CommandOption("--orchestrator")]
     [Description(
-        "Orchestrator: aspire (default) or docker-compose. Prompted interactively if omitted and the session is interactive."
+        "Orchestrator: aspire (default), docker-compose, or none. Prompted interactively if omitted and the session is interactive."
     )]
     public string? Orchestrator { get; init; }
 
