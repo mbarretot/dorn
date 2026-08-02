@@ -126,6 +126,20 @@
         {
           "condition": "(UseCompose && !UseSqlServer)",
           "exclude": ["docker-compose.SqlServer.yml"]
+        },
+        {
+          "condition": "(UseSqlServer)",
+          "rename": {
+            ".github/config/db-provider.txt.tpl-sqlserver": ".github/config/db-provider.txt"
+          },
+          "exclude": [".github/config/db-provider.txt.tpl-sqlite"]
+        },
+        {
+          "condition": "(!UseSqlServer)",
+          "rename": {
+            ".github/config/db-provider.txt.tpl-sqlite": ".github/config/db-provider.txt"
+          },
+          "exclude": [".github/config/db-provider.txt.tpl-sqlserver"]
         }
       ]
     }
