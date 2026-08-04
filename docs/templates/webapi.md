@@ -8,6 +8,7 @@ choice of database provider at generation time.
 ```bash
 dorn new webapi MyApp                             # SQLite (default), no external setup required
 dorn new webapi MyApp --database sqlserver        # SQL Server, run via an Aspire-managed container
+dorn new webapi MyApp --database postgres         # PostgreSQL, run via an Aspire-managed container
 dorn new webapi MyApp --orchestrator docker-compose  # Docker Compose scaffolding, no Aspire dependency
 dorn new webapi MyApp --orchestrator none         # no orchestration scaffolding, run the API directly
 dorn new webapi MyApp                             # omit --database/--orchestrator in an interactive terminal to be prompted
@@ -96,10 +97,11 @@ template:
   starts the Aspire dashboard and launches the `<Name>.WebApi` resource under it. With the
   default SQLite provider, SQLite stays untouched by Aspire's resource model (it's an
   embedded file-based DB, not something Aspire containerizes/orchestrates) — the AppHost
-  only orchestrates the WebApi project itself. With `--database sqlserver`, the AppHost
-  additionally provisions a SQL Server container resource (`builder.AddSqlServer(...)`)
-  and wires its connection string into the WebApi project via `WithReference(...)` — this
-  requires Docker to be running locally. See
+  only orchestrates the WebApi project itself. With `--database sqlserver` or
+  `--database postgres`, the AppHost additionally provisions a matching container resource
+  (`builder.AddSqlServer(...)` or `builder.AddPostgres(...)`) and wires its connection
+  string into the WebApi project via `WithReference(...)` — this requires Docker to be
+  running locally. See
   [Persistence: EF Core, database provider selection](#persistence-ef-core-database-provider-selection).
 - **`<Name>.ServiceDefaults`** — a shared class library centralizing OpenTelemetry
   (logging, metrics, tracing, with an OTLP exporter enabled when
@@ -133,9 +135,12 @@ one `--database` value (the two axes are otherwise orthogonal, so not every cell
     (`ports: 8080:8080`). With `--database sqlserver`, an additional `sqlserver` service (image
     `mcr.microsoft.com/mssql/server:2022-latest`, with a healthcheck and a named volume) is
     included, and the `webapi` service gets a `ConnectionStrings__<Name>` environment override
-    pointing at the `sqlserver` compose DNS name with `TrustServerCertificate=true` — the
-    compose-path equivalent of what Aspire's `WithReference(sql)` injects at runtime on the
-    Aspire path. Run with `docker compose up --build`.
+    pointing at the `sqlserver` compose DNS name with `TrustServerCertificate=true`. With
+    `--database postgres`, the same pattern applies with a `postgres` service (image
+    `postgres:17`, healthcheck via `pg_isready`, named volume) and a matching connection
+    string pointing at the `postgres` compose DNS name. Both are the compose-path equivalent
+    of what Aspire's `WithReference(...)` injects at runtime on the Aspire path. Run with
+    `docker compose up --build`.
   - The generated `<Name>.slnx` on this path lists only `Application`, `Domain`,
     `Infrastructure`, `WebApi`, and `Application.Tests` — no `AppHost`/`ServiceDefaults`
     entries, since those projects don't exist in this generation.
@@ -147,8 +152,9 @@ one `--database` value (the two axes are otherwise orthogonal, so not every cell
   `src/<Name>.ServiceDefaults` are not generated, and the generated `<Name>.slnx` reuses the
   same orchestrator-agnostic solution file as the `docker-compose` path (only
   `Application`/`Domain`/`Infrastructure`/`WebApi`/`Application.Tests`, no
-  `AppHost`/`ServiceDefaults`). Unlike `docker-compose`, neither `docker-compose.yml` nor
-  `docker-compose.SqlServer.yml` is generated. `Dockerfile` and `.dockerignore` still are
+  `AppHost`/`ServiceDefaults`). Unlike `docker-compose`, none of `docker-compose.yml`,
+  `docker-compose.SqlServer.yml`, or `docker-compose.Postgres.yml` is generated. `Dockerfile`
+  and `.dockerignore` still are
   (see above — both are unconditional), so `docker build` against the generated WebApi image
   remains possible even without Compose. Run the API directly with
   `dotnet run --project src/<Name>.WebApi`.
@@ -262,16 +268,20 @@ unconditionally — no flag or symbol controls them. See
 - **Database-provider conditional steps** — when the marker is `sqlserver` and the runner
   is Linux, two ordinary steps run before the test step: "Start SQL Server (Linux)"
   (`docker run mcr.microsoft.com/azure-sql-edge`) and "Wait for SQL Server to be healthy
-  (Linux)" (polls with `sqlcmd -Q "select 1"` until the container responds). Neither step
-  runs for the `sqlite` marker, and neither runs on Windows — see the Windows caveat
-  below. This is two plain, `if:`-gated steps rather than a `services:` block, because
-  GitHub Actions service containers don't support a per-service `if:` and only start on
-  Linux runners.
-- **Windows + SQL Server is best-effort** — GitHub-hosted `windows-latest` runners provide
-  no Docker host, so `Integration.Tests`' `PersistenceTestFixture` (see the "Estrategia de
-  testing" table in `templates/webapi/README.md` / ADR 0013) fails to start SQL Server
-  there. A comment on the matching step documents this; the Windows matrix cell still
-  builds and runs the non-database-dependent tiers.
+  (Linux)" (polls with `sqlcmd -Q "select 1"` until the container responds). When the marker
+  is `postgres`, the equivalent pair runs instead: "Start PostgreSQL (Linux)"
+  (`docker run postgres:17`) and "Wait for PostgreSQL to be healthy (Linux)" (polls with
+  `pg_isready -U postgres` until the container responds). Both providers generate their
+  disposable container password at CI runtime via `openssl rand -base64 24` — never a
+  literal committed value. Neither pair of steps runs for the `sqlite` marker, and neither
+  runs on Windows — see the Windows caveat below. This is plain, `if:`-gated steps rather
+  than a `services:` block, because GitHub Actions service containers don't support a
+  per-service `if:` and only start on Linux runners.
+- **Windows + SQL Server / PostgreSQL is best-effort** — GitHub-hosted `windows-latest`
+  runners provide no Docker host, so `Integration.Tests`' `PersistenceTestFixture` (see the
+  "Estrategia de testing" table in `templates/webapi/README.md` / ADR 0013) fails to start
+  SQL Server or PostgreSQL there. A comment on the matching step documents this; the
+  Windows matrix cell still builds and runs the non-database-dependent tiers.
 - **Coverage** — `dotnet test --collect:"XPlat Code Coverage"` on every cell; a
   ReportGenerator aggregation step runs only on `ubuntu-latest`, producing
   `Html;Cobertura;Badges` output filtered to exclude `*.Tests` assemblies.
@@ -432,65 +442,73 @@ fire-and-forget strategy.
 
 `Infrastructure/Persistence/ApplicationDbContext.cs` is a plain `DbContext` implementing
 the `Application`-layer `IApplicationDbContext` port. The provider is chosen at
-generation time via `dorn new webapi MyApp --database sqlite|sqlserver`:
+generation time via `dorn new webapi MyApp --database sqlite|sqlserver|postgres`:
 
 - **`--database sqlite`** (default) — zero-config: a generated project builds and runs
   without installing or provisioning a database server, which matters for a scaffolded
   starting point.
 - **`--database sqlserver`** — runs SQL Server via an Aspire-managed container, so it's
   runnable out of the box with Docker instead of requiring a manually provisioned server.
+- **`--database postgres`** — runs PostgreSQL via an Aspire-managed container, at parity
+  with the SQL Server path (Aspire-hosted, not zero-Docker).
 - Omit `--database` in an interactive terminal to be prompted; in a non-interactive
   session (e.g. CI) the omitted flag silently falls back to `sqlite`.
 
 ```csharp
 // Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs
 services.AddDbContext<ApplicationDbContext>(options =>
-#if (UseSqlServer)
-    options.UseSqlServer(configuration.GetConnectionString("CleanArchWebApi"))
-#else
+#if (UseSqlite)
     options.UseSqlite(configuration.GetConnectionString("Default"))
+#elif (UseSqlServer)
+    options.UseSqlServer(configuration.GetConnectionString("CleanArchWebApi"))
+#elif (UsePostgres)
+    options.UseNpgsql(configuration.GetConnectionString("CleanArchWebApi"))
 #endif
 );
 ```
 
 With SQLite, the connection string is static in `appsettings.json`
-(`"ConnectionStrings": { "Default": "Data Source=app.db" }`). With SQL Server, no static
-connection string is needed — Aspire's `WithReference(sql)` in `AppHost.cs` injects the
-resolved connection string into the WebApi project's configuration at runtime under the
-resource name `"CleanArchWebApi"` (renamed to your project name like everything else
-sourced from `sourceName`).
+(`"ConnectionStrings": { "Default": "Data Source=app.db" }`). With SQL Server or
+PostgreSQL, no static connection string is needed — Aspire's `WithReference(...)` in
+`AppHost.cs` injects the resolved connection string into the WebApi project's
+configuration at runtime under the resource name `"CleanArchWebApi"` (renamed to your
+project name like everything else sourced from `sourceName`).
 
 The template ships a real, provider-specific EF Core migration for whichever provider is
-selected (`Infrastructure/Persistence/Migrations/`, generated once per provider — SQLite's
-and SQL Server's authoring folders never both land in the same generated output, so there
-is exactly one `ApplicationDbContextModelSnapshot`), and `Program.cs` calls
-`dbContext.Database.MigrateAsync()` on startup, so `dotnet run` (SQLite) or
-`dotnet run --project src/<Name>.AppHost` (SQL Server, with Docker running) against a
-freshly generated project creates the schema automatically — no manual
-`dotnet ef database update` step needed for the golden path. This was verified by
-generating a project with each provider, building it, and exercising
+selected (`Infrastructure/Persistence/Migrations/`, generated once per provider — the
+SQLite, SQL Server, and PostgreSQL authoring folders never land together in the same
+generated output, so there is exactly one `ApplicationDbContextModelSnapshot`), and
+`Program.cs` calls `dbContext.Database.MigrateAsync()` on startup, so `dotnet run`
+(SQLite) or `dotnet run --project src/<Name>.AppHost` (SQL Server or PostgreSQL, with
+Docker running) against a freshly generated project creates the schema automatically —
+no manual `dotnet ef database update` step needed for the golden path. This was verified
+by generating a project with each provider, building it, and exercising
 `POST`/`GET /api/todos` for real.
 
-To swap to PostgreSQL (not a first-class `--database` choice, still a manual swap):
+For other, still-unsupported engines (e.g. MySQL, Oracle), the same manual swap the
+SQL Server and PostgreSQL providers used to require still applies:
 
-1. Replace the `Microsoft.EntityFrameworkCore.Sqlite`/`.SqlServer` package reference (and
-   its `PackageVersion` entry in `templates/webapi`'s — or your generated project's —
-   `Directory.Packages.props`) with `Npgsql.EntityFrameworkCore.PostgreSQL`.
-2. Change `options.UseSqlite(...)`/`options.UseSqlServer(...)` to `options.UseNpgsql(...)`
-   in `AddInfrastructure`.
+1. Replace the provider-specific EF Core package reference (and its `PackageVersion`
+   entry in `templates/webapi`'s — or your generated project's — `Directory.Packages.props`)
+   with the target provider's EF Core package.
+2. Change the `options.Use...(...)` call in `AddInfrastructure` to the target provider's
+   equivalent.
 3. Add or update the `ConnectionStrings` entry in `appsettings.json` (and
    `appsettings.Development.json` if you add one) to match the new provider — if you're
-   starting from `--database sqlserver`, there is no static entry to update, since Aspire
-   injects that connection string at runtime; you'll need to add one.
-4. If you started from `--database sqlserver`, remove the Aspire SQL Server wiring: the
-   `builder.AddSqlServer("sql").AddDatabase(...)` resource and `.WithReference(sql)` in
-   `AppHost.cs`, and the `Aspire.Hosting.SqlServer` package reference in
-   `<Name>.AppHost.csproj` — otherwise you're left running an unused SQL Server container.
+   starting from `--database sqlserver`/`--database postgres`, there is no static entry to
+   update, since Aspire injects that connection string at runtime; you'll need to add one.
+4. If you started from `--database sqlserver`/`--database postgres`, remove the matching
+   Aspire container wiring (the `builder.Add...(...)` resource and `.WithReference(...)`
+   in `AppHost.cs`, and the corresponding `Aspire.Hosting.*` package reference in
+   `<Name>.AppHost.csproj`) — otherwise you're left running an unused container.
 5. Delete `Infrastructure/Persistence/Migrations/` and regenerate it for the new provider
    (`dotnet ef migrations add InitialCreate --project src/<Name>.Infrastructure
    --startup-project src/<Name>.WebApi`) — EF Core migrations are provider-specific and
-   neither the SQLite nor the SQL Server ones will apply cleanly to PostgreSQL.
+   none of the SQLite, SQL Server, or PostgreSQL ones will apply cleanly to a different
+   engine.
 
 See `docs/adr/0005-ef-core-sqlite-default-persistence.md` for the original SQLite-only
-rationale, and `docs/adr/0012-database-provider-selection.md` for the decision to make
-SQL Server a first-class, Aspire-hosted `--database` choice.
+rationale, `docs/adr/0012-database-provider-selection.md` for the decision to make
+SQL Server a first-class, Aspire-hosted `--database` choice, and
+`docs/adr/0015-postgresql-database-provider.md` for the decision to add PostgreSQL as a
+first-class `--database` choice at the same parity.
