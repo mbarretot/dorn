@@ -13,6 +13,10 @@
             Include="Aspire.Hosting.SqlServer"
             Condition="'$(UseSqlServer)' == 'True'"
         />
+        <PackageReference
+            Include="Aspire.Hosting.PostgreSQL"
+            Condition="'$(UsePostgres)' == 'True'"
+        />
     </ItemGroup>
 
     <ItemGroup>

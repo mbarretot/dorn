@@ -116,7 +116,7 @@ public class NewWebApiCommandTests
         var (engine, _, command) = CreateCommand();
 
         var exitCode = await command.RunAsync(
-            new NewWebApiSettings { Name = "MyApp", Database = "postgres" },
+            new NewWebApiSettings { Name = "MyApp", Database = "mysql" },
             CancellationToken.None
         );
 
@@ -127,6 +127,30 @@ public class NewWebApiCommandTests
     }
 
     [Fact]
+    public async Task NewWebApi_WithPostgresDatabaseOption_PassesThroughToEngine()
+    {
+        var (engine, _, command) = CreateCommand();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
+
+        var exitCode = await command.RunAsync(
+            new NewWebApiSettings { Name = "MyApp", Database = "postgres" },
+            CancellationToken.None
+        );
+
+        Assert.Equal(0, exitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(
+                Arg.Is<GenerationRequest>(r =>
+                    r.Parameters != null && r.Parameters["DatabaseProvider"] == "postgres"
+                ),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
     public async Task NewWebApi_WithSqlServerAndAspireUnsafeProjectName_ReturnsExitCodeOneAndNeverCallsEngine()
     {
         // "My.App" passes ProjectNameValidator but is invalid as an Aspire resource name (ASPIRE006).
@@ -134,6 +158,24 @@ public class NewWebApiCommandTests
 
         var exitCode = await command.RunAsync(
             new NewWebApiSettings { Name = "My.App", Database = "sqlserver" },
+            CancellationToken.None
+        );
+
+        Assert.Equal(1, exitCode);
+        await engine
+            .DidNotReceive()
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithPostgresAndAspireUnsafeProjectName_ReturnsExitCodeOneAndNeverCallsEngine()
+    {
+        // "My.App" passes ProjectNameValidator but is invalid as an Aspire resource name (ASPIRE006);
+        // the guard is `!= "sqlite"`, so postgres must trigger it exactly like sqlserver does.
+        var (engine, _, command) = CreateCommand();
+
+        var exitCode = await command.RunAsync(
+            new NewWebApiSettings { Name = "My.App", Database = "postgres" },
             CancellationToken.None
         );
 

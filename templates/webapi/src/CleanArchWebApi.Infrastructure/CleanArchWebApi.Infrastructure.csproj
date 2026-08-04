@@ -17,12 +17,17 @@
     <!-- Exclude SqlServer migrations when SqlServer is not the selected provider -->
     <Compile
       Remove="Persistence\Migrations\SqlServer\**\*.cs"
-      Condition="'$(UseSqlite)' == 'True'"
+      Condition="'$(UseSqlite)' == 'True' Or '$(UsePostgres)' == 'True'"
     />
-    <!-- Exclude Sqlite migrations when UseSqlServer is true -->
+    <!-- Exclude Sqlite migrations when UseSqlServer or UsePostgres is true -->
     <Compile
       Remove="Persistence\Migrations\Sqlite\**\*.cs"
-      Condition="'$(UseSqlServer)' == 'True'"
+      Condition="'$(UseSqlServer)' == 'True' Or '$(UsePostgres)' == 'True'"
+    />
+    <!-- Exclude Postgres migrations when Postgres is not the selected provider -->
+    <Compile
+      Remove="Persistence\Migrations\Postgres\**\*.cs"
+      Condition="'$(UseSqlite)' == 'True' Or '$(UseSqlServer)' == 'True'"
     />
   </ItemGroup>
 
@@ -43,6 +48,10 @@
       Condition="'$(UseEfCore)' == 'True' And '$(UseSqlServer)' == 'True'"
     />
     <PackageReference
+      Include="Npgsql.EntityFrameworkCore.PostgreSQL"
+      Condition="'$(UseEfCore)' == 'True' And '$(UsePostgres)' == 'True'"
+    />
+    <PackageReference
       Include="Microsoft.EntityFrameworkCore.Design"
       Condition="'$(UseEfCore)' == 'True'"
     />
@@ -56,6 +65,10 @@
     <PackageReference
       Include="Microsoft.Data.SqlClient"
       Condition="'$(UseDapper)' == 'True' And '$(UseSqlServer)' == 'True'"
+    />
+    <PackageReference
+      Include="Npgsql"
+      Condition="'$(UseDapper)' == 'True' And '$(UsePostgres)' == 'True'"
     />
 
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />

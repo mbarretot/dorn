@@ -83,7 +83,7 @@ public sealed class NewWebApiCommand(
                     ? _console.Prompt(
                         new SelectionPrompt<string>()
                             .Title("Select a [green]database provider[/]:")
-                            .AddChoices("sqlite", "sqlserver")
+                            .AddChoices("sqlite", "sqlserver", "postgres")
                     )
                     : "sqlite"
             );
@@ -108,9 +108,12 @@ public sealed class NewWebApiCommand(
                     : "aspire"
             );
 
-        if (orchestrator == "aspire" && databaseProvider == "sqlserver")
+        if (orchestrator == "aspire" && databaseProvider != "sqlite")
         {
-            var aspireNameValidation = AspireResourceNameValidator.Validate(settings.Name);
+            var aspireNameValidation = AspireResourceNameValidator.Validate(
+                settings.Name,
+                databaseProvider
+            );
             if (!aspireNameValidation.IsValid)
             {
                 WriteErrorPanel("Invalid project name", aspireNameValidation.ErrorMessage);

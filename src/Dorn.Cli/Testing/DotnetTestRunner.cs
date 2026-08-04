@@ -50,9 +50,9 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
             if (string.IsNullOrEmpty(tierPath))
                 continue;
 
-            if (tier == TestTier.Integration && database == DatabaseProvider.SqlServer)
+            if (tier == TestTier.Integration && database != DatabaseProvider.Sqlite)
             {
-                WarnDockerRequired("integration tests with sqlserver");
+                WarnDockerRequired($"integration tests with {DescribeProvider(database)}");
             }
 
             var spec = new ProcessSpec(
@@ -106,4 +106,12 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
             $"[yellow]Warning[/]: [bold]{operation}[/] requires Docker. Ensure the Docker daemon is running before continuing."
         );
     }
+
+    private static string DescribeProvider(DatabaseProvider database) =>
+        database switch
+        {
+            DatabaseProvider.SqlServer => "sqlserver",
+            DatabaseProvider.Postgres => "postgres",
+            _ => database.ToString().ToLowerInvariant(),
+        };
 }

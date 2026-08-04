@@ -23,9 +23,7 @@ public sealed class PersistenceTestFixture : IAsyncLifetime
     ).Build();
 #elif (UsePostgres)
     // Same image tag as docker-compose.Postgres.yml, kept in sync deliberately.
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("postgres:17")
-        .Build();
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").Build();
 #endif
 
     public ApplicationDbContext DbContext { get; private set; } = null!;

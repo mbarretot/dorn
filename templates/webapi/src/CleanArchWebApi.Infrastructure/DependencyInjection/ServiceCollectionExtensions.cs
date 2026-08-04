@@ -19,7 +19,7 @@ public static class ServiceCollectionExtensions
 #elif (UseSqlServer)
             options.UseSqlServer(configuration.GetConnectionString("CleanArchWebApi"))
 #elif (UsePostgres)
-            // Postgres provider wiring lands in Slice B.
+            options.UseNpgsql(configuration.GetConnectionString("CleanArchWebApi"))
 #endif
         );
 
