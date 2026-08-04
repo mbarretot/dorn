@@ -1,5 +1,9 @@
 using System.Data;
+#if (UseSqlite)
 using Microsoft.Data.Sqlite;
+#elif (UsePostgres)
+using Npgsql;
+#endif
 using Microsoft.Extensions.Configuration;
 
 namespace CleanArchWebApi.Infrastructure.Repositories.Dapper;
@@ -15,7 +19,7 @@ public class DapperContext
 #elif (UseSqlServer)
         _connectionString = configuration.GetConnectionString("CleanArchWebApi")!;
 #elif (UsePostgres)
-        // Postgres provider wiring lands in Slice B.
+        _connectionString = configuration.GetConnectionString("CleanArchWebApi")!;
 #endif
     }
 
@@ -26,7 +30,7 @@ public class DapperContext
 #elif (UseSqlServer)
         return new Microsoft.Data.SqlClient.SqlConnection(_connectionString);
 #elif (UsePostgres)
-        // Postgres provider wiring lands in Slice B.
+        return new NpgsqlConnection(_connectionString);
 #endif
     }
 }

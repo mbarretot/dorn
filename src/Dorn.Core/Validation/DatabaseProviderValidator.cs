@@ -17,6 +17,7 @@ public static class DatabaseProviderValidator
     {
         "sqlite",
         "sqlserver",
+        "postgres",
     };
 
     public static DatabaseProviderValidationResult Validate(string? value)
@@ -29,7 +30,7 @@ public static class DatabaseProviderValidator
         if (!ValidProviders.Contains(value))
         {
             return DatabaseProviderValidationResult.Invalid(
-                $"Unknown database provider '{value}'. Valid values are 'sqlite', 'sqlserver'."
+                $"Unknown database provider '{value}'. Valid values are 'sqlite', 'sqlserver', 'postgres'."
             );
         }
 

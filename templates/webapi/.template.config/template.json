@@ -32,7 +32,8 @@
       "datatype": "choice",
       "choices": [
         { "choice": "sqlite", "description": "SQLite — no external setup required (default)." },
-        { "choice": "sqlserver", "description": "SQL Server, run via an Aspire-managed container." }
+        { "choice": "sqlserver", "description": "SQL Server, run via an Aspire-managed container." },
+        { "choice": "postgres", "description": "PostgreSQL, run via an Aspire-managed container." }
       ],
       "defaultValue": "sqlite",
       "description": "The EF Core database provider used for persistence."
@@ -87,14 +88,30 @@
           "rename": {
             "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/": "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/"
           },
-          "exclude": ["src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/**"]
+          "exclude": [
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/**",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Postgres/**"
+          ]
         },
         {
           "condition": "(UseSqlite)",
           "rename": {
             "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/": "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/"
           },
-          "exclude": ["src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/**"]
+          "exclude": [
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/**",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Postgres/**"
+          ]
+        },
+        {
+          "condition": "(UsePostgres)",
+          "rename": {
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Postgres/": "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/"
+          },
+          "exclude": [
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/**",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/**"
+          ]
         },
         {
           "condition": "(!UseAspire)",

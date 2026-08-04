@@ -6,7 +6,8 @@ builder.AddProject<Projects.CleanArchWebApi_WebApi>("webapi");
 var sql = builder.AddSqlServer("sql").AddDatabase("CleanArchWebApi");
 builder.AddProject<Projects.CleanArchWebApi_WebApi>("webapi").WithReference(sql);
 #elif (UsePostgres)
-// Postgres provider wiring lands in Slice B.
+var postgres = builder.AddPostgres("postgres").AddDatabase("CleanArchWebApi");
+builder.AddProject<Projects.CleanArchWebApi_WebApi>("webapi").WithReference(postgres);
 #endif
 
 builder.Build().Run();
