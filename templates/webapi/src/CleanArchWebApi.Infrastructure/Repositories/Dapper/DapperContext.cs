@@ -10,19 +10,23 @@ public class DapperContext
 
     public DapperContext(IConfiguration configuration)
     {
-#if (UseSqlServer)
-        _connectionString = configuration.GetConnectionString("CleanArchWebApi")!;
-#else
+#if (UseSqlite)
         _connectionString = configuration.GetConnectionString("Default")!;
+#elif (UseSqlServer)
+        _connectionString = configuration.GetConnectionString("CleanArchWebApi")!;
+#elif (UsePostgres)
+        // Postgres provider wiring lands in Slice B.
 #endif
     }
 
     public IDbConnection CreateConnection()
     {
-#if (UseSqlServer)
-        return new Microsoft.Data.SqlClient.SqlConnection(_connectionString);
-#else
+#if (UseSqlite)
         return new SqliteConnection(_connectionString);
+#elif (UseSqlServer)
+        return new Microsoft.Data.SqlClient.SqlConnection(_connectionString);
+#elif (UsePostgres)
+        // Postgres provider wiring lands in Slice B.
 #endif
     }
 }

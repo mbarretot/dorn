@@ -12,7 +12,9 @@
   <PropertyGroup>
     <UseEfCore Condition="'$(UseEfCore)' == ''">True</UseEfCore>
     <UseDapper Condition="'$(UseDapper)' == ''">False</UseDapper>
+    <UseSqlite Condition="'$(UseSqlite)' == ''">True</UseSqlite>
     <UseSqlServer Condition="'$(UseSqlServer)' == ''">False</UseSqlServer>
+    <UsePostgres Condition="'$(UsePostgres)' == ''">False</UsePostgres>
   </PropertyGroup>
 
   <!-- In-place builds need C# symbols because generation-time #if directives are not evaluated by MSBuild. -->
@@ -22,7 +24,13 @@
   <PropertyGroup Condition="'$(UseDapper)' == 'True' OR '$(UseDapper)' == 'true'">
     <DefineConstants>$(DefineConstants);UseDapper</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(UseSqlite)' == 'True' OR '$(UseSqlite)' == 'true'">
+    <DefineConstants>$(DefineConstants);UseSqlite</DefineConstants>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(UseSqlServer)' == 'True' OR '$(UseSqlServer)' == 'true'">
     <DefineConstants>$(DefineConstants);UseSqlServer</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(UsePostgres)' == 'True' OR '$(UsePostgres)' == 'true'">
+    <DefineConstants>$(DefineConstants);UsePostgres</DefineConstants>
   </PropertyGroup>
 </Project>

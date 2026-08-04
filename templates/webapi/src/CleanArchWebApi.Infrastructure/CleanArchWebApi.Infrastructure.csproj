@@ -14,10 +14,10 @@
     <Compile Remove="Persistence\Migrations\**\*.cs" Condition="'$(UseDapper)' == 'True'" />
     <!-- Exclude ApplicationDbContext when using Dapper -->
     <Compile Remove="Persistence\ApplicationDbContext.cs" Condition="'$(UseDapper)' == 'True'" />
-    <!-- Exclude SqlServer migrations when UseSqlServer is false -->
+    <!-- Exclude SqlServer migrations when SqlServer is not the selected provider -->
     <Compile
       Remove="Persistence\Migrations\SqlServer\**\*.cs"
-      Condition="'$(UseSqlServer)' != 'True'"
+      Condition="'$(UseSqlite)' == 'True'"
     />
     <!-- Exclude Sqlite migrations when UseSqlServer is true -->
     <Compile
@@ -36,7 +36,7 @@
     />
     <PackageReference
       Include="Microsoft.EntityFrameworkCore.Sqlite"
-      Condition="'$(UseEfCore)' == 'True' And '$(UseSqlServer)' != 'True'"
+      Condition="'$(UseEfCore)' == 'True' And '$(UseSqlite)' == 'True'"
     />
     <PackageReference
       Include="Microsoft.EntityFrameworkCore.SqlServer"
@@ -51,7 +51,7 @@
     <PackageReference Include="Dapper" Condition="'$(UseDapper)' == 'True'" />
     <PackageReference
       Include="Microsoft.Data.Sqlite"
-      Condition="'$(UseDapper)' == 'True' And '$(UseSqlServer)' != 'True'"
+      Condition="'$(UseDapper)' == 'True' And '$(UseSqlite)' == 'True'"
     />
     <PackageReference
       Include="Microsoft.Data.SqlClient"
