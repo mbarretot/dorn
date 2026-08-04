@@ -1,5 +1,6 @@
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMediator(typeof(CreateTodoItemCommand).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(CreateTodoItemCommand).Assembly);
@@ -14,6 +15,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapGrpcService<TodoGrpcService>();
+app.MapDefaultEndpoints();
 app.Run();
 
 public partial class Program;
