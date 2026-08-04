@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <!-- Deliberately NOT AppHost/ServiceDefaults: absent from the grpc template MVP
+       (those live in PR6 and would distort namespace topology today). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CleanArchGrpcService.Domain\CleanArchGrpcService.Domain.csproj" />
+    <ProjectReference Include="..\..\src\CleanArchGrpcService.Application\CleanArchGrpcService.Application.csproj" />
+    <ProjectReference Include="..\..\src\CleanArchGrpcService.Infrastructure\CleanArchGrpcService.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\CleanArchGrpcService.Grpc\CleanArchGrpcService.Grpc.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dorn.Messaging.Contracts" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="TngTech.ArchUnitNET.xUnit" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

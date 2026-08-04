@@ -41,4 +41,22 @@ public sealed class TodoServiceTests : IClassFixture<TodoGrpcApplicationFactory>
         Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
         Assert.Contains("Title", exception.Status.Detail, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task GetTodoItems_ReturnsPersistedItems()
+    {
+        var client = new TodoService.TodoServiceClient(_factory.CreateGrpcChannel());
+        var created = await client.CreateTodoItemAsync(
+            new CreateTodoItemRequest { Title = "List through gRPC" }
+        );
+
+        var listed = await client.GetTodoItemsAsync(new GetTodoItemsRequest());
+
+        Assert.NotEmpty(listed.Items);
+        var match = Assert.Single(
+            listed.Items,
+            item => item.Id == created.Id && item.Title == "List through gRPC"
+        );
+        Assert.False(match.IsComplete);
+    }
 }

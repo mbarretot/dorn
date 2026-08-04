@@ -4,6 +4,7 @@
     <Project Path="src/CleanArchGrpcService.Grpc/CleanArchGrpcService.Grpc.csproj" />
     <Project Path="src/CleanArchGrpcService.Infrastructure/CleanArchGrpcService.Infrastructure.csproj" />
     <Project Path="tests/CleanArchGrpcService.Application.Tests/CleanArchGrpcService.Application.Tests.csproj" />
+    <Project Path="tests/CleanArchGrpcService.Architecture.Tests/CleanArchGrpcService.Architecture.Tests.csproj" />
     <Project Path="tests/CleanArchGrpcService.Functional.Tests/CleanArchGrpcService.Functional.Tests.csproj" />
     <Project Path="tests/CleanArchGrpcService.Integration.Tests/CleanArchGrpcService.Integration.Tests.csproj" />
 </Solution>

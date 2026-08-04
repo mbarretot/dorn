@@ -1,4 +1,5 @@
 using CleanArchGrpcService.Application.Todos.CreateTodoItem;
+using CleanArchGrpcService.Application.Todos.GetTodoItems;
 using CleanArchGrpcService.Grpc.Protos;
 using Dorn.Messaging.Contracts;
 using Grpc.Core;
@@ -18,5 +19,24 @@ public sealed class TodoGrpcService(ISender sender) : TodoService.TodoServiceBas
         );
 
         return new CreateTodoItemResponse { Id = id.ToString() };
+    }
+
+    public override async Task<GetTodoItemsResponse> GetTodoItems(
+        GetTodoItemsRequest request,
+        ServerCallContext context
+    )
+    {
+        var items = await sender.Send(new GetTodoItemsQuery(), context.CancellationToken);
+
+        var response = new GetTodoItemsResponse();
+        response.Items.AddRange(
+            items.Select(item => new Protos.TodoItem
+            {
+                Id = item.Id.ToString(),
+                Title = item.Title,
+                IsComplete = item.IsComplete,
+            })
+        );
+        return response;
     }
 }
