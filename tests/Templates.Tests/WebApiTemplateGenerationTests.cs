@@ -636,6 +636,97 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
+    /// Builds the docker-compose/postgres cell and verifies its PostgreSQL connection override and clean generated settings.
+    /// </summary>
+    [Fact]
+    public async Task GenerateAndBuild_DornWebApiTemplateWithDockerComposeAndPostgres_ProducesBuildableSolution()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-tests-{Guid.NewGuid():N}");
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornIntegrationTestComposePostgresApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string>
+                {
+                    ["Orchestrator"] = "docker-compose",
+                    ["DatabaseProvider"] = "postgres",
+                }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+            Assert.NotEmpty(result.CreatedFiles);
+
+            var composeFile = Path.Combine(outputDirectory, "docker-compose.yml");
+            Assert.True(File.Exists(composeFile));
+            var composeContent = await File.ReadAllTextAsync(composeFile);
+            Assert.Contains("postgres:", composeContent);
+            Assert.Contains("ConnectionStrings__", composeContent);
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "docker-compose.SqlServer.yml"))
+            );
+
+            var migrationsDirectory = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornIntegrationTestComposePostgresApp.Infrastructure",
+                "Persistence",
+                "Migrations"
+            );
+            Assert.True(Directory.Exists(migrationsDirectory));
+            Assert.False(Directory.Exists(Path.Combine(migrationsDirectory, "Sqlite")));
+            Assert.False(Directory.Exists(Path.Combine(migrationsDirectory, "Postgres")));
+
+            var appSettingsContent = await File.ReadAllTextAsync(
+                Path.Combine(
+                    outputDirectory,
+                    "src",
+                    "DornIntegrationTestComposePostgresApp.WebApi",
+                    "appsettings.json"
+                )
+            );
+            Assert.DoesNotContain("//#if", appSettingsContent);
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
     /// Verifies global.json is emitted at the generated repository root with Dorn's pinned SDK version.
     /// </summary>
     [Fact]
@@ -947,6 +1038,110 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
+    /// Verifies the Linux PostgreSQL cell starts a disposable Postgres container and health-checks it before testing.
+    /// </summary>
+    [Fact]
+    public async Task CiWorkflow_LinuxPostgresUsesHealthyContainer()
+    {
+        await WithGeneratedWebApiProjectAsync(
+            "DornCiLinuxPostgresApp",
+            outputDirectory =>
+            {
+                var steps = GetSteps(LoadCiWorkflowRoot(outputDirectory), "build-and-test");
+                var context = new Dictionary<string, string>
+                {
+                    ["needs.configuration.outputs.db"] = "postgres",
+                    ["runner.os"] = "Linux",
+                };
+
+                var startIndex = steps.FindIndex(s =>
+                    s.Run.Contains("postgres:17", StringComparison.Ordinal)
+                    && s.Run.Contains("docker run", StringComparison.Ordinal)
+                );
+                Assert.True(startIndex >= 0);
+                Assert.NotNull(steps[startIndex].If);
+                Assert.True(EvaluateGithubActionsExpression(steps[startIndex].If!, context));
+
+                var healthCheckIndex = steps.FindIndex(s =>
+                    s.Run.Contains("pg_isready", StringComparison.Ordinal)
+                );
+                Assert.True(healthCheckIndex >= 0);
+
+                var testIndex = steps.FindIndex(s => s.Run.Contains("dotnet test", StringComparison.Ordinal));
+                Assert.True(testIndex >= 0);
+                Assert.True(healthCheckIndex < testIndex);
+
+                return Task.CompletedTask;
+            }
+        );
+    }
+
+    /// <summary>
+    /// Verifies SQLite workflow cells skip every PostgreSQL container step.
+    /// </summary>
+    [Fact]
+    public async Task CiWorkflow_SqliteStartsNoPostgresService()
+    {
+        await WithGeneratedWebApiProjectAsync(
+            "DornCiSqlitePostgresServiceApp",
+            outputDirectory =>
+            {
+                var steps = GetSteps(LoadCiWorkflowRoot(outputDirectory), "build-and-test");
+                var context = new Dictionary<string, string>
+                {
+                    ["needs.configuration.outputs.db"] = "sqlite",
+                    ["runner.os"] = "Linux",
+                };
+
+                var postgresSteps = steps
+                    .Where(s => s.Run.Contains("postgres:17", StringComparison.Ordinal))
+                    .ToList();
+                Assert.NotEmpty(postgresSteps);
+                Assert.All(
+                    postgresSteps,
+                    s =>
+                        Assert.False(
+                            s.If is not null && EvaluateGithubActionsExpression(s.If, context),
+                            $"Step '{s.Name}' would execute for a sqlite marker."
+                        )
+                );
+
+                return Task.CompletedTask;
+            }
+        );
+    }
+
+    /// <summary>
+    /// Verifies the Windows PostgreSQL branch is best-effort and uses Testcontainers as a .NET library, not a CLI.
+    /// </summary>
+    [Fact]
+    public async Task CiWorkflow_WindowsPostgresIsBestEffort()
+    {
+        await WithGeneratedWebApiProjectAsync(
+            "DornCiWindowsPostgresApp",
+            outputDirectory =>
+            {
+                var rawText = ReadCiWorkflowRawText(outputDirectory);
+                var branchIndex = rawText.IndexOf("Windows + PostgreSQL caveat", StringComparison.Ordinal);
+                Assert.True(branchIndex >= 0);
+
+                var steps = GetSteps(LoadCiWorkflowRoot(outputDirectory), "build-and-test");
+                Assert.All(
+                    steps,
+                    s =>
+                        Assert.DoesNotContain(
+                            "testcontainers",
+                            s.Run,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                );
+
+                return Task.CompletedTask;
+            }
+        );
+    }
+
+    /// <summary>
     /// Verifies the Windows SQL Server branch is best-effort and uses Testcontainers as a .NET library, not a CLI.
     /// </summary>
     [Fact]
@@ -1056,6 +1251,26 @@ public class WebApiTemplateGenerationTests
                 return Task.CompletedTask;
             },
             databaseProvider: "sqlserver"
+        );
+    }
+
+    /// <summary>
+    /// Requirement "Marker File Emission" (PostgreSQL): `--database postgres` emits
+    /// `.github/config/db-provider.txt` equal to `postgres`.
+    /// </summary>
+    [Fact]
+    public async Task PostgresMarker_IsEmitted()
+    {
+        await WithGeneratedWebApiProjectAsync(
+            "DornCiPostgresMarkerApp",
+            outputDirectory =>
+            {
+                var markerPath = Path.Combine(outputDirectory, ".github", "config", "db-provider.txt");
+                Assert.True(File.Exists(markerPath), $"Expected marker file at '{markerPath}'.");
+                Assert.Equal("postgres", File.ReadAllText(markerPath).Trim());
+                return Task.CompletedTask;
+            },
+            databaseProvider: "postgres"
         );
     }
 

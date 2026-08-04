@@ -1,6 +1,6 @@
 # Scaffolded by dorn (`dorn new webapi`). Builds and tests every layer of the generated Clean
-# Architecture solution across the supported orchestrator matrix, and adapts its SQL Server
-# service container to the DatabaseProvider selected at scaffold time (see
+# Architecture solution across the supported orchestrator matrix, and adapts its SQL Server or
+# PostgreSQL service container to the DatabaseProvider selected at scaffold time (see
 # .github/config/db-provider.txt, emitted by the template's rename/exclude modifiers).
 name: CI
 
@@ -27,8 +27,8 @@ env:
 
 jobs:
   # Reads the DatabaseProvider marker emitted at scaffold time once, up front, so
-  # build-and-test can gate its SQL Server service container on this output before any
-  # service containers start for the matrix below.
+  # build-and-test can gate its SQL Server or PostgreSQL service container on this output
+  # before any service containers start for the matrix below.
   configuration:
     runs-on: ubuntu-latest
     outputs:
@@ -121,6 +121,48 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "::warning::Windows + SQL Server is best-effort: the Integration tier's PersistenceTestFixture requires a Docker host, which github-hosted windows-latest runners do not provide."
+
+      # Starts a disposable PostgreSQL container as a plain step, for the same reason the SQL
+      # Server container above is a plain step rather than a `services:` block: GitHub Actions
+      # service containers cannot be skipped per matrix cell.
+      - name: Generate PostgreSQL password (Linux)
+        id: postgres-password
+        if: runner.os == 'Linux' && needs.configuration.outputs.db == 'postgres'
+        run: echo "value=$(openssl rand -base64 24)" >> "$GITHUB_OUTPUT"
+
+      - name: Start PostgreSQL (Linux)
+        if: runner.os == 'Linux' && needs.configuration.outputs.db == 'postgres'
+        env:
+          POSTGRES_PASSWORD: ${{ steps.postgres-password.outputs.value }}
+        run: |
+          docker run -d --name postgres \
+            -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+            -p 5432:5432 \
+            postgres:17
+
+      - name: Wait for PostgreSQL to be healthy (Linux)
+        if: runner.os == 'Linux' && needs.configuration.outputs.db == 'postgres'
+        run: |
+          for i in $(seq 1 30); do
+            if docker exec postgres pg_isready -U postgres > /dev/null 2>&1; then
+              echo "PostgreSQL is healthy."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::PostgreSQL did not become healthy in time."
+          exit 1
+
+      # best-effort: Windows + PostgreSQL requires a Docker host, which github-hosted
+      # windows-latest runners do not provide. The Integration tier's PersistenceTestFixture
+      # uses Testcontainers.PostgreSql internally (a .NET library, not invoked directly here)
+      # to start PostgreSQL when no service container is present; on Windows without Docker
+      # that fixture setup will fail and the test step below surfaces the failure.
+      - name: Windows + PostgreSQL caveat
+        if: runner.os == 'Windows' && needs.configuration.outputs.db == 'postgres'
+        shell: pwsh
+        run: |
+          Write-Host "::warning::Windows + PostgreSQL is best-effort: the Integration tier's PersistenceTestFixture requires a Docker host, which github-hosted windows-latest runners do not provide."
 
       - name: Test (all tiers)
         if: github.event.inputs.exclude_tiers == ''

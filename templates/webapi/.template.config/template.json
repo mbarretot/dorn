@@ -126,7 +126,11 @@
         },
         {
           "condition": "(!UseCompose)",
-          "exclude": ["docker-compose.yml", "docker-compose.SqlServer.yml"]
+          "exclude": [
+            "docker-compose.yml",
+            "docker-compose.SqlServer.yml",
+            "docker-compose.Postgres.yml"
+          ]
         },
         {
           "condition": "(!UseAspire)",
@@ -140,25 +144,48 @@
           "rename": {
             "docker-compose.SqlServer.yml": "docker-compose.yml"
           },
-          "exclude": ["docker-compose.yml"]
+          "exclude": ["docker-compose.yml", "docker-compose.Postgres.yml"]
+        },
+        {
+          "condition": "(UseCompose && UsePostgres)",
+          "rename": {
+            "docker-compose.Postgres.yml": "docker-compose.yml"
+          },
+          "exclude": ["docker-compose.yml", "docker-compose.SqlServer.yml"]
         },
         {
           "condition": "(UseCompose && UseSqlite)",
-          "exclude": ["docker-compose.SqlServer.yml"]
+          "exclude": ["docker-compose.SqlServer.yml", "docker-compose.Postgres.yml"]
         },
         {
           "condition": "(UseSqlServer)",
           "rename": {
             ".github/config/db-provider.txt.tpl-sqlserver": ".github/config/db-provider.txt"
           },
-          "exclude": [".github/config/db-provider.txt.tpl-sqlite"]
+          "exclude": [
+            ".github/config/db-provider.txt.tpl-sqlite",
+            ".github/config/db-provider.txt.tpl-postgres"
+          ]
         },
         {
           "condition": "(UseSqlite)",
           "rename": {
             ".github/config/db-provider.txt.tpl-sqlite": ".github/config/db-provider.txt"
           },
-          "exclude": [".github/config/db-provider.txt.tpl-sqlserver"]
+          "exclude": [
+            ".github/config/db-provider.txt.tpl-sqlserver",
+            ".github/config/db-provider.txt.tpl-postgres"
+          ]
+        },
+        {
+          "condition": "(UsePostgres)",
+          "rename": {
+            ".github/config/db-provider.txt.tpl-postgres": ".github/config/db-provider.txt"
+          },
+          "exclude": [
+            ".github/config/db-provider.txt.tpl-sqlite",
+            ".github/config/db-provider.txt.tpl-sqlserver"
+          ]
         }
       ]
     }
