@@ -1,0 +1,27 @@
+using CleanArchGrpcService.Application.Todos.CreateTodoItem;
+using CleanArchGrpcService.Domain.Entities;
+using CleanArchGrpcService.Domain.Repositories;
+
+namespace CleanArchGrpcService.Application.Tests.Todos;
+
+public sealed class CreateTodoItemCommandHandlerTests
+{
+    [Fact]
+    public async Task Handle_AddsTodoItemToRepository_AndReturnsItsId()
+    {
+        var repository = Substitute.For<ITodoItemRepository>();
+        var handler = new CreateTodoItemCommandHandler(repository);
+        var command = new CreateTodoItemCommand("Write the Dorn scaffolding");
+
+        var id = await handler.Handle(command, CancellationToken.None);
+
+        Assert.NotEqual(Guid.Empty, id);
+
+        await repository
+            .Received(1)
+            .AddAsync(
+                Arg.Is<TodoItem>(item => item.Title == "Write the Dorn scaffolding"),
+                Arg.Any<CancellationToken>()
+            );
+    }
+}
