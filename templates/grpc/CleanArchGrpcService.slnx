@@ -1,0 +1,4 @@
+<Solution>
+    <Project Path="src/CleanArchGrpcService.Domain/CleanArchGrpcService.Domain.csproj" />
+    <Project Path="tests/CleanArchGrpcService.Application.Tests/CleanArchGrpcService.Application.Tests.csproj" />
+</Solution>
