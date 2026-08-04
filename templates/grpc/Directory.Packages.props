@@ -15,10 +15,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Persistence — sqlite + EF Core only, no provider axis (see design D2). -->
+    <!-- Persistence — sqlite + EF Core only, no provider axis (see design D2).
+         Microsoft.EntityFrameworkCore.Sqlite 10.0.9 pulls SQLitePCLRaw.lib.e_sqlite3 2.1.11,
+         flagged by GHSA-2m69-gcr7-jv3q (bundled SQLite older than 3.50.2). No patched
+         SQLitePCLRaw version exists yet (first_patched_version is null upstream); tracked,
+         not fixable via override. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
+    <!-- Direct ADO.NET provider used by PersistenceTestFixture for SqliteConnection.ClearAllPools(). -->
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>
