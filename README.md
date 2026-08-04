@@ -89,7 +89,7 @@ Los flujos con paquetes `.nupkg` locales y feeds bajo `./artifacts` son solo par
 | Opción | Default | Descripción |
 |---|---|---|
 | `--orm` | `efcore` | ORM: `efcore` (EF Core con migraciones) o `dapper` (micro-ORM con SQL crudo) |
-| `--database` | `sqlite` | Proveedor de base de datos: `sqlite` (zero-config) o `sqlserver` (contenedor vía Aspire) |
+| `--database` | `sqlite` | Proveedor de base de datos: `sqlite` (zero-config), `sqlserver` o `postgres` (ambos vía contenedor Aspire) |
 | `--orchestrator` | `aspire` | Orquestador: `aspire`, `docker-compose` o `none` |
 | `-o`, `--output` | directorio actual | Carpeta de salida |
 | `--force` | — | Sobrescribe si la carpeta no está vacía |
@@ -100,6 +100,9 @@ Los flujos con paquetes `.nupkg` locales y feeds bajo `./artifacts` son solo par
 ```bash
 # Stack completo: Dapper + SQL Server + Docker Compose
 dorn new webapi MyApp --orm dapper --database sqlserver --orchestrator docker-compose
+
+# PostgreSQL vía Aspire
+dorn new webapi MyApp --database postgres
 
 # Default: EF Core + SQLite + Aspire
 dorn new webapi MyApp
