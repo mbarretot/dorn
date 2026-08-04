@@ -14,6 +14,11 @@ public class TodoItemRepository : ITodoItemRepository
         await _context.Items.AddAsync(todoItem, cancellationToken);
     }
 
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<TodoItem>> GetAllAsync(
         CancellationToken cancellationToken = default
     )

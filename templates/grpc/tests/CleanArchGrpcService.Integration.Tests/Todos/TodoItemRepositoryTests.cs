@@ -35,7 +35,7 @@ public sealed class TodoItemRepositoryTests : IClassFixture<PersistenceTestFixtu
         var todoItem = TodoItem.Create("Persisted via TodoItemRepository");
 
         await repository.AddAsync(todoItem, CancellationToken.None);
-        await _fixture.DbContext.SaveChangesAsync(CancellationToken.None);
+        await repository.SaveChangesAsync(CancellationToken.None);
 
         // Forces the next read to hit the database, not the change tracker's cache.
         _fixture.DbContext.ChangeTracker.Clear();
