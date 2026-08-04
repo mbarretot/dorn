@@ -14,10 +14,12 @@ public static class ServiceCollectionExtensions
     {
 #if (UseEfCore)
         services.AddDbContext<ApplicationDbContext>(options =>
-#if (UseSqlServer)
-            options.UseSqlServer(configuration.GetConnectionString("CleanArchWebApi"))
-#else
+#if (UseSqlite)
             options.UseSqlite(configuration.GetConnectionString("Default"))
+#elif (UseSqlServer)
+            options.UseSqlServer(configuration.GetConnectionString("CleanArchWebApi"))
+#elif (UsePostgres)
+            // Postgres provider wiring lands in Slice B.
 #endif
         );
 

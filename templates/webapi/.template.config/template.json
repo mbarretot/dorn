@@ -37,7 +37,9 @@
       "defaultValue": "sqlite",
       "description": "The EF Core database provider used for persistence."
     },
+    "UseSqlite": { "type": "computed", "value": "(DatabaseProvider == \"sqlite\")" },
     "UseSqlServer": { "type": "computed", "value": "(DatabaseProvider == \"sqlserver\")" },
+    "UsePostgres": { "type": "computed", "value": "(DatabaseProvider == \"postgres\")" },
     "Orchestrator": {
       "type": "parameter",
       "datatype": "choice",
@@ -88,7 +90,7 @@
           "exclude": ["src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/**"]
         },
         {
-          "condition": "(!UseSqlServer)",
+          "condition": "(UseSqlite)",
           "rename": {
             "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/": "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/"
           },
@@ -124,7 +126,7 @@
           "exclude": ["docker-compose.yml"]
         },
         {
-          "condition": "(UseCompose && !UseSqlServer)",
+          "condition": "(UseCompose && UseSqlite)",
           "exclude": ["docker-compose.SqlServer.yml"]
         },
         {
@@ -135,7 +137,7 @@
           "exclude": [".github/config/db-provider.txt.tpl-sqlite"]
         },
         {
-          "condition": "(!UseSqlServer)",
+          "condition": "(UseSqlite)",
           "rename": {
             ".github/config/db-provider.txt.tpl-sqlite": ".github/config/db-provider.txt"
           },
