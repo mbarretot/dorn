@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package todo.v1;
+option csharp_namespace = "CleanArchGrpcService.Grpc.Protos";
+
+service TodoService {
+  rpc CreateTodoItem (CreateTodoItemRequest) returns (CreateTodoItemResponse);
+  rpc GetTodoItems (GetTodoItemsRequest) returns (GetTodoItemsResponse);
+}
+
+message CreateTodoItemRequest { string title = 1; }
+message CreateTodoItemResponse { string id = 1; }
+message GetTodoItemsRequest {}
+message GetTodoItemsResponse { repeated TodoItem items = 1; }
+message TodoItem { string id = 1; string title = 2; bool is_complete = 3; }

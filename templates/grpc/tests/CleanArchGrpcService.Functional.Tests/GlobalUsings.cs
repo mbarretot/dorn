@@ -1,0 +1,12 @@
+global using CleanArchGrpcService.Grpc.Protos;
+global using CleanArchGrpcService.Infrastructure.Persistence;
+global using Grpc.Core;
+global using Grpc.Net.Client;
+global using Microsoft.AspNetCore.Hosting;
+global using Microsoft.AspNetCore.Mvc.Testing;
+global using Microsoft.Data.Sqlite;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.EntityFrameworkCore.Infrastructure;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.DependencyInjection.Extensions;
+global using Xunit;

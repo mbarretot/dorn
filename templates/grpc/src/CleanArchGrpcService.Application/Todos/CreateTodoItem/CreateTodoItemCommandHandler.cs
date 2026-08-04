@@ -14,6 +14,7 @@ public sealed class CreateTodoItemCommandHandler : IRequestHandler<CreateTodoIte
         var todoItem = TodoItem.Create(request.Title);
 
         await _repository.AddAsync(todoItem, ct);
+        await _repository.SaveChangesAsync(ct);
 
         return todoItem.Id;
     }

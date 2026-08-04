@@ -23,5 +23,6 @@ public sealed class CreateTodoItemCommandHandlerTests
                 Arg.Is<TodoItem>(item => item.Title == "Write the Dorn scaffolding"),
                 Arg.Any<CancellationToken>()
             );
+        await repository.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }
