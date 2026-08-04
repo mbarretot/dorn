@@ -38,6 +38,12 @@ jobs:
         shell: pwsh
         run: pwsh eng/scripts/pack-packages.ps1
 
+      - name: Build and test gRPC template
+        run: |
+          dotnet restore templates/grpc/CleanArchGrpcService.slnx
+          dotnet build templates/grpc/CleanArchGrpcService.slnx --no-restore -c Release
+          dotnet test templates/grpc/CleanArchGrpcService.slnx --no-build -c Release
+
       - name: Restore
         run: dotnet restore Dorn.slnx
 
