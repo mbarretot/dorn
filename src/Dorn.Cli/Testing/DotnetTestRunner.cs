@@ -4,9 +4,6 @@ using Spectre.Console;
 
 namespace Dorn.Cli.Testing;
 
-/// <summary>
-/// Runs <c>dotnet test</c> for generated webapi test tiers without parsing output; exit codes are tracked per tier.
-/// </summary>
 public sealed class DotnetTestRunner : IDotnetTestRunner
 {
     private readonly IProcessRunner _processRunner;
@@ -18,9 +15,6 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
         _console = console;
     }
 
-    /// <summary>
-    /// Runs <c>dotnet test</c> against the given tiers in the target project.
-    /// </summary>
     /// <param name="context">The resolved project context.</param>
     /// <param name="database">Database provider — controls the Docker preflight warning.</param>
     /// <param name="tiers">Tiers to run. Empty list = IncludeTests=false scenario.</param>

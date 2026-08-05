@@ -14,7 +14,6 @@ public record ProcessSpec(
     string? WorkingDirectory = null
 )
 {
-    /// <summary>Initializes a new instance of the <see cref="ProcessSpec"/> record.</summary>
     public ProcessSpec(string fileName, params string[] arguments)
         : this(fileName, (IReadOnlyList<string>)arguments, Directory.GetCurrentDirectory()) { }
 }

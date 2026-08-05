@@ -7,9 +7,6 @@ namespace Dorn.Cli.Testing;
 /// </summary>
 public interface IDotnetTestRunner
 {
-    /// <summary>
-    /// Runs <c>dotnet test</c> against the given tiers in the target project.
-    /// </summary>
     /// <param name="context">The resolved project context.</param>
     /// <param name="database">Database provider — controls the Docker preflight warning.</param>
     /// <param name="tiers">Tiers to run. Empty list = IncludeTests=false scenario.</param>
