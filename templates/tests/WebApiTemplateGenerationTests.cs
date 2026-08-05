@@ -829,7 +829,11 @@ public class WebApiTemplateGenerationTests
             outputDirectory =>
             {
                 var rawText = ReadCiWorkflowRawText(outputDirectory);
-                Assert.Contains("global-json-file: ./global.json", rawText, StringComparison.Ordinal);
+                Assert.Contains(
+                    "global-json-file: ./global.json",
+                    rawText,
+                    StringComparison.Ordinal
+                );
                 Assert.Contains("Directory.Packages.props", rawText, StringComparison.Ordinal);
 
                 var steps = GetSteps(LoadCiWorkflowRoot(outputDirectory), "build-and-test");
@@ -863,7 +867,9 @@ public class WebApiTemplateGenerationTests
                 var restoreIndex = steps.FindIndex(s =>
                     s.Run.Contains("dotnet restore", StringComparison.Ordinal)
                 );
-                var buildIndex = steps.FindIndex(s => s.Run.Contains("dotnet build", StringComparison.Ordinal));
+                var buildIndex = steps.FindIndex(s =>
+                    s.Run.Contains("dotnet build", StringComparison.Ordinal)
+                );
 
                 Assert.True(restoreIndex >= 0);
                 Assert.True(buildIndex >= 0);
@@ -901,7 +907,11 @@ public class WebApiTemplateGenerationTests
                 var command = Assert.Single(activeTestCommands);
                 Assert.Contains("--no-build", command, StringComparison.Ordinal);
                 Assert.Contains("-c Release", command, StringComparison.Ordinal);
-                Assert.Contains("--collect:\"XPlat Code Coverage\"", command, StringComparison.Ordinal);
+                Assert.Contains(
+                    "--collect:\"XPlat Code Coverage\"",
+                    command,
+                    StringComparison.Ordinal
+                );
                 Assert.DoesNotContain("--filter", command, StringComparison.Ordinal);
 
                 return Task.CompletedTask;
@@ -917,7 +927,10 @@ public class WebApiTemplateGenerationTests
             outputDirectory =>
             {
                 var steps = GetSteps(LoadCiWorkflowRoot(outputDirectory), "build-and-test");
-                var context = new Dictionary<string, string> { ["inputs.exclude_tiers"] = "Integration" };
+                var context = new Dictionary<string, string>
+                {
+                    ["inputs.exclude_tiers"] = "Integration",
+                };
 
                 var activeTestSteps = steps
                     .Where(s => s.Run.Contains("dotnet test", StringComparison.Ordinal))
@@ -951,7 +964,9 @@ public class WebApiTemplateGenerationTests
                 };
 
                 var sqlServerSteps = steps
-                    .Where(s => s.Run.Contains("mcr.microsoft.com/azure-sql-edge", StringComparison.Ordinal))
+                    .Where(s =>
+                        s.Run.Contains("mcr.microsoft.com/azure-sql-edge", StringComparison.Ordinal)
+                    )
                     .ToList();
                 Assert.NotEmpty(sqlServerSteps);
                 Assert.All(
@@ -995,7 +1010,9 @@ public class WebApiTemplateGenerationTests
                 );
                 Assert.True(healthCheckIndex >= 0);
 
-                var testIndex = steps.FindIndex(s => s.Run.Contains("dotnet test", StringComparison.Ordinal));
+                var testIndex = steps.FindIndex(s =>
+                    s.Run.Contains("dotnet test", StringComparison.Ordinal)
+                );
                 Assert.True(testIndex >= 0);
                 Assert.True(healthCheckIndex < testIndex);
 
@@ -1031,7 +1048,9 @@ public class WebApiTemplateGenerationTests
                 );
                 Assert.True(healthCheckIndex >= 0);
 
-                var testIndex = steps.FindIndex(s => s.Run.Contains("dotnet test", StringComparison.Ordinal));
+                var testIndex = steps.FindIndex(s =>
+                    s.Run.Contains("dotnet test", StringComparison.Ordinal)
+                );
                 Assert.True(testIndex >= 0);
                 Assert.True(healthCheckIndex < testIndex);
 
@@ -1081,7 +1100,10 @@ public class WebApiTemplateGenerationTests
             outputDirectory =>
             {
                 var rawText = ReadCiWorkflowRawText(outputDirectory);
-                var branchIndex = rawText.IndexOf("Windows + PostgreSQL caveat", StringComparison.Ordinal);
+                var branchIndex = rawText.IndexOf(
+                    "Windows + PostgreSQL caveat",
+                    StringComparison.Ordinal
+                );
                 Assert.True(branchIndex >= 0);
 
                 var steps = GetSteps(LoadCiWorkflowRoot(outputDirectory), "build-and-test");
@@ -1110,7 +1132,10 @@ public class WebApiTemplateGenerationTests
             {
                 var rawText = ReadCiWorkflowRawText(outputDirectory);
                 var commentIndex = rawText.IndexOf("# best-effort:", StringComparison.Ordinal);
-                var branchIndex = rawText.IndexOf("Windows + SQL Server caveat", StringComparison.Ordinal);
+                var branchIndex = rawText.IndexOf(
+                    "Windows + SQL Server caveat",
+                    StringComparison.Ordinal
+                );
                 Assert.True(commentIndex >= 0);
                 Assert.True(branchIndex > commentIndex);
 
@@ -1141,7 +1166,11 @@ public class WebApiTemplateGenerationTests
             "DornCiNoEfCliApp",
             outputDirectory =>
             {
-                Assert.DoesNotContain("dotnet ef", ReadCiWorkflowRawText(outputDirectory), StringComparison.Ordinal);
+                Assert.DoesNotContain(
+                    "dotnet ef",
+                    ReadCiWorkflowRawText(outputDirectory),
+                    StringComparison.Ordinal
+                );
                 return Task.CompletedTask;
             }
         );
@@ -1159,8 +1188,16 @@ public class WebApiTemplateGenerationTests
                     s.Run.Contains("reportgenerator", StringComparison.OrdinalIgnoreCase)
                 );
 
-                Assert.Contains("**/coverage.cobertura.xml", coverageStep.Run, StringComparison.Ordinal);
-                Assert.Contains("-assemblyfilters:+:-*.Tests", coverageStep.Run, StringComparison.Ordinal);
+                Assert.Contains(
+                    "**/coverage.cobertura.xml",
+                    coverageStep.Run,
+                    StringComparison.Ordinal
+                );
+                Assert.Contains(
+                    "-assemblyfilters:+:-*.Tests",
+                    coverageStep.Run,
+                    StringComparison.Ordinal
+                );
                 Assert.Equal("matrix.os == 'ubuntu-latest'", coverageStep.If);
 
                 return Task.CompletedTask;
@@ -1179,7 +1216,12 @@ public class WebApiTemplateGenerationTests
             "DornCiSqliteMarkerApp",
             outputDirectory =>
             {
-                var markerPath = Path.Combine(outputDirectory, ".github", "config", "db-provider.txt");
+                var markerPath = Path.Combine(
+                    outputDirectory,
+                    ".github",
+                    "config",
+                    "db-provider.txt"
+                );
                 Assert.True(File.Exists(markerPath), $"Expected marker file at '{markerPath}'.");
                 Assert.Equal("sqlite", File.ReadAllText(markerPath).Trim());
                 return Task.CompletedTask;
@@ -1199,7 +1241,12 @@ public class WebApiTemplateGenerationTests
             "DornCiSqlServerMarkerApp",
             outputDirectory =>
             {
-                var markerPath = Path.Combine(outputDirectory, ".github", "config", "db-provider.txt");
+                var markerPath = Path.Combine(
+                    outputDirectory,
+                    ".github",
+                    "config",
+                    "db-provider.txt"
+                );
                 Assert.True(File.Exists(markerPath), $"Expected marker file at '{markerPath}'.");
                 Assert.Equal("sqlserver", File.ReadAllText(markerPath).Trim());
                 return Task.CompletedTask;
@@ -1219,7 +1266,12 @@ public class WebApiTemplateGenerationTests
             "DornCiPostgresMarkerApp",
             outputDirectory =>
             {
-                var markerPath = Path.Combine(outputDirectory, ".github", "config", "db-provider.txt");
+                var markerPath = Path.Combine(
+                    outputDirectory,
+                    ".github",
+                    "config",
+                    "db-provider.txt"
+                );
                 Assert.True(File.Exists(markerPath), $"Expected marker file at '{markerPath}'.");
                 Assert.Equal("postgres", File.ReadAllText(markerPath).Trim());
                 return Task.CompletedTask;
@@ -1303,7 +1355,11 @@ public class WebApiTemplateGenerationTests
                 // Structural YAML-parser check, independent of the assertions above.
                 LoadCiWorkflowRoot(outputDirectory);
 
-                var slnFiles = Directory.GetFiles(outputDirectory, "*.slnx", SearchOption.TopDirectoryOnly);
+                var slnFiles = Directory.GetFiles(
+                    outputDirectory,
+                    "*.slnx",
+                    SearchOption.TopDirectoryOnly
+                );
                 Assert.Single(slnFiles);
 
                 var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
@@ -1351,8 +1407,9 @@ public class WebApiTemplateGenerationTests
             var name = TryGetChild(step, "name") is YamlScalarNode nameNode ? nameNode.Value : null;
             var uses = TryGetChild(step, "uses") is YamlScalarNode usesNode ? usesNode.Value : null;
             var ifValue = TryGetChild(step, "if") is YamlScalarNode ifNode ? ifNode.Value : null;
-            var runValue =
-                TryGetChild(step, "run") is YamlScalarNode runNode ? runNode.Value ?? string.Empty : string.Empty;
+            var runValue = TryGetChild(step, "run") is YamlScalarNode runNode
+                ? runNode.Value ?? string.Empty
+                : string.Empty;
             result.Add((name, uses, ifValue, runValue));
         }
 
@@ -1377,18 +1434,27 @@ public class WebApiTemplateGenerationTests
             }
 
             bool clauseResult;
-            var containsMatch = Regex.Match(clause, @"^contains\((?<expr>[^,]+),\s*'(?<value>[^']*)'\)$");
+            var containsMatch = Regex.Match(
+                clause,
+                @"^contains\((?<expr>[^,]+),\s*'(?<value>[^']*)'\)$"
+            );
             if (containsMatch.Success)
             {
                 var left = ResolveGithubActionsExpressionValue(
                     containsMatch.Groups["expr"].Value.Trim(),
                     context
                 );
-                clauseResult = left.Contains(containsMatch.Groups["value"].Value, StringComparison.Ordinal);
+                clauseResult = left.Contains(
+                    containsMatch.Groups["value"].Value,
+                    StringComparison.Ordinal
+                );
             }
             else
             {
-                var comparisonMatch = Regex.Match(clause, @"^(?<left>[A-Za-z0-9_.]+)\s*(?<op>==|!=)\s*'(?<value>[^']*)'$");
+                var comparisonMatch = Regex.Match(
+                    clause,
+                    @"^(?<left>[A-Za-z0-9_.]+)\s*(?<op>==|!=)\s*'(?<value>[^']*)'$"
+                );
                 if (!comparisonMatch.Success)
                 {
                     throw new NotSupportedException(
@@ -1396,8 +1462,15 @@ public class WebApiTemplateGenerationTests
                     );
                 }
 
-                var left = ResolveGithubActionsExpressionValue(comparisonMatch.Groups["left"].Value, context);
-                var equal = string.Equals(left, comparisonMatch.Groups["value"].Value, StringComparison.Ordinal);
+                var left = ResolveGithubActionsExpressionValue(
+                    comparisonMatch.Groups["left"].Value,
+                    context
+                );
+                var equal = string.Equals(
+                    left,
+                    comparisonMatch.Groups["value"].Value,
+                    StringComparison.Ordinal
+                );
                 clauseResult = comparisonMatch.Groups["op"].Value == "==" ? equal : !equal;
             }
 
@@ -1420,7 +1493,11 @@ public class WebApiTemplateGenerationTests
         IReadOnlyDictionary<string, string> context
     )
     {
-        var normalized = reference.Replace("github.event.inputs.", "inputs.", StringComparison.Ordinal);
+        var normalized = reference.Replace(
+            "github.event.inputs.",
+            "inputs.",
+            StringComparison.Ordinal
+        );
         return context.TryGetValue(normalized, out var value) ? value : string.Empty;
     }
 

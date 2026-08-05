@@ -192,7 +192,12 @@ public class NewGrpcCommandTests
         try
         {
             var exitCode = await command.RunAsync(
-                new NewGrpcSettings { Name = "MyService", Output = tempDir, NoRestore = true },
+                new NewGrpcSettings
+                {
+                    Name = "MyService",
+                    Output = tempDir,
+                    NoRestore = true,
+                },
                 CancellationToken.None
             );
 

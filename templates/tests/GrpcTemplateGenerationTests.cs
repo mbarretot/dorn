@@ -29,7 +29,10 @@ public class GrpcTemplateGenerationTests
         await using var provider = services.BuildServiceProvider();
         var engine = provider.GetRequiredService<IGenerationEngine>();
 
-        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-tests-grpc-{Guid.NewGuid():N}");
+        var outputDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-tests-grpc-{Guid.NewGuid():N}"
+        );
         try
         {
             var request = new GenerationRequest(

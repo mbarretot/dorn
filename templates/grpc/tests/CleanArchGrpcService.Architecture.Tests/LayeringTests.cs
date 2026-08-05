@@ -25,9 +25,7 @@ public sealed class LayeringTests
     private static readonly IObjectProvider<IType> Application = InNamespace(
         "CleanArchGrpcService.Application"
     );
-    private static readonly IObjectProvider<IType> Grpc = InNamespace(
-        "CleanArchGrpcService.Grpc"
-    );
+    private static readonly IObjectProvider<IType> Grpc = InNamespace("CleanArchGrpcService.Grpc");
 
     [Fact]
     public void Domain_ShouldNot_DependOnApplicationInfrastructureOrGrpc()
@@ -69,7 +67,9 @@ public sealed class LayeringTests
             .NotDependOnAny(
                 Types()
                     .That()
-                    .ResideInNamespaceMatching(@"^CleanArchGrpcService\.(Infrastructure|Grpc)(\.|$)")
+                    .ResideInNamespaceMatching(
+                        @"^CleanArchGrpcService\.(Infrastructure|Grpc)(\.|$)"
+                    )
             )
             .Check(Architecture);
     }
@@ -95,9 +95,7 @@ public sealed class LayeringTests
             .That()
             .Are(Application)
             .Should()
-            .NotDependOnAny(
-                Types().That().ResideInNamespaceMatching(@"^(Grpc\.|Google\.Protobuf)")
-            )
+            .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^(Grpc\.|Google\.Protobuf)"))
             .Check(Architecture);
     }
 
