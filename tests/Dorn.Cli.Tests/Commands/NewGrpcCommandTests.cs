@@ -12,10 +12,9 @@ using Xunit;
 namespace Dorn.Cli.Tests.Commands;
 
 /// <summary>
-/// Tests for <see cref="NewGrpcCommand"/>. Mirrors the threat-matrix shape of
-/// <c>NewWebApiCommandTests</c>: project-name validation and the dorn-grpc short name
-/// are the only required behaviors here because the gRPC MVP is fixed at
-/// sqlite + EF Core + Aspire (no provider/orm/orchestrator options).
+/// Mirrors the threat-matrix shape of <c>NewWebApiCommandTests</c>: project-name validation
+/// and the dorn-grpc short name are the only required behaviors, since the gRPC MVP is
+/// fixed at sqlite + EF Core + Aspire (no provider/orm/orchestrator options).
 /// </summary>
 public class NewGrpcCommandTests
 {

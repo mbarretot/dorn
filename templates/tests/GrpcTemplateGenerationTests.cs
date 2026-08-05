@@ -8,9 +8,7 @@ using Xunit;
 namespace TemplateGenerationTests;
 
 /// <summary>
-/// Generates the real gRPC template outside the repo, builds it, and verifies that
-/// the sourceName replacement landed in the generated proto. Mirrors the
-/// <see cref="WebApiTemplateGenerationTests"/> shape but stays scoped to the gRPC MVP
+/// Mirrors <see cref="WebApiTemplateGenerationTests"/> but stays scoped to the gRPC MVP
 /// (sqlite + EF Core + Aspire, no provider/orm/orchestrator symbols).
 /// </summary>
 [Trait("Category", "Integration")]
@@ -75,8 +73,7 @@ public class GrpcTemplateGenerationTests
     }
 
     /// <summary>
-    /// Verifies the sourceName replacement actually rewrote the proto's
-    /// <c>csharp_namespace</c> (and only that — the wire package stays proto-side).
+    /// Only <c>csharp_namespace</c> should change — the wire package stays proto-side.
     /// See design D3.
     /// </summary>
     [Fact]
