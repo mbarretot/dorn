@@ -16,7 +16,7 @@ hand, with no enforcement, would let them silently drift apart over time as one 
 is edited and the other isn't.
 
 At the same time, `templates/webapi` must be fully self-contained (see
-`docs/architecture.md`'s MSBuild note and `tests/Templates.Tests`, which generates into a
+`docs/architecture.md`'s MSBuild note and `templates/tests`, which generates into a
 temp directory outside the repo and builds it as a standalone project to prove exactly
 this): it ships its own non-chaining `Directory.Build.props`/`Directory.Packages.props`,
 and — critically for this decision — cannot reference files outside its own directory
@@ -65,7 +65,7 @@ cross-template code needed to be consumed via ordinary `PackageReference` instea
 copied per-template — see ADR 0011.
 
 - `templates/webapi` stays genuinely self-contained — no reference of any kind reaches
-  outside its own directory tree — which keeps `tests/Templates.Tests`'s
+  outside its own directory tree — which keeps `templates/tests`'s
   outside-the-repo build honest and keeps the door open for future NuGet template
   packaging (`eng/scripts/pack-templates.ps1`, currently a placeholder).
 - Drift between the canonical source and its copy is a CI failure, not a silent bug: a

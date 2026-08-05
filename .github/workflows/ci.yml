@@ -71,7 +71,7 @@ jobs:
           -reports:"**/coverage.cobertura.xml"
           -targetdir:"./coverage-report"
           -reporttypes:"Html;Cobertura;Badges"
-          -assemblyfilters:"-Dorn.Cli.Tests;-Dorn.Core.Tests;-Templates.Tests"
+          -assemblyfilters:"-Dorn.Cli.Tests;-Dorn.Core.Tests;-Dorn.TemplateGeneration.Tests"
 
       - name: Upload coverage report as artifact
         if: matrix.os == 'ubuntu-latest'
@@ -112,7 +112,7 @@ jobs:
           # The generated project lives outside the repo, so it can't see this repo's
           # nuget.config "dorn-local" source for Dorn.Messaging.Contracts/Dorn.Messaging/
           # Dorn.SharedKernel (not published to NuGet.org yet - see ADR 0011). Point restore
-          # at the local feed explicitly, same as tests/Templates.Tests does.
+          # at the local feed explicitly, same as templates/tests does.
           dotnet restore /tmp/ci-smoke-test-app -p:RestoreAdditionalProjectSources=${{ github.workspace }}/artifacts
           dotnet build /tmp/ci-smoke-test-app -c Release --no-restore
           dotnet new uninstall Dorn.Templates.WebApi

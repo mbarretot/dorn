@@ -100,7 +100,7 @@ job marker in `.github/workflows/ci.yml` and `eng/README.md`). Until that exists
   self-containment requirement); this ADR adds no new constraint on that front, it
   exercises a constraint that already existed.
 - CI now smoke-tests both paths: the existing `dorn new webapi` path (via
-  `tests/Templates.Tests`, unaffected by this change) and the new
+  `templates/tests`, unaffected by this change) and the new
   `dotnet new install`/`dotnet new dorn-webapi`/`dotnet new uninstall` path (new CI step
   in `build-and-test`, ubuntu-only).
 - Visual Studio discoverability is a direct, no-extra-work consequence of using

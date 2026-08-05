@@ -138,7 +138,7 @@ version `1.0.0` on NuGet. See `docs/templates/webapi.md` and
 DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" dotnet test Dorn.slnx
 ```
 
-`DORN_TEMPLATES_PATH` is required for `tests/Templates.Tests`, which generates a real
+`DORN_TEMPLATES_PATH` is required for `templates/tests`, which generates a real
 `CleanArchWebApi` project into a temp directory outside the repo (`Path.GetTempPath()`)
 and runs `dotnet build` against it as a subprocess — this is the test that proves the
 template is genuinely self-contained and buildable by an end user, not just inside this

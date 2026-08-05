@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using YamlDotNet.RepresentationModel;
 
-namespace Templates.Tests;
+namespace Dorn.TemplateGeneration.Tests;
 
 /// <summary>
 /// Generates the real webapi template outside the repo and builds it to verify the template's build isolation.
