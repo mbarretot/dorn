@@ -2,9 +2,6 @@ using System.Diagnostics;
 
 namespace Dorn.Cli.Execution;
 
-/// <summary>
-/// Default implementation of <see cref="IProcessRunner"/> that wraps <see cref="Process"/>.
-/// </summary>
 public sealed class ProcessRunner : IProcessRunner
 {
     public async Task<int> RunAsync(ProcessSpec spec, CancellationToken ct)

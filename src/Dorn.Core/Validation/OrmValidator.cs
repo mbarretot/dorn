@@ -7,9 +7,6 @@ public sealed record OrmValidationResult(bool IsValid, string? ErrorMessage)
     public static OrmValidationResult Invalid(string errorMessage) => new(false, errorMessage);
 }
 
-/// <summary>
-/// Validates the optional <c>--orm</c> value passed to <c>dorn new webapi</c>.
-/// </summary>
 public static class OrmValidator
 {
     private static readonly HashSet<string> ValidOrms = new(StringComparer.OrdinalIgnoreCase)

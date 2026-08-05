@@ -242,10 +242,7 @@ public class NewGrpcCommandTests
         return (engine, processRunner, command, consoleMock);
     }
 
-    /// <summary>
-    /// IAnsiConsole mock with Interactive=false by default. TestConsole-style interactive
-    /// flows are not exercised by the gRPC MVP (no SelectionPrompt paths).
-    /// </summary>
+    /// <summary>TestConsole-style interactive flows aren't exercised — the gRPC MVP has no SelectionPrompt paths.</summary>
     private static IAnsiConsole CreateNonInteractiveConsoleMock()
     {
         var consoleMock = Substitute.For<IAnsiConsole>();

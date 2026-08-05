@@ -5,10 +5,7 @@ using Xunit;
 
 namespace Dorn.Cli.Tests.Execution;
 
-/// <summary>
-/// Unit tests for <see cref="ProcessRunner"/> and <see cref="ProcessSpec"/>.
-/// Verifies the process execution contract used by all three verb commands.
-/// </summary>
+/// <summary>Verifies the process execution contract used by all three verb commands.</summary>
 public class ProcessRunnerTests : IDisposable
 {
     private readonly string _tempRoot;
