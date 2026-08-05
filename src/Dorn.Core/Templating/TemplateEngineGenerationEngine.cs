@@ -5,9 +5,7 @@ using Microsoft.TemplateEngine.Edge.Template;
 
 namespace Dorn.Core.Templating;
 
-/// <summary>
-/// Implements IGenerationEngine on top of Microsoft.TemplateEngine.Edge.Template.TemplateCreator.
-/// </summary>
+/// <summary>Wraps Microsoft.TemplateEngine.Edge.Template.TemplateCreator.</summary>
 public sealed class TemplateEngineGenerationEngine : IGenerationEngine
 {
     private readonly FileSystemTemplateCatalog _catalog;

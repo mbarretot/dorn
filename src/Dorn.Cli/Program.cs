@@ -43,7 +43,9 @@ app.Configure(config =>
                 .WithDescription("Generate a Clean Architecture Web API project.");
             branch
                 .AddCommand<NewGrpcCommand>("grpc")
-                .WithDescription("Generate a Clean Architecture gRPC service (sqlite + EF Core + Aspire).");
+                .WithDescription(
+                    "Generate a Clean Architecture gRPC service (sqlite + EF Core + Aspire)."
+                );
         }
     );
     config
@@ -69,7 +71,10 @@ static void ShowWelcome()
     table.AddColumn("Command");
     table.AddColumn("Description");
     table.AddRow("[green]new webapi[/] <name>", "Generate a Clean Architecture Web API project.");
-    table.AddRow("[green]new grpc[/] <name>", "Generate a Clean Architecture gRPC service (sqlite + EF Core + Aspire).");
+    table.AddRow(
+        "[green]new grpc[/] <name>",
+        "Generate a Clean Architecture gRPC service (sqlite + EF Core + Aspire)."
+    );
     table.AddRow("[green]test[/]", "Run the generated project's test tiers.");
     table.AddRow(
         "[green]run[/]",

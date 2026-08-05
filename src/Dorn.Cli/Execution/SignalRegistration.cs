@@ -2,9 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Dorn.Cli.Execution;
 
-/// <summary>
-/// Production <see cref="ISignalRegistration"/> that forwards to <see cref="PosixSignalRegistration"/>.
-/// </summary>
+/// <summary>Forwards to <see cref="PosixSignalRegistration"/>.</summary>
 public sealed class SignalRegistration : ISignalRegistration
 {
     public IDisposable Register(PosixSignal signal, Action<PosixSignalContext> handler)

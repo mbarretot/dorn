@@ -8,9 +8,6 @@ public sealed record DatabaseProviderValidationResult(bool IsValid, string? Erro
         new(false, errorMessage);
 }
 
-/// <summary>
-/// Validates the optional <c>--database</c> value passed to <c>dorn new webapi</c>.
-/// </summary>
 public static class DatabaseProviderValidator
 {
     private static readonly HashSet<string> ValidProviders = new(StringComparer.OrdinalIgnoreCase)

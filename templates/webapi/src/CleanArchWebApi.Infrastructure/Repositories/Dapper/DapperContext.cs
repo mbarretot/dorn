@@ -1,10 +1,10 @@
 using System.Data;
+using Microsoft.Extensions.Configuration;
 #if (UseSqlite)
 using Microsoft.Data.Sqlite;
 #elif (UsePostgres)
 using Npgsql;
 #endif
-using Microsoft.Extensions.Configuration;
 
 namespace CleanArchWebApi.Infrastructure.Repositories.Dapper;
 

@@ -7,9 +7,6 @@ namespace Dorn.Cli.Execution;
 /// </summary>
 public interface ISignalRegistration
 {
-    /// <summary>
-    /// Subscribes <paramref name="handler"/> to <paramref name="signal"/> until disposed.
-    /// </summary>
     IDisposable Register(PosixSignal signal, Action<PosixSignalContext> handler);
 }
 

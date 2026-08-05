@@ -11,9 +11,8 @@ public sealed record AspireResourceNameValidationResult(bool IsValid, string? Er
 }
 
 /// <summary>
-/// Aspire resource names (ASPIRE006) allow only ASCII letters, digits, and hyphens —
-/// stricter than <see cref="ProjectNameValidator"/>, so this only gates Aspire-hosted
-/// database providers (any provider other than the zero-Docker `sqlite` default).
+/// ASPIRE006 allows only ASCII letters/digits/hyphens, stricter than
+/// <see cref="ProjectNameValidator"/> — gates non-sqlite database providers only.
 /// </summary>
 public static partial class AspireResourceNameValidator
 {

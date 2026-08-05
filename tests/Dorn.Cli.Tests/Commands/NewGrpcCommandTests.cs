@@ -12,10 +12,9 @@ using Xunit;
 namespace Dorn.Cli.Tests.Commands;
 
 /// <summary>
-/// Tests for <see cref="NewGrpcCommand"/>. Mirrors the threat-matrix shape of
-/// <c>NewWebApiCommandTests</c>: project-name validation and the dorn-grpc short name
-/// are the only required behaviors here because the gRPC MVP is fixed at
-/// sqlite + EF Core + Aspire (no provider/orm/orchestrator options).
+/// Mirrors the threat-matrix shape of <c>NewWebApiCommandTests</c>: project-name validation
+/// and the dorn-grpc short name are the only required behaviors, since the gRPC MVP is
+/// fixed at sqlite + EF Core + Aspire (no provider/orm/orchestrator options).
 /// </summary>
 public class NewGrpcCommandTests
 {
@@ -193,7 +192,12 @@ public class NewGrpcCommandTests
         try
         {
             var exitCode = await command.RunAsync(
-                new NewGrpcSettings { Name = "MyService", Output = tempDir, NoRestore = true },
+                new NewGrpcSettings
+                {
+                    Name = "MyService",
+                    Output = tempDir,
+                    NoRestore = true,
+                },
                 CancellationToken.None
             );
 
@@ -243,10 +247,7 @@ public class NewGrpcCommandTests
         return (engine, processRunner, command, consoleMock);
     }
 
-    /// <summary>
-    /// IAnsiConsole mock with Interactive=false by default. TestConsole-style interactive
-    /// flows are not exercised by the gRPC MVP (no SelectionPrompt paths).
-    /// </summary>
+    /// <summary>TestConsole-style interactive flows aren't exercised — the gRPC MVP has no SelectionPrompt paths.</summary>
     private static IAnsiConsole CreateNonInteractiveConsoleMock()
     {
         var consoleMock = Substitute.For<IAnsiConsole>();

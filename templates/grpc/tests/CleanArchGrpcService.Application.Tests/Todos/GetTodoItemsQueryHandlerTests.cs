@@ -10,13 +10,7 @@ public sealed class GetTodoItemsQueryHandlerTests
         var repository = Substitute.For<ITodoItemRepository>();
         repository
             .GetAllAsync(Arg.Any<CancellationToken>())
-            .Returns(
-                new List<TodoItem>
-                {
-                    TodoItem.Create("first"),
-                    TodoItem.Create("second"),
-                }
-            );
+            .Returns(new List<TodoItem> { TodoItem.Create("first"), TodoItem.Create("second") });
 
         var handler = new GetTodoItemsQueryHandler(repository);
 
@@ -31,9 +25,7 @@ public sealed class GetTodoItemsQueryHandlerTests
     public async Task Handle_WhenNoItemsSeeded_ReturnsEmptyList()
     {
         var repository = Substitute.For<ITodoItemRepository>();
-        repository
-            .GetAllAsync(Arg.Any<CancellationToken>())
-            .Returns(new List<TodoItem>());
+        repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<TodoItem>());
 
         var handler = new GetTodoItemsQueryHandler(repository);
 

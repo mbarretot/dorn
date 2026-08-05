@@ -1,8 +1,5 @@
 namespace Dorn.Cli.Testing;
 
-/// <summary>
-/// Captured process invocation captured by a test runner — file name, args, working directory.
-/// </summary>
 public sealed record CapturedProcessSpec(
     string FileName,
     IReadOnlyList<string> Arguments,

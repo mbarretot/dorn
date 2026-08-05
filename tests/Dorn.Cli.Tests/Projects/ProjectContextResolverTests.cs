@@ -3,10 +3,7 @@ using Xunit;
 
 namespace Dorn.Cli.Tests.Projects;
 
-/// <summary>
-/// Matrix tests for <see cref="ProjectContextResolver"/>. Exercises suffix-based project
-/// detection against synthesized directory trees without touching the real filesystem.
-/// </summary>
+/// <summary>Exercises suffix-based project detection against synthesized directory trees, no real filesystem.</summary>
 public class ProjectContextResolverTests : IDisposable
 {
     private readonly string _tempRoot;

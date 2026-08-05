@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using YamlDotNet.RepresentationModel;
 
-namespace Dorn.TemplateGeneration.Tests;
+namespace TemplateGenerationTests;
 
 /// <summary>
 /// Generates the real webapi template outside the repo and builds it to verify the template's build isolation.
@@ -129,8 +129,8 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Generates with sqlserver and builds. Catches migration namespace collisions, bad
-    /// #if/Condition/rename modifiers, and stray //#if markers in appsettings.json.
+    /// Catches migration namespace collisions, bad #if/Condition/rename modifiers, and stray
+    /// //#if markers in appsettings.json.
     /// </summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithSqlServer_ProducesBuildableSolution()
@@ -207,10 +207,7 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Generates with postgres and builds. Mirrors the sqlserver cell above: catches migration
-    /// namespace collisions, bad #if/Condition/rename modifiers, and stray markers.
-    /// </summary>
+    /// <summary>Mirrors the sqlserver cell above (namespace collisions, #if/Condition/rename modifiers, stray markers).</summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithPostgres_ProducesBuildableSolution()
     {
@@ -283,16 +280,12 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Generates with postgres and the Dapper ORM and verifies the EF-only migrations tree is
-    /// excluded and DapperContext.cs contains real Npgsql wiring (source-level, not a nested
-    /// build): a standalone-csproj `dotnet build` invoked from inside this xunit test host is
-    /// unreliable for transitive Central-Package-Management resolution through ProjectReference
-    /// (reproducibly fails here yet succeeds identically run from a plain shell — an artifact of
-    /// nested dotnet-in-dotnet-test invocation, not a real compile defect); compile-correctness
-    /// for Postgres+Dapper was independently confirmed via `dotnet build` against a raw,
-    /// UseDapper=true/UsePostgres=true in-place copy of the checked-in template source (see
-    /// apply-progress Work Unit Evidence). The full-solution EF Core cell above already proves
-    /// the shared solution/restore path builds correctly for postgres.
+    /// Verifies EF-only migrations are excluded and DapperContext.cs has real Npgsql wiring —
+    /// source-level only, not a nested build: `dotnet build` from inside this xunit host is
+    /// unreliable for CPM resolution through ProjectReference (fails here, succeeds from a plain
+    /// shell — a nested dotnet-in-dotnet-test artifact, not a real defect). Compile-correctness
+    /// was independently confirmed via a raw UseDapper=true/UsePostgres=true copy (see
+    /// apply-progress Work Unit Evidence).
     /// </summary>
     [Fact]
     public async Task Generate_DornWebApiTemplateWithPostgresAndDapper_ExcludesEfOnlyMigrationsAndWiresNpgsql()
@@ -375,9 +368,7 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Builds the docker-compose/sqlite matrix cell and verifies it omits Aspire projects while retaining Docker assets.
-    /// </summary>
+    /// <summary>Omits Aspire projects while retaining Docker assets.</summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithDockerComposeAndSqlite_ProducesBuildableSolution()
     {
@@ -459,9 +450,7 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Covers the plain orchestrator by verifying it omits orchestration files but retains the Docker assets and solution.
-    /// </summary>
+    /// <summary>Omits orchestration files but retains the Docker assets and solution.</summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithNoneOrchestrator_ProducesBuildableSolution()
     {
@@ -547,9 +536,7 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Builds the docker-compose/sqlserver cell and verifies its SQL Server connection override and clean generated settings.
-    /// </summary>
+    /// <summary>Verifies its SQL Server connection override and clean generated settings.</summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithDockerComposeAndSqlServer_ProducesBuildableSolution()
     {
@@ -635,9 +622,7 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Builds the docker-compose/postgres cell and verifies its PostgreSQL connection override and clean generated settings.
-    /// </summary>
+    /// <summary>Verifies its PostgreSQL connection override and clean generated settings.</summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithDockerComposeAndPostgres_ProducesBuildableSolution()
     {
@@ -726,9 +711,6 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Verifies global.json is emitted at the generated repository root with Dorn's pinned SDK version.
-    /// </summary>
     [Fact]
     public async Task GlobalJson_IsEmittedAtRepositoryRootWithPinnedSdkVersion()
     {
@@ -847,7 +829,11 @@ public class WebApiTemplateGenerationTests
             outputDirectory =>
             {
                 var rawText = ReadCiWorkflowRawText(outputDirectory);
-                Assert.Contains("global-json-file: ./global.json", rawText, StringComparison.Ordinal);
+                Assert.Contains(
+                    "global-json-file: ./global.json",
+                    rawText,
+                    StringComparison.Ordinal
+                );
                 Assert.Contains("Directory.Packages.props", rawText, StringComparison.Ordinal);
 
                 var steps = GetSteps(LoadCiWorkflowRoot(outputDirectory), "build-and-test");
@@ -870,9 +856,6 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Requirement "Restore + Build": restore with the race-avoidance flags runs before build.
-    /// </summary>
     [Fact]
     public async Task CiWorkflow_RestoresBeforeBuildWithRaceFlags()
     {
@@ -884,7 +867,9 @@ public class WebApiTemplateGenerationTests
                 var restoreIndex = steps.FindIndex(s =>
                     s.Run.Contains("dotnet restore", StringComparison.Ordinal)
                 );
-                var buildIndex = steps.FindIndex(s => s.Run.Contains("dotnet build", StringComparison.Ordinal));
+                var buildIndex = steps.FindIndex(s =>
+                    s.Run.Contains("dotnet build", StringComparison.Ordinal)
+                );
 
                 Assert.True(restoreIndex >= 0);
                 Assert.True(buildIndex >= 0);
@@ -903,9 +888,6 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Verifies the default workflow runs one solution-wide test command across all tiers without filtering.
-    /// </summary>
     [Fact]
     public async Task CiWorkflow_DefaultTestRunsAllTiersOnce()
     {
@@ -925,7 +907,11 @@ public class WebApiTemplateGenerationTests
                 var command = Assert.Single(activeTestCommands);
                 Assert.Contains("--no-build", command, StringComparison.Ordinal);
                 Assert.Contains("-c Release", command, StringComparison.Ordinal);
-                Assert.Contains("--collect:\"XPlat Code Coverage\"", command, StringComparison.Ordinal);
+                Assert.Contains(
+                    "--collect:\"XPlat Code Coverage\"",
+                    command,
+                    StringComparison.Ordinal
+                );
                 Assert.DoesNotContain("--filter", command, StringComparison.Ordinal);
 
                 return Task.CompletedTask;
@@ -933,9 +919,6 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Verifies excluding Integration activates exactly the remaining three per-tier test commands.
-    /// </summary>
     [Fact]
     public async Task CiWorkflow_ExclusionRunsRemainingTiers()
     {
@@ -944,7 +927,10 @@ public class WebApiTemplateGenerationTests
             outputDirectory =>
             {
                 var steps = GetSteps(LoadCiWorkflowRoot(outputDirectory), "build-and-test");
-                var context = new Dictionary<string, string> { ["inputs.exclude_tiers"] = "Integration" };
+                var context = new Dictionary<string, string>
+                {
+                    ["inputs.exclude_tiers"] = "Integration",
+                };
 
                 var activeTestSteps = steps
                     .Where(s => s.Run.Contains("dotnet test", StringComparison.Ordinal))
@@ -963,9 +949,6 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Verifies SQLite workflow cells skip every SQL Server container step.
-    /// </summary>
     [Fact]
     public async Task CiWorkflow_SqliteStartsNoService()
     {
@@ -981,7 +964,9 @@ public class WebApiTemplateGenerationTests
                 };
 
                 var sqlServerSteps = steps
-                    .Where(s => s.Run.Contains("mcr.microsoft.com/azure-sql-edge", StringComparison.Ordinal))
+                    .Where(s =>
+                        s.Run.Contains("mcr.microsoft.com/azure-sql-edge", StringComparison.Ordinal)
+                    )
                     .ToList();
                 Assert.NotEmpty(sqlServerSteps);
                 Assert.All(
@@ -998,9 +983,6 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Verifies the Linux SQL Server cell starts Azure SQL Edge and health-checks it before testing.
-    /// </summary>
     [Fact]
     public async Task CiWorkflow_LinuxSqlServerUsesHealthyEdge()
     {
@@ -1028,7 +1010,9 @@ public class WebApiTemplateGenerationTests
                 );
                 Assert.True(healthCheckIndex >= 0);
 
-                var testIndex = steps.FindIndex(s => s.Run.Contains("dotnet test", StringComparison.Ordinal));
+                var testIndex = steps.FindIndex(s =>
+                    s.Run.Contains("dotnet test", StringComparison.Ordinal)
+                );
                 Assert.True(testIndex >= 0);
                 Assert.True(healthCheckIndex < testIndex);
 
@@ -1037,9 +1021,6 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Verifies the Linux PostgreSQL cell starts a disposable Postgres container and health-checks it before testing.
-    /// </summary>
     [Fact]
     public async Task CiWorkflow_LinuxPostgresUsesHealthyContainer()
     {
@@ -1067,7 +1048,9 @@ public class WebApiTemplateGenerationTests
                 );
                 Assert.True(healthCheckIndex >= 0);
 
-                var testIndex = steps.FindIndex(s => s.Run.Contains("dotnet test", StringComparison.Ordinal));
+                var testIndex = steps.FindIndex(s =>
+                    s.Run.Contains("dotnet test", StringComparison.Ordinal)
+                );
                 Assert.True(testIndex >= 0);
                 Assert.True(healthCheckIndex < testIndex);
 
@@ -1076,9 +1059,6 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Verifies SQLite workflow cells skip every PostgreSQL container step.
-    /// </summary>
     [Fact]
     public async Task CiWorkflow_SqliteStartsNoPostgresService()
     {
@@ -1111,9 +1091,7 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Verifies the Windows PostgreSQL branch is best-effort and uses Testcontainers as a .NET library, not a CLI.
-    /// </summary>
+    /// <summary>Uses Testcontainers as a .NET library, not a CLI.</summary>
     [Fact]
     public async Task CiWorkflow_WindowsPostgresIsBestEffort()
     {
@@ -1122,7 +1100,10 @@ public class WebApiTemplateGenerationTests
             outputDirectory =>
             {
                 var rawText = ReadCiWorkflowRawText(outputDirectory);
-                var branchIndex = rawText.IndexOf("Windows + PostgreSQL caveat", StringComparison.Ordinal);
+                var branchIndex = rawText.IndexOf(
+                    "Windows + PostgreSQL caveat",
+                    StringComparison.Ordinal
+                );
                 Assert.True(branchIndex >= 0);
 
                 var steps = GetSteps(LoadCiWorkflowRoot(outputDirectory), "build-and-test");
@@ -1141,9 +1122,7 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Verifies the Windows SQL Server branch is best-effort and uses Testcontainers as a .NET library, not a CLI.
-    /// </summary>
+    /// <summary>Uses Testcontainers as a .NET library, not a CLI.</summary>
     [Fact]
     public async Task CiWorkflow_WindowsSqlServerIsBestEffort()
     {
@@ -1153,7 +1132,10 @@ public class WebApiTemplateGenerationTests
             {
                 var rawText = ReadCiWorkflowRawText(outputDirectory);
                 var commentIndex = rawText.IndexOf("# best-effort:", StringComparison.Ordinal);
-                var branchIndex = rawText.IndexOf("Windows + SQL Server caveat", StringComparison.Ordinal);
+                var branchIndex = rawText.IndexOf(
+                    "Windows + SQL Server caveat",
+                    StringComparison.Ordinal
+                );
                 Assert.True(commentIndex >= 0);
                 Assert.True(branchIndex > commentIndex);
 
@@ -1184,15 +1166,16 @@ public class WebApiTemplateGenerationTests
             "DornCiNoEfCliApp",
             outputDirectory =>
             {
-                Assert.DoesNotContain("dotnet ef", ReadCiWorkflowRawText(outputDirectory), StringComparison.Ordinal);
+                Assert.DoesNotContain(
+                    "dotnet ef",
+                    ReadCiWorkflowRawText(outputDirectory),
+                    StringComparison.Ordinal
+                );
                 return Task.CompletedTask;
             }
         );
     }
 
-    /// <summary>
-    /// Verifies coverage aggregation runs only on Ubuntu and excludes test assemblies.
-    /// </summary>
     [Fact]
     public async Task CiWorkflow_AggregatesCoverageOnUbuntuOnly()
     {
@@ -1205,8 +1188,16 @@ public class WebApiTemplateGenerationTests
                     s.Run.Contains("reportgenerator", StringComparison.OrdinalIgnoreCase)
                 );
 
-                Assert.Contains("**/coverage.cobertura.xml", coverageStep.Run, StringComparison.Ordinal);
-                Assert.Contains("-assemblyfilters:+:-*.Tests", coverageStep.Run, StringComparison.Ordinal);
+                Assert.Contains(
+                    "**/coverage.cobertura.xml",
+                    coverageStep.Run,
+                    StringComparison.Ordinal
+                );
+                Assert.Contains(
+                    "-assemblyfilters:+:-*.Tests",
+                    coverageStep.Run,
+                    StringComparison.Ordinal
+                );
                 Assert.Equal("matrix.os == 'ubuntu-latest'", coverageStep.If);
 
                 return Task.CompletedTask;
@@ -1225,7 +1216,12 @@ public class WebApiTemplateGenerationTests
             "DornCiSqliteMarkerApp",
             outputDirectory =>
             {
-                var markerPath = Path.Combine(outputDirectory, ".github", "config", "db-provider.txt");
+                var markerPath = Path.Combine(
+                    outputDirectory,
+                    ".github",
+                    "config",
+                    "db-provider.txt"
+                );
                 Assert.True(File.Exists(markerPath), $"Expected marker file at '{markerPath}'.");
                 Assert.Equal("sqlite", File.ReadAllText(markerPath).Trim());
                 return Task.CompletedTask;
@@ -1245,7 +1241,12 @@ public class WebApiTemplateGenerationTests
             "DornCiSqlServerMarkerApp",
             outputDirectory =>
             {
-                var markerPath = Path.Combine(outputDirectory, ".github", "config", "db-provider.txt");
+                var markerPath = Path.Combine(
+                    outputDirectory,
+                    ".github",
+                    "config",
+                    "db-provider.txt"
+                );
                 Assert.True(File.Exists(markerPath), $"Expected marker file at '{markerPath}'.");
                 Assert.Equal("sqlserver", File.ReadAllText(markerPath).Trim());
                 return Task.CompletedTask;
@@ -1265,7 +1266,12 @@ public class WebApiTemplateGenerationTests
             "DornCiPostgresMarkerApp",
             outputDirectory =>
             {
-                var markerPath = Path.Combine(outputDirectory, ".github", "config", "db-provider.txt");
+                var markerPath = Path.Combine(
+                    outputDirectory,
+                    ".github",
+                    "config",
+                    "db-provider.txt"
+                );
                 Assert.True(File.Exists(markerPath), $"Expected marker file at '{markerPath}'.");
                 Assert.Equal("postgres", File.ReadAllText(markerPath).Trim());
                 return Task.CompletedTask;
@@ -1274,9 +1280,7 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Verifies the generated workflow contains no out-of-scope packaging, Dependabot, or README badge steps.
-    /// </summary>
+    /// <summary>No out-of-scope packaging, Dependabot, or README badge steps.</summary>
     [Fact]
     public async Task CiWorkflow_ContainsNoOutOfScopeSteps()
     {
@@ -1351,7 +1355,11 @@ public class WebApiTemplateGenerationTests
                 // Structural YAML-parser check, independent of the assertions above.
                 LoadCiWorkflowRoot(outputDirectory);
 
-                var slnFiles = Directory.GetFiles(outputDirectory, "*.slnx", SearchOption.TopDirectoryOnly);
+                var slnFiles = Directory.GetFiles(
+                    outputDirectory,
+                    "*.slnx",
+                    SearchOption.TopDirectoryOnly
+                );
                 Assert.Single(slnFiles);
 
                 var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
@@ -1399,8 +1407,9 @@ public class WebApiTemplateGenerationTests
             var name = TryGetChild(step, "name") is YamlScalarNode nameNode ? nameNode.Value : null;
             var uses = TryGetChild(step, "uses") is YamlScalarNode usesNode ? usesNode.Value : null;
             var ifValue = TryGetChild(step, "if") is YamlScalarNode ifNode ? ifNode.Value : null;
-            var runValue =
-                TryGetChild(step, "run") is YamlScalarNode runNode ? runNode.Value ?? string.Empty : string.Empty;
+            var runValue = TryGetChild(step, "run") is YamlScalarNode runNode
+                ? runNode.Value ?? string.Empty
+                : string.Empty;
             result.Add((name, uses, ifValue, runValue));
         }
 
@@ -1425,18 +1434,27 @@ public class WebApiTemplateGenerationTests
             }
 
             bool clauseResult;
-            var containsMatch = Regex.Match(clause, @"^contains\((?<expr>[^,]+),\s*'(?<value>[^']*)'\)$");
+            var containsMatch = Regex.Match(
+                clause,
+                @"^contains\((?<expr>[^,]+),\s*'(?<value>[^']*)'\)$"
+            );
             if (containsMatch.Success)
             {
                 var left = ResolveGithubActionsExpressionValue(
                     containsMatch.Groups["expr"].Value.Trim(),
                     context
                 );
-                clauseResult = left.Contains(containsMatch.Groups["value"].Value, StringComparison.Ordinal);
+                clauseResult = left.Contains(
+                    containsMatch.Groups["value"].Value,
+                    StringComparison.Ordinal
+                );
             }
             else
             {
-                var comparisonMatch = Regex.Match(clause, @"^(?<left>[A-Za-z0-9_.]+)\s*(?<op>==|!=)\s*'(?<value>[^']*)'$");
+                var comparisonMatch = Regex.Match(
+                    clause,
+                    @"^(?<left>[A-Za-z0-9_.]+)\s*(?<op>==|!=)\s*'(?<value>[^']*)'$"
+                );
                 if (!comparisonMatch.Success)
                 {
                     throw new NotSupportedException(
@@ -1444,8 +1462,15 @@ public class WebApiTemplateGenerationTests
                     );
                 }
 
-                var left = ResolveGithubActionsExpressionValue(comparisonMatch.Groups["left"].Value, context);
-                var equal = string.Equals(left, comparisonMatch.Groups["value"].Value, StringComparison.Ordinal);
+                var left = ResolveGithubActionsExpressionValue(
+                    comparisonMatch.Groups["left"].Value,
+                    context
+                );
+                var equal = string.Equals(
+                    left,
+                    comparisonMatch.Groups["value"].Value,
+                    StringComparison.Ordinal
+                );
                 clauseResult = comparisonMatch.Groups["op"].Value == "==" ? equal : !equal;
             }
 
@@ -1468,7 +1493,11 @@ public class WebApiTemplateGenerationTests
         IReadOnlyDictionary<string, string> context
     )
     {
-        var normalized = reference.Replace("github.event.inputs.", "inputs.", StringComparison.Ordinal);
+        var normalized = reference.Replace(
+            "github.event.inputs.",
+            "inputs.",
+            StringComparison.Ordinal
+        );
         return context.TryGetValue(normalized, out var value) ? value : string.Empty;
     }
 
