@@ -1,99 +1,56 @@
-# Template: `grpc`
+# CleanArchGrpcService
 
-Clean Architecture gRPC service with CQRS, EF Core (SQLite), and Aspire orchestration.
+[![Scaffolded with Dorn](https://img.shields.io/badge/scaffolded_with-Dorn-1A1A1A?style=flat-square)](https://github.com/mbarretot/dorn)
 
-## Structure
+A Clean Architecture gRPC service: Domain, Application, Infrastructure, and a proto-backed presentation layer fully wired, CQRS via a custom mediator, on a fixed SQLite + EF Core + Aspire stack.
+
+## 🚀 Getting started
+
+```bash
+dotnet dev-certs https --trust   # one-time per machine, gRPC requires TLS/HTTP2
+dotnet run --project src/CleanArchGrpcService.AppHost
+```
+
+Aspire isn't optional here: there's no `--orchestrator` flag, so the AppHost is the only supported way to run this service.
+
+> [!TIP]
+> `dorn test`, `dorn run`, and `dorn coverage` also work from this project's root; see [CLI commands](#cli-commands) below.
+
+## 📁 Project structure
 
 ```
 src/
-├── ProjectName.Domain/            # Entities, domain events, no dependencies
-├── ProjectName.Application/       # Commands, queries, handlers, validators, behaviors
-├── ProjectName.Infrastructure/    # EF Core DbContext, migrations
-├── ProjectName.Grpc/              # Proto contract, gRPC services, Program.cs
-├── ProjectName.AppHost/           # Aspire AppHost — registers the service as a project resource
-└── ProjectName.ServiceDefaults/   # Aspire ServiceDefaults — telemetry, health checks, resilience
+├── CleanArchGrpcService.Domain/            # Entities, domain events, no dependencies
+├── CleanArchGrpcService.Application/       # Commands, queries, handlers, validators, behaviors
+├── CleanArchGrpcService.Infrastructure/    # EF Core DbContext, SQLite migration
+├── CleanArchGrpcService.Grpc/              # Protos/todo.proto, TodoGrpcService, Program.cs
+├── CleanArchGrpcService.AppHost/           # Aspire AppHost: registers the service as a resource
+└── CleanArchGrpcService.ServiceDefaults/   # Aspire ServiceDefaults: telemetry, health checks, resilience
 tests/
-├── ProjectName.Application.Tests/   # Unit: handlers, provider-agnostic
-├── ProjectName.Integration.Tests/   # Integration: EF Core against a temp SQLite file
-├── ProjectName.Architecture.Tests/  # Architecture: layering rules (ArchUnitNET)
-└── ProjectName.Functional.Tests/    # Functional: GrpcChannel round-trip via WebApplicationFactory
+├── CleanArchGrpcService.Application.Tests/    # Unit: handlers, validators, behaviors
+├── CleanArchGrpcService.Integration.Tests/    # Real EF Core persistence against a temp SQLite file
+├── CleanArchGrpcService.Architecture.Tests/   # Layering rules (ArchUnitNET)
+└── CleanArchGrpcService.Functional.Tests/     # RPC round-trip (GrpcChannel + WebApplicationFactory)
 ```
 
-Unlike `templates/webapi`, this template has no `--orm`, `--database`, or `--orchestrator`
-choice: the MVP scope is fixed at sqlite + EF Core + Aspire. The only generation parameter is
-`IncludeTests`.
+## 🧱 Layers
 
-## Layers
+**Domain** depends on nothing but the language itself.
 
-### Domain
+- `Entity`: base type, identity-based equality
+- `AggregateRoot : Entity`, adding a `DomainEvents` collection; only the aggregate can raise its own events
+- `TodoItem.Create(title)` guards against an empty/whitespace title and raises `TodoItemCreatedEvent`
 
-Language-only dependencies (plus `Dorn.SharedKernel`/`Dorn.Messaging.Contracts`, resolved as
-NuGet packages, not copied). No references to EF Core, gRPC, or Application-layer libraries.
-
-- `Entity` — base type with `Id` and identity-based equality
-- `AggregateRoot` — extends `Entity` with a `DomainEvents` collection
-- `TodoItem` — the worked example aggregate; `Create(title)` guards against an empty/whitespace
-  title and raises `TodoItemCreatedEvent`
-
-### Application
-
-Pure business logic. Depends only on `Domain` and the custom mediator contracts (`IRequest`,
-`IRequestHandler`, `ISender`).
-
-- **Commands/Queries** — records implementing `IRequest<T>` or `IRequest`
-- **Handlers** — implement `IRequestHandler<TRequest, TResponse>`, dispatch through
-  `ITodoItemRepository`
-- **Validators** — FluentValidation, auto-discovered by assembly
-- **Behaviors** — cross-cutting pipeline (validation, logging, etc.)
-
-### Infrastructure
-
-Implements the ports defined in `Domain`/`Application`. Depends only on `Application`.
-
-- `ApplicationDbContext` — EF Core DbContext
-- `Repositories/EfCore/TodoItemRepository.cs` — implements `ITodoItemRepository`
-- SQLite migrations (flat `Persistence/Migrations/`, no provider subfolder)
-
-### Grpc
-
-Hosts the gRPC service. Depends only on `Application` and `Infrastructure`.
+**Application** depends only on `Domain` and the mediator's contracts (`IRequest`, `IRequestHandler`, `ISender`), identical in shape to the `webapi` template's Application layer.
 
 ```csharp
-public sealed class TodoGrpcService(ISender sender) : TodoService.TodoServiceBase
-{
-    public override async Task<CreateTodoItemResponse> CreateTodoItem(
-        CreateTodoItemRequest request,
-        ServerCallContext context)
-    {
-        var id = await sender.Send(
-            new CreateTodoItemCommand(request.Title),
-            context.CancellationToken);
-
-        return new CreateTodoItemResponse { Id = id.ToString() };
-    }
-}
-```
-
-Validation failures surface as `RpcException` with `StatusCode.InvalidArgument` via a
-`Grpc.Core.Interceptors.Interceptor` — gRPC has no HTTP middleware pipeline equivalent to
-webapi's `ValidationExceptionHandler`.
-
-## CQRS with the mediator
-
-Commands and queries are records. Handlers receive only what they need through the
-constructor.
-
-```csharp
-// Command
 public sealed record CreateTodoItemCommand(string Title) : IRequest<Guid>;
 
-// Handler
 public sealed class CreateTodoItemCommandHandler : IRequestHandler<CreateTodoItemCommand, Guid>
 {
     private readonly ITodoItemRepository _repository;
 
-    public CreateTodoItemCommandHandler(ITodoItemRepository repository) =>
-        _repository = repository;
+    public CreateTodoItemCommandHandler(ITodoItemRepository repository) => _repository = repository;
 
     public async Task<Guid> Handle(CreateTodoItemCommand request, CancellationToken ct)
     {
@@ -104,64 +61,56 @@ public sealed class CreateTodoItemCommandHandler : IRequestHandler<CreateTodoIte
 }
 ```
 
-## Domain events
+Validators (FluentValidation) are auto-discovered by assembly and run in a `ValidationBehavior` pipeline step before the handler.
 
-Only `AggregateRoot` can raise events.
+**Infrastructure** implements the ports `Application` defines (`ITodoItemRepository`) and depends only on `Application`.
+
+**Grpc** hosts the service and depends only on `Application`:
 
 ```csharp
-public class TodoItem : AggregateRoot
+public sealed class TodoGrpcService(ISender sender) : TodoService.TodoServiceBase
 {
-    public string Title { get; private set; } = string.Empty;
-    public bool IsComplete { get; private set; }
-
-    public static TodoItem Create(string title)
+    public override async Task<CreateTodoItemResponse> CreateTodoItem(
+        CreateTodoItemRequest request,
+        ServerCallContext context)
     {
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            throw new ArgumentException("Title must not be empty.", nameof(title));
-        }
-
-        var todoItem = new TodoItem { Title = title };
-        todoItem.AddDomainEvent(new TodoItemCreatedEvent(todoItem.Id, todoItem.Title));
-        return todoItem;
+        var id = await sender.Send(new CreateTodoItemCommand(request.Title), context.CancellationToken);
+        return new CreateTodoItemResponse { Id = id.ToString() };
     }
 }
 ```
 
-## Validation
+gRPC has no HTTP middleware pipeline equivalent to `webapi`'s `ValidationExceptionHandler`, so validation failures surface through a `Grpc.Core.Interceptors.Interceptor` instead: `ValidationInterceptor` catches `FluentValidation.ValidationException` and translates it into an `RpcException(StatusCode.InvalidArgument, detail)`.
 
-FluentValidation validators auto-registered via `AddValidatorsFromAssembly`. A
-`ValidationInterceptor` catches `FluentValidation.ValidationException` and translates it into
-an `RpcException(StatusCode.InvalidArgument, detail)`, where `detail` identifies the failing
-field(s).
+## 🧪 Testing
 
-## Testing strategy
+| Project | Verifies | Database | Docker |
+|---|---|---|---|
+| `Application.Tests` | Handlers, validators, behaviors, domain entities | None | No |
+| `Integration.Tests` | Real EF Core persistence via `Database.MigrateAsync()` | SQLite (temp file) | No |
+| `Architecture.Tests` | Layers don't leak into each other (ArchUnitNET) | N/A | No |
+| `Functional.Tests` | RPC round-trip via `GrpcChannel` against `WebApplicationFactory<Program>` | SQLite (temp file) | No |
 
-Four tiers, each with a distinct goal:
+No test tier touches Docker: the stack is fixed at SQLite, so there's no container-backed provider to spin up.
 
-| Project              | Goal                                                                    | Database                  |
-| --------------------- | ------------------------------------------------------------------------ | -------------------------- |
-| `Application.Tests`  | Unit — handlers, validators, behaviors, domain entities                | No database                |
-| `Integration.Tests`  | Real persistence against EF Core / SQLite, via `Database.MigrateAsync()` | SQLite file                |
-| `Architecture.Tests` | Fitness functions: Domain/Application/Infrastructure do not leak across layers | —                     |
-| `Functional.Tests`   | Round-trip RPC via `GrpcChannel` against `WebApplicationFactory<Program>` | SQLite (temp file)         |
+## ⚙️ Configuration
 
-See `docs/adr/0013-four-tier-test-strategy.md` for the rationale behind this split.
+There is none. Unlike `webapi`, this template has no `--database`, `--orm`, or `--orchestrator` flag: the stack is fixed at SQLite + EF Core + Aspire.
 
-## Aspire
+| Parameter | Default | Values |
+|---|---|---|
+| `IncludeTests` | `true` | Whether the four test projects above were generated |
 
-The generated `AppHost` registers the service as a project resource over HTTP/2:
+## ⌨️ CLI commands
 
-```csharp
-var builder = DistributedApplication.CreateBuilder(args);
-builder.AddProject<Projects.ProjectName_Grpc>("grpc");
-builder.Build().Run();
+If `Dorn.Cli` is available (globally, or as the local tool this project's `.config/dotnet-tools.json` already pins), these run from the project root:
+
+```bash
+dorn test              # all 4 tiers, or dorn test --tier <name> for one
+dorn run                # Aspire, auto-detected
+dorn coverage           # tests + coverage, gated at 80%
 ```
 
-Run `dotnet dev-certs https --trust` once, then `dotnet run` against the `AppHost` project.
+## 📚 Learn more
 
-## Options
-
-| Parameter      | Default | Description               |
-| -------------- | ------- | -------------------------- |
-| `IncludeTests` | `true`  | Include the test projects  |
+This project was generated by [Dorn](https://github.com/mbarretot/dorn), a .NET scaffolding CLI. This template doesn't yet generate a CI workflow (`webapi`'s depends on a provider/orchestrator matrix this fixed MVP doesn't have). See its [`grpc` template reference](https://github.com/mbarretot/dorn/blob/main/docs/templates/grpc.md) and [architecture decision records](https://github.com/mbarretot/dorn/tree/main/docs/adr) for the reasoning behind these choices.
