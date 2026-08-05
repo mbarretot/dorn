@@ -81,7 +81,7 @@ public sealed class TestCommand : AsyncCommand<TestSettings>
 
         return tierFilter.ToLowerInvariant() switch
         {
-            // ADR 0013: Application.Tests IS the unit-level tier; "unit" is the documented alias.
+            // ADR 0012: Application.Tests IS the unit-level tier; "unit" is the documented alias.
             "unit" or "application" => [TestTier.Application],
             "integration" => [TestTier.Integration],
             "architecture" => [TestTier.Architecture],

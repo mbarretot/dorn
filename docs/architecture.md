@@ -1,15 +1,22 @@
 # Architecture
 
-Dorn has two halves that are easy to conflate but serve different purposes:
+## Contents
 
-- **The CLI tool** (`src/Dorn.Abstractions`, `src/Dorn.Core`, `src/Dorn.Cli`) — the
-  scaffolding engine itself, distributed (eventually) as a `dotnet tool`.
-- **The templates** (`templates/`) — the actual project skeletons Dorn generates, each an
-  independent, self-contained codebase in its own right.
-- **The packages** (`packages/`) — first-party NuGet packages that generated projects
-  depend on at runtime (the mediator and DDD building blocks) — see ADR 0011.
+- [The three `src/` projects](#the-three-src-projects)
+- [The custom mediator (ADR 0003)](#the-custom-mediator-adr-0003)
+- [Cross-template building blocks: `packages/` (ADR 0010)](#cross-template-building-blocks-packages-adr-0010)
+- [Related documents](#related-documents)
 
-This document covers all three, plus the packages that keep cross-template code shared.
+Dorn has two halves that are easy to conflate:
+
+- **The CLI tool** (`src/Dorn.Abstractions`, `src/Dorn.Core`, `src/Dorn.Cli`): the
+  scaffolding engine, distributed as a `dotnet tool`.
+- **The templates** (`templates/`): the project skeletons Dorn generates, each
+  self-contained.
+- **The packages** (`packages/`): first-party NuGet packages generated projects depend on
+  at runtime (the mediator and DDD building blocks). See ADR 0010.
+
+This document covers all three.
 
 ## The three `src/` projects
 
@@ -17,172 +24,182 @@ This document covers all three, plus the packages that keep cross-template code 
 
 Pure contracts, no implementation, no dependency on the Template Engine. Two areas:
 
-- **`Generation`** — `IGenerationEngine` (`ListTemplatesAsync`, `GenerateAsync`), plus the
+- **`Generation`**: `IGenerationEngine` (`ListTemplatesAsync`, `GenerateAsync`), plus the
   records it operates on: `GenerationRequest` (template short name, project name, output
   directory, optional parameters, `Force` flag), `GenerationResult` (success flag, output
   directory, created files, diagnostics), and `GenerationDiagnostic`
   (`Info`/`Warning`/`Error` severity + message).
-- **`Templates`** — `ITemplateCatalog` (`GetAvailableTemplatesAsync`,
+- **`Templates`**: `ITemplateCatalog` (`GetAvailableTemplatesAsync`,
   `FindByShortNameAsync`) and the `TemplateDescriptor` record it returns (identity, short
   name, name, description, classifications, source path).
 
-The point of keeping this project dependency-free is isolation: everything that touches
-`Microsoft.TemplateEngine.*` directly lives in `Dorn.Core`, so a breaking change in that
-API surface (see below — it already broke once, mid-implementation) only requires
-changing `Dorn.Core`, never the contracts `Dorn.Cli` codes against.
+Keeping this project dependency-free isolates `Microsoft.TemplateEngine.*` usage inside
+`Dorn.Core`: a breaking change in that API surface (it already broke once,
+mid-implementation) only requires changing `Dorn.Core`, never the contracts `Dorn.Cli`
+codes against.
 
 ### `Dorn.Core`
 
 Implements `Dorn.Abstractions` against the embedded Template Engine, and exposes
 `AddDornCore(this IServiceCollection)` to register everything as singletons (the
-Template Engine environment is expensive to build and safe to share for the process
+Template Engine environment is expensive to build, safe to share for the process
 lifetime).
 
-- **`DornTemplateEngineHost`** — builds an isolated `IEngineEnvironmentSettings` rooted at
+- **`DornTemplateEngineHost`**: builds an isolated `IEngineEnvironmentSettings` rooted at
   `~/.dorn/template-engine`, deliberately *not* the user's global `~/.templateengine`
-  used by `dotnet new`. See ADR 0002 for why Dorn embeds the engine instead of shelling
-  out to `dotnet new` in the first place.
-- **`TemplateLocator`** — resolves the filesystem root of `templates/`: first
-  `DORN_TEMPLATES_PATH` (dev and tests against a repo checkout), then a walk up from
-  `AppContext.BaseDirectory` looking for a `templates/` directory containing at least one
-  `.template.config` subfolder (a future installed-tool layout; no packaging story exists
-  for this yet).
-- **`FileSystemTemplateCatalog`** — scans `templates/` directly with
-  `Microsoft.TemplateEngine.Edge.Settings.Scanner`, rather than "installing" templates
-  through `TemplatePackageManager`/`InstallRequest`. Dorn ships templates as source
-  alongside the tool; it doesn't need the package/version/update machinery that exists
-  for NuGet-installed `dotnet new` templates. Implements `ITemplateCatalog` and also
-  exposes the raw `ITemplateInfo` (not just the `TemplateDescriptor` projection) for
-  `TemplateEngineGenerationEngine` to consume.
-- **`TemplateEngineGenerationEngine`** — implements `IGenerationEngine` on top of
-  `Microsoft.TemplateEngine.Edge.Template.TemplateCreator.InstantiateAsync`. Notably, it
-  enforces the `--force` contract itself: the embedded host's default destructive-change
-  handling is permissive regardless of `forceCreation`, so without this explicit
-  pre-check `InstantiateAsync` would happily overwrite a non-empty output directory even
-  when the caller asked it not to.
-- **`Validation/ProjectNameValidator`** — checks a proposed project name is valid both as
-  a filesystem directory name and as the root of a generated C# identifier/namespace
-  (rejects invalid path characters, leading digits, reserved Windows device names like
-  `CON`/`PRN`/`COM1`, etc.).
+  used by `dotnet new`. See ADR 0002.
+- **`TemplateLocator`**: resolves the filesystem root of `templates/`, in order: (1)
+  `DORN_TEMPLATES_PATH` (dev/tests against a repo checkout), (2) a walk up from
+  `AppContext.BaseDirectory` for a `templates/` directory with at least one
+  `.template.config` subfolder.
+- **`FileSystemTemplateCatalog`**: scans `templates/` directly with
+  `Microsoft.TemplateEngine.Edge.Settings.Scanner` rather than "installing" templates
+  through `TemplatePackageManager`/`InstallRequest`, since Dorn ships templates as source
+  and doesn't need NuGet's package/version/update machinery. Implements `ITemplateCatalog`
+  and also exposes the raw `ITemplateInfo` for `TemplateEngineGenerationEngine`.
+- **`TemplateEngineGenerationEngine`**: implements `IGenerationEngine` on
+  `Microsoft.TemplateEngine.Edge.Template.TemplateCreator.InstantiateAsync`, and enforces
+  the `--force` contract itself: the embedded host's default destructive-change handling
+  is permissive regardless of `forceCreation`, so without this pre-check `InstantiateAsync`
+  would overwrite a non-empty output directory even when told not to.
+- **`Validation/ProjectNameValidator`**: checks a proposed project name is valid as both a
+  filesystem directory name and the root of a generated C# identifier/namespace (rejects
+  invalid path characters, leading digits, reserved Windows device names like
+  `CON`/`PRN`/`COM1`).
 
 #### The real embedded Template Engine API (ADR 0002)
 
-The original plan assumed a `Bootstrapper` façade class, based on older
+The original plan assumed a `Bootstrapper` façade class from older
 `Microsoft.TemplateEngine.Edge` docs/samples. **That class does not exist in the version
-this repo actually uses (`10.0.301`, pinned to match the installed .NET 10 SDK exactly).**
-This was discovered during implementation, not anticipated in advance. The real entry
-points are:
+this repo uses (`10.0.301`, pinned to match the installed .NET 10 SDK).** The real entry
+points:
 
-- `Microsoft.TemplateEngine.Edge.EngineEnvironmentSettings` — constructed from a
-  `DefaultTemplateEngineHost` plus the built-in components from
+- `Microsoft.TemplateEngine.Edge.EngineEnvironmentSettings`: constructed from a
+  `DefaultTemplateEngineHost` plus built-in components from
   `Microsoft.TemplateEngine.Edge.Components` and
   `Microsoft.TemplateEngine.Orchestrator.RunnableProjects.Components`.
-- `Microsoft.TemplateEngine.Edge.Settings.Scanner` — discovers templates by scanning a
-  filesystem path (`ScanAsync`), returning a `ScanResult` whose mount point must be kept
-  open for the process lifetime (template instantiation reads file contents lazily from
-  it — this is why `FileSystemTemplateCatalog` is registered as a singleton and disposes
-  the scan result on shutdown, not per-call).
-- `Microsoft.TemplateEngine.Edge.Template.TemplateCreator` — the actual instantiation
-  entry point, via `InstantiateAsync(templateInfo, name, fallbackName, outputPath,
-  inputParameters, forceCreation, cancellationToken)`, returning an
-  `ITemplateCreationResult` (status, file changes, error message) that
-  `TemplateEngineGenerationEngine` maps onto `GenerationResult`.
+- `Microsoft.TemplateEngine.Edge.Settings.Scanner`: discovers templates by scanning a
+  filesystem path (`ScanAsync`), returning a `ScanResult` whose mount point must stay open
+  for the process lifetime (template instantiation reads file contents lazily from it, so
+  `FileSystemTemplateCatalog` is a singleton that disposes the scan result on shutdown, not
+  per-call).
+- `Microsoft.TemplateEngine.Edge.Template.TemplateCreator`: the instantiation entry point,
+  via `InstantiateAsync(templateInfo, name, fallbackName, outputPath, inputParameters,
+  forceCreation, cancellationToken)`, returning an `ITemplateCreationResult` (status, file
+  changes, error message) that `TemplateEngineGenerationEngine` maps onto
+  `GenerationResult`.
 
-All three are wrapped behind `Dorn.Core`'s classes precisely so that if a future SDK
-version narrows or renames this surface again, the blast radius stays inside
-`Dorn.Core` — `Dorn.Abstractions` and `Dorn.Cli` never reference
-`Microsoft.TemplateEngine.*` directly.
+All three stay wrapped behind `Dorn.Core`'s classes, so a future SDK version narrowing or
+renaming this surface only affects `Dorn.Core`: `Dorn.Abstractions` and `Dorn.Cli` never
+reference `Microsoft.TemplateEngine.*` directly.
 
 ### `Dorn.Cli`
 
-Thin: `Program.cs` wires a `ServiceCollection` with `AddDornCore()`, adapts it to
-Spectre.Console.Cli via `Infrastructure/TypeRegistrar` and `TypeResolver` (the documented
-pattern for DI-driven `CommandApp` construction), and registers one command branch —
-`new webapi`, backed by `NewWebApiCommand`. The command validates the project name via
-`ProjectNameValidator`, builds a `GenerationRequest` with the fixed template short name
-`dorn-webapi`, calls `IGenerationEngine.GenerateAsync`, and renders the result as a
-Spectre table of created files plus a "next steps" panel on success, or a red diagnostics
-panel and a non-zero exit code on failure.
+Thin. `Program.cs`:
+
+- Wires a `ServiceCollection` with `AddDornCore()`.
+- Adapts it to Spectre.Console.Cli via `Infrastructure/TypeRegistrar` and `TypeResolver`
+  (the documented pattern for DI-driven `CommandApp` construction).
+- Registers one command branch: `new webapi`, backed by `NewWebApiCommand`.
+
+`NewWebApiCommand` then:
+
+1. Validates the project name via `ProjectNameValidator`.
+2. Builds a `GenerationRequest` with the fixed template short name `dorn-webapi`.
+3. Calls `IGenerationEngine.GenerateAsync`.
+4. Renders the result: a Spectre table of created files plus a "next steps" panel on
+   success, or a red diagnostics panel and a non-zero exit code on failure.
 
 ## The custom mediator (ADR 0003)
 
-`packages/Dorn.Messaging.Contracts/` and `packages/Dorn.Messaging/` (consumed by every
-template that needs CQRS — currently just `webapi` — via ordinary `PackageReference`)
-implement a MediatR-shaped but independent, MIT-licensed mediator:
+`packages/Dorn.Messaging.Contracts/` and `packages/Dorn.Messaging/` (consumed via ordinary
+`PackageReference` by every template that needs CQRS, currently just `webapi`) implement a
+MediatR-shaped, independent, MIT-licensed mediator:
 
-- `IRequest<TResponse>` / `IRequest` (the latter is `IRequest<Unit>`, with `Unit` a
-  zero-information struct standing in for "no return value").
+- `IRequest<TResponse>` / `IRequest` (the latter is `IRequest<Unit>`, `Unit` a
+  zero-information struct for "no return value").
 - `IRequestHandler<TRequest, TResponse>.Handle(TRequest, CancellationToken)`.
 - `ISender.Send<TResponse>(IRequest<TResponse>, CancellationToken)`.
 - `IPipelineBehavior<TRequest, TResponse>.Handle(TRequest, RequestHandlerDelegate<TResponse>, CancellationToken)`
-  for decorator-style cross-cutting concerns (validation, logging, transactions, etc.).
+  for decorator-style cross-cutting concerns (validation, logging, transactions).
 - `INotificationHandler<TNotification>.Handle(TNotification, CancellationToken)` and
-  `IPublisher.Publish(INotification, CancellationToken)` for the publish/subscribe side:
+  `IPublisher.Publish(INotification, CancellationToken)` for publish/subscribe:
   zero-or-more handlers per event type, dispatched by `Mediator.Publish`. `INotification`
-  itself lives in `packages/Dorn.Messaging.Contracts/INotification.cs` alongside the rest
-  of the wire contracts, so that `AggregateRoot` (in `packages/Dorn.SharedKernel/`) can
-  type its event collection as `IReadOnlyCollection<INotification>` by depending only on
-  the lightweight, dependency-free contracts package — see ADR 0010 and ADR 0011.
+  lives in `packages/Dorn.Messaging.Contracts/INotification.cs`, so `AggregateRoot`
+  (`packages/Dorn.SharedKernel/`) can type its event collection as
+  `IReadOnlyCollection<INotification>` while depending only on the dependency-free
+  contracts package (ADR 0009, ADR 0010).
 
-All of the above interfaces/types live in `packages/Dorn.Messaging.Contracts/` — pure
-interfaces, zero package dependencies, safe to reference from any layer including Domain.
-`Mediator : ISender, IPublisher` (in `packages/Dorn.Messaging/Mediator.cs`) resolves the
-handler for a request's concrete type via `IServiceProvider` (reflection over
-`IRequestHandler<,>`), then wraps the call in every registered `IPipelineBehavior<,>` for
-that request/response pair, innermost handler last, exactly the decorator chain MediatR
-itself uses — just without MediatR's dependency or its RPL-1.5/commercial licensing from
-v13 onward. `Publish` resolves every registered `INotificationHandler<,>` for the
-notification's concrete type and invokes each in turn.
-`ServiceCollectionExtensions.AddMediator(this IServiceCollection, Assembly)` (also in
-`packages/Dorn.Messaging/`) scans an assembly's concrete classes and registers every
+All of the above live in `packages/Dorn.Messaging.Contracts/`: pure interfaces, zero
+package dependencies, safe to reference from any layer including Domain.
+
+`Mediator : ISender, IPublisher` (`packages/Dorn.Messaging/Mediator.cs`):
+
+- `Send` resolves the handler for a request's concrete type via `IServiceProvider`
+  (reflection over `IRequestHandler<,>`), then wraps the call in every registered
+  `IPipelineBehavior<,>` for that request/response pair, innermost handler last: the same
+  decorator chain MediatR uses, without MediatR's dependency or its RPL-1.5/commercial
+  licensing from v13 onward.
+- `Publish` resolves every registered `INotificationHandler<,>` for the notification's
+  concrete type and invokes each in turn.
+
+`ServiceCollectionExtensions.AddMediator(this IServiceCollection, Assembly)`
+(`packages/Dorn.Messaging/`) scans an assembly's concrete classes, registers every
 `IRequestHandler<,>`, `IPipelineBehavior<,>`, and `INotificationHandler<>` implementation
-it finds, plus `ISender → Mediator` and `IPublisher → Mediator`.
+found, plus `ISender → Mediator` and `IPublisher → Mediator`.
 
-See `docs/adr/0003-custom-mediator-instead-of-mediatr.md` for the licensing rationale in
-full, `docs/adr/0010-ddd-aggregates-and-domain-events.md` for the domain-event dispatch
-design, `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md` for why
-this code lives in packages rather than physically-copied template source, and
-`docs/templates/webapi.md` for worked examples of both.
+Further reading: `docs/adr/0003-custom-mediator-instead-of-mediatr.md` (licensing
+rationale), `docs/adr/0009-ddd-aggregates-and-domain-events.md` (domain-event dispatch
+design), `docs/adr/0010-extract-messaging-and-shared-kernel-as-nuget-packages.md` (why
+packages, not copied source), and `docs/templates/webapi.md` (worked examples).
 
-## Cross-template building blocks: `packages/` (ADR 0011)
+## Cross-template building blocks: `packages/` (ADR 0010)
 
-`templates/webapi` must be **self-contained**: it ships its own `Directory.Build.props`
-and `Directory.Packages.props` that do *not* chain to the repo root's (MSBuild only
-auto-imports the nearest file up the tree, it doesn't merge multiple), specifically so
-that (a) the generated project compiles standalone once copied out of the repo, and
-(b) it doesn't silently inherit Dorn's own analyzer/package versions, which could mask a
-bug that would otherwise be visible to an end user. `templates/tests` proves this
-by generating into `Path.GetTempPath()` — deliberately outside the repo — and running
-`dotnet build` there as a real subprocess.
+Code that must stay identical across every template, `Entity`/`AggregateRoot`/`Result`
+and `INotification`, plus the entire custom mediator, ships as three NuGet packages under
+the top-level `packages/` directory (sibling of `src/`, `templates/`, `tests/`), consumed
+via `PackageReference`:
 
-Self-containment means `templates/webapi` cannot reference code living outside its own
-directory tree via a normal project reference or `<Compile Include>` — that would break
-the moment the template is packaged (a future NuGet `PackageType=Template` package, see
-`eng/scripts/pack-templates.ps1`) or copied out of the repo checkout. But some code —
-`Entity`/`AggregateRoot`/`Result` and `INotification`, and the entire custom mediator —
-is meant to be identical across every template that needs it, not maintained
-independently per template. Rather than a physical copy (the original approach, ADR
-0008, now superseded), this code ships as three real NuGet packages under the top-level
-`packages/` directory (a sibling of `src/`, `templates/`, `tests/`), consumed via ordinary
-`PackageReference`:
-
-| Package                       | Contents                                                    |
-|--------------------------------|--------------------------------------------------------------|
-| `packages/Dorn.Messaging.Contracts/` | Pure mediator interfaces + `INotification`, zero dependencies. |
+| Package                              | Contents                                                        |
+| ------------------------------------- | ----------------------------------------------------------------- |
+| `packages/Dorn.Messaging.Contracts/` | Pure mediator interfaces + `INotification`, zero dependencies.  |
 | `packages/Dorn.Messaging/`           | The mediator implementation (`Mediator`, `AddMediator`).        |
-| `packages/Dorn.SharedKernel/`        | `Entity`, `AggregateRoot`, `Result`/`Result<T>`.                |
+| `packages/Dorn.SharedKernel/`        | `Entity`, `AggregateRoot`, `Result`/`Result<T>`.                 |
 
-Since these three packages aren't published to NuGet.org yet, they're built locally via
-`eng/scripts/pack-packages.ps1` into `./artifacts`, which the root `nuget.config`'s
-`dorn-local` source resolves as a package feed for `templates/webapi`'s in-repo build.
-See `eng/README.md` and `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`
-for the full rationale, including why a physical copy (the ADR 0008 approach) or a
-symlink or an MSBuild-level share was rejected.
+### Why templates can't just project-reference this code
+
+`templates/webapi` must be **self-contained**:
+
+- It ships its own `Directory.Build.props` and `Directory.Packages.props`, not chained to
+  the repo root's (MSBuild only auto-imports the nearest file up the tree).
+- This keeps the generated project compiling standalone once copied out of the repo, and
+  stops it silently inheriting Dorn's own analyzer/package versions. `templates/tests`
+  proves this by generating into `Path.GetTempPath()` (outside the repo) and running
+  `dotnet build` there as a real subprocess.
+- Consequently, `templates/webapi` cannot reference code outside its own directory tree
+  via a project reference or `<Compile Include>`: that would break once the template is
+  packaged (`eng/scripts/pack-templates.ps1`) or copied out of the repo checkout.
+
+### Why packages instead of a physical copy
+
+This code ships as NuGet packages, not a physical copy per template (the original
+approach, ADR 0007, now superseded), because it must stay identical across every template
+that needs it.
+
+### Local build
+
+These three packages aren't published to NuGet.org yet:
+
+- Built locally via `eng/scripts/pack-packages.ps1` into `./artifacts`.
+- The root `nuget.config`'s `dorn-local` source resolves that folder as a package feed for
+  `templates/webapi`'s in-repo build.
+
+See `eng/README.md` and
+`docs/adr/0010-extract-messaging-and-shared-kernel-as-nuget-packages.md` for the full
+rationale.
 
 ## Related documents
 
-- `docs/adr/0001-target-framework-net10.md` through
-  `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md` — the full
-  decision records.
-- `docs/templates/webapi.md` — user-facing docs for what `dorn new webapi` generates.
-- `docs/contributing.md` — conventions for adding a new template.
+- `docs/adr/` (0001 to 0015): the full decision records.
+- `docs/templates/webapi.md`: user-facing docs for what `dorn new webapi` generates.
+- `docs/contributing.md`: conventions for adding a new template.

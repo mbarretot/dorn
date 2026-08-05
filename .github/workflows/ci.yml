@@ -100,7 +100,7 @@ jobs:
 
       # Dual-distribution smoke test: pack templates/webapi as a standalone NuGet
       # template package and prove it's installable/usable via vanilla `dotnet new`,
-      # independent of the `dorn` CLI. See docs/adr/0009-dual-distribution-dotnet-new-template-pack.md.
+      # independent of the `dorn` CLI. See docs/adr/0008-dual-distribution-dotnet-new-template-pack.md.
       - name: Pack and smoke-test Dorn.Templates.WebApi (dotnet new)
         if: matrix.os == 'ubuntu-latest'
         shell: pwsh
@@ -111,7 +111,7 @@ jobs:
           dotnet new dorn-webapi -n CiSmokeTestApp -o /tmp/ci-smoke-test-app
           # The generated project lives outside the repo, so it can't see this repo's
           # nuget.config "dorn-local" source for Dorn.Messaging.Contracts/Dorn.Messaging/
-          # Dorn.SharedKernel (not published to NuGet.org yet - see ADR 0011). Point restore
+          # Dorn.SharedKernel (not published to NuGet.org yet - see ADR 0010). Point restore
           # at the local feed explicitly, same as templates/tests does.
           dotnet restore /tmp/ci-smoke-test-app -p:RestoreAdditionalProjectSources=${{ github.workspace }}/artifacts
           dotnet build /tmp/ci-smoke-test-app -c Release --no-restore

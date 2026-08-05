@@ -1,8 +1,8 @@
 namespace CleanArchGrpcService.Architecture.Tests;
 
 /// <summary>
-/// Enforces the layering rules from the README as executable checks (ArchUnitNET, ADR 0013) —
-/// nothing else stops an errant `using`. Adds <c>Application_ShouldNot_DependOnGrpcLibraries</c>
+/// Enforces the layering rules from the README as executable checks (ArchUnitNET, ADR 0012).
+/// Nothing else stops an errant `using`. Adds <c>Application_ShouldNot_DependOnGrpcLibraries</c>
 /// since gRPC is a new external coupling the Application layer must not absorb.
 /// </summary>
 public sealed class LayeringTests

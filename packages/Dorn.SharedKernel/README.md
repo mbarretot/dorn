@@ -6,7 +6,7 @@ Domain base types and primitives shared across every Dorn template: `Entity`, `A
 
 ## Entity
 
-Base class for all domain entities. Provides identity-based equality — two entities are equal only if they are the same type AND have the same `Id`.
+Base class for all domain entities. Provides identity-based equality: two entities are equal only if they are the same type AND have the same `Id`.
 
 ```csharp
 public class TodoItem : Entity
@@ -18,12 +18,12 @@ public class TodoItem : Entity
 // Two TodoItems with the same Id are the same entity
 var a = new TodoItem { Id = guid, Title = "Task" };
 var b = new TodoItem { Id = guid, Title = "Different" };
-a == b  // true — same type and Id
+a == b  // true, same type and Id
 ```
 
 ## AggregateRoot
 
-Extends `Entity` and adds a domain event collection. Only aggregates can raise domain events — domain logic lives on the aggregate, not scattered across services.
+Extends `Entity` and adds a domain event collection. Only aggregates can raise domain events.
 
 ```csharp
 public class TodoItem : AggregateRoot
@@ -52,7 +52,7 @@ public class TodoItem : AggregateRoot
 Railway-oriented programming without exceptions for expected failures.
 
 ```csharp
-// Non-generic — for commands or queries that return nothing
+// Non-generic: for commands or queries that return nothing
 public static Result CreateTodoItem(string title)
 {
     if (string.IsNullOrWhiteSpace(title))
@@ -62,12 +62,12 @@ public static Result CreateTodoItem(string title)
     return Result.Success();
 }
 
-// Generic — for queries or commands that return a value
+// Generic: for queries or commands that return a value
 public static Result<TodoItem> GetById(Guid id)
 {
     var item = _db.Items.Find(id);
     if (item is null)
-        return Result.FFailure("Todo item not found.");
+        return Result.Failure("Todo item not found.");
 
     return Result<TodoItem>.Success(item);
 }
