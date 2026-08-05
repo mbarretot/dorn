@@ -10,7 +10,7 @@ Accepted
 API project with a choice of database provider (`--database sqlite|sqlserver|postgres`,
 ADR 0012, ADR 0015), ORM (`--orm efcore|dapper`), and orchestrator
 (`--orchestrator aspire|docker-compose|none`). Contributors and end users asked for a gRPC
-option, and the roadmap in `README.md` listed `ui` as the next template — gRPC was not
+option, and the roadmap in `README.md` listed `ui` as the next template. gRPC was not
 originally scheduled next, but it exercises a presentation layer HTTP endpoints don't
 (binary proto contracts, `Grpc.Core.Interceptors.Interceptor` instead of ASP.NET Core
 exception-handler middleware, HTTP/2-only transport), which makes it a better proof that
@@ -35,12 +35,12 @@ Ship `templates/grpc/` (short name `dorn-grpc`, identity `Dorn.Templates.Grpc`) 
 1. **Every conditional axis collapsed, not ported.** `templates/webapi`'s `#if
    (UseSqlServer)`/`UsePostgres`/`UseSqlite` branching, `Directory.Build.props` `Use*`
    MSBuild symbols, provider-subfolder migrations, and `Compose.slnx` variant all have no
-   equivalent in `templates/grpc` — there is exactly one code path, so conditional
+   equivalent in `templates/grpc`: there is exactly one code path, so conditional
    compilation would only add dead branches. `template.json` exposes a single symbol,
    `IncludeTests` (identical in shape to `webapi`'s), and no `sources[0].modifiers` beyond
    the one that excludes `tests/**`.
 2. **The proto wire package stays free of the `sourceName` token.**
-   `Protos/todo.proto` declares `package todo.v1;` — the Template Engine's `sourceName`
+   `Protos/todo.proto` declares `package todo.v1;`: the Template Engine's `sourceName`
    replacement (`CleanArchGrpcService` → the user's project name) is applied only to
    `option csharp_namespace = "CleanArchGrpcService.Grpc.Protos"`. Putting the project name
    in the wire package would have made replacement depend on the name's casing producing a
@@ -62,7 +62,7 @@ Ship `templates/grpc/` (short name `dorn-grpc`, identity `Dorn.Templates.Grpc`) 
    `Http1AndHttp2` over TLS lets ALPN serve gRPC over HTTP/2 and the health endpoint over
    HTTP/1.1 from the same port. The AppHost registration itself
    (`builder.AddProject<Projects.<Name>_Grpc>("grpc")`) is the plain, unconditional
-   pattern `webapi` uses for its own default Aspire path — there is no
+   pattern `webapi` uses for its own default Aspire path: there is no
    `AspireResourceNameValidator` gate, since the Aspire resource name is the hardcoded
    literal `"grpc"`, not derived from the project name.
 5. **Delivered as nine sequential PRs on a feature-branch chain**, mirroring the
@@ -74,7 +74,7 @@ Ship `templates/grpc/` (short name `dorn-grpc`, identity `Dorn.Templates.Grpc`) 
    documentation slice.
 6. **Two RPCs implement the same CQRS handlers `webapi` already has.**
    `CreateTodoItem`/`GetTodoItems` dispatch through `ISender` to the identical
-   `CreateTodoItemCommand`/`GetTodoItemsQuery` handlers the `webapi` template ships — the
+   `CreateTodoItemCommand`/`GetTodoItemsQuery` handlers the `webapi` template ships. The
    Domain/Application layers are copied structurally unchanged, so the MVP's real
    surface area is the presentation adapter and its tests, not a second business-logic
    implementation.
@@ -85,7 +85,7 @@ Ship `templates/grpc/` (short name `dorn-grpc`, identity `Dorn.Templates.Grpc`) 
   already decided: no interactive provider/ORM/orchestrator prompt, no flag to skip,
   builds and runs immediately via `dotnet run --project src/MyService.AppHost`.
 - Adding SQL Server/PostgreSQL, Dapper, or `docker-compose`/`none` orchestration to `grpc`
-  later means re-introducing the exhaustive branching this ADR deliberately removed — a
+  later means re-introducing the exhaustive branching this ADR deliberately removed: a
   bounded, well-precedented follow-up (ADR 0012, ADR 0015 already did this exercise for
   `webapi`), not a design change.
 - No generated `.github/workflows/ci.yml` ships with `grpc` yet: `webapi`'s CI workflow
@@ -93,12 +93,12 @@ Ship `templates/grpc/` (short name `dorn-grpc`, identity `Dorn.Templates.Grpc`) 
   have. A `grpc`-specific workflow is deferred to whenever provider/orchestrator parity is
   added, not implemented in this release.
 - `templates/grpc` is **not** packed and published as a standalone `dotnet new` NuGet
-  template package the way `templates/webapi` is (`Dorn.Templates.WebApi`, ADR 0009) —
+  template package the way `templates/webapi` is (`Dorn.Templates.WebApi`, ADR 0009).
   `eng/scripts/pack-templates.ps1` only packs `webapi` today. `dorn new grpc` is the only
   supported generation path until a `Dorn.Templates.Grpc` package is added.
 - The RPC surface is intentionally thin: only `CreateTodoItem` and `GetTodoItems` are
   implemented, proving the proto-to-mediator dispatch pattern end to end without building
   out `UpdateTodoItem`/`DeleteTodoItem`/streaming RPCs, which remain future work.
 - `docs/adr/0012-database-provider-selection.md` and
-  `docs/adr/0015-postgresql-database-provider.md` are unaffected — both describe
+  `docs/adr/0015-postgresql-database-provider.md` are unaffected: both describe
   `webapi`-only decisions and are not superseded by this ADR.
