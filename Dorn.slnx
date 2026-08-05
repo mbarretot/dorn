@@ -27,6 +27,9 @@
         <Project Path="templates/grpc/tests/CleanArchGrpcService.Functional.Tests/CleanArchGrpcService.Functional.Tests.csproj" />
         <Project Path="templates/grpc/tests/CleanArchGrpcService.Integration.Tests/CleanArchGrpcService.Integration.Tests.csproj" />
     </Folder>
+    <Folder Name="/templates/tests/">
+        <Project Path="templates/tests/Dorn.TemplateGeneration.Tests.csproj" />
+    </Folder>
     <Folder Name="/templates/webapi/">
         <Project Path="templates/webapi/src/CleanArchWebApi.AppHost/CleanArchWebApi.AppHost.csproj" />
         <Project Path="templates/webapi/src/CleanArchWebApi.Application/CleanArchWebApi.Application.csproj" />
@@ -42,6 +45,5 @@
     <Folder Name="/tests/">
         <Project Path="tests/Dorn.Cli.Tests/Dorn.Cli.Tests.csproj" />
         <Project Path="tests/Dorn.Core.Tests/Dorn.Core.Tests.csproj" />
-        <Project Path="tests/Templates.Tests/Templates.Tests.csproj" />
     </Folder>
 </Solution>

@@ -151,7 +151,7 @@ and `Directory.Packages.props` that do *not* chain to the repo root's (MSBuild o
 auto-imports the nearest file up the tree, it doesn't merge multiple), specifically so
 that (a) the generated project compiles standalone once copied out of the repo, and
 (b) it doesn't silently inherit Dorn's own analyzer/package versions, which could mask a
-bug that would otherwise be visible to an end user. `tests/Templates.Tests` proves this
+bug that would otherwise be visible to an end user. `templates/tests` proves this
 by generating into `Path.GetTempPath()` — deliberately outside the repo — and running
 `dotnet build` there as a real subprocess.
 

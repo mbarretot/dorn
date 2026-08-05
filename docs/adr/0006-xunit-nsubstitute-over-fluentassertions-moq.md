@@ -7,7 +7,7 @@ Accepted
 ## Context
 
 Every test project in this repo (`tests/Dorn.Core.Tests`, `tests/Dorn.Cli.Tests`,
-`tests/Templates.Tests`, and the `webapi` template's own
+`templates/tests`, and the `webapi` template's own
 `tests/CleanArchWebApi.Application.Tests`) needs a test framework, an assertion style,
 and — where mocking is needed (`Dorn.Cli.Tests` fakes `IGenerationEngine`) — a mocking
 library. xUnit is the test framework across the board; the two libraries under

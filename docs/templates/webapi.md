@@ -113,7 +113,7 @@ template:
 ## Orchestration: Aspire vs. Docker Compose vs. None
 
 `--orchestrator` is chosen independently of `--database` — the two axes compose freely. All
-three `--orchestrator` values are covered by `tests/Templates.Tests`, each paired with at least
+three `--orchestrator` values are covered by `templates/tests`, each paired with at least
 one `--database` value (the two axes are otherwise orthogonal, so not every cell of the full
 3×2 matrix has a dedicated generation test).
 

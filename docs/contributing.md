@@ -27,8 +27,8 @@ next one on the roadmap is `ui`, currently just a placeholder at `templates/ui/R
    `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`.
 4. Add the new template's projects to `Dorn.slnx` so `dotnet build Dorn.slnx` builds it as
    part of the normal solution build (this is how `templates/webapi` is wired in today).
-5. Add a `tests/<Name>Templates.Tests`-style integration test (or extend
-   `tests/Templates.Tests`) that generates the template into a temp directory outside the
+5. Add a `templates/tests/<Name>TemplateGenerationTests.cs`-style integration test (or extend
+   `templates/tests`) that generates the template into a temp directory outside the
    repo and runs `dotnet build` against it as a subprocess — this is what actually proves
    the template is self-contained and buildable by an end user, not just inside this
    repo's solution.
@@ -71,7 +71,7 @@ DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" 
 `pack-packages.ps1` must run first: `templates/webapi` resolves `Dorn.Messaging.Contracts`/
 `Dorn.Messaging`/`Dorn.SharedKernel` from the local `./artifacts` feed (see
 `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`), and
-`tests/Templates.Tests` needs it too, for the same reason, via `DORN_LOCAL_NUGET_FEED`.
+`templates/tests` needs it too, for the same reason, via `DORN_LOCAL_NUGET_FEED`.
 
 All of the above are enforced in `.github/workflows/ci.yml` on every push and pull
 request (build + test run on an `ubuntu-latest`/`windows-latest` matrix).
