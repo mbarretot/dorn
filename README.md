@@ -14,15 +14,16 @@
 [![Dorn.Templates.WebApi](https://img.shields.io/nuget/v/Dorn.Templates.WebApi?style=flat-square&label=Dorn.Templates.WebApi)](https://www.nuget.org/packages/Dorn.Templates.WebApi)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](./docs/contributing.md)
 
-:star: Si este proyecto te resulta útil, dejale una estrella — ayuda a que más gente lo encuentre.
-
-[Por qué Dorn](#por-qué-dorn) • [Instalación](#instalación) • [Uso](#uso) • [Opciones](#opciones) • [Arquitectura](#arquitectura) • [Roadmap](#roadmap) • [Documentación](#documentación) • [Contribuir](#contribuir)
+[Por qué Dorn](#por-qué-dorn) • [Instalación](#instalación) • [Uso](#uso) • [Opciones](#opciones) • [Arquitectura](#arquitectura) • [Roadmap](#roadmap) • [Documentación](#documentación)
 
 </div>
 
 ---
 
-Dorn es una CLI de scaffolding para .NET que genera proyectos WebAPI listos para producción con **Clean Architecture**, **CQRS** y persistencia configurable (EF Core o Dapper). No genera un esqueleto vacío: cada capa está cableada de punta a punta desde el primer commit.
+> [!TIP]
+> Si este proyecto te resulta útil, dejale una estrella — ayuda a que más gente lo encuentre.
+
+Dorn es una CLI de scaffolding para .NET que genera proyectos de producción con **Clean Architecture**, **CQRS** y persistencia configurable. No genera un esqueleto vacío: cada capa está cableada de punta a punta desde el primer commit. Incluye dos templates: **`webapi`** (REST completo, ORM y proveedor de base de datos a elección) y **`grpc`** (servicio gRPC, scope fijo y minimalista).
 
 ## Por qué Dorn
 
@@ -34,11 +35,11 @@ Armar un proyecto .NET con Clean Architecture desde cero significa resolver, una
 
 `dorn new webapi MyApp` resuelve eso en un comando. Lo que ves es la punta del iceberg — debajo hay una arquitectura completa, no una plantilla a medio hacer.
 
-- **Arquitectura limpia real** — Domain, Application, Infrastructure, WebApi completamente cableadas, con la regla de dependencias validada por tests (ArchUnitNET)
+- **Arquitectura limpia real** — Domain, Application, Infrastructure, WebApi/Grpc completamente cableadas, con la regla de dependencias validada por tests (ArchUnitNET)
 - **CQRS nativo** — Commands y Queries separados con un mediator pattern propio, MIT, sin depender de MediatR
-- **ORM flexible** — EF Core o Dapper, elegís según tu caso de uso
+- **ORM flexible** (template `webapi`) — EF Core o Dapper, elegís según tu caso de uso
 - **Testing de cuatro tiers** — Application, Integration, Architecture y Functional tests generados junto con el proyecto
-- **CLI interactiva** — te pregunta por wizard las opciones que no pasaste como flags
+- **CLI interactiva** — el template `webapi` te pregunta por wizard las opciones que no pasaste como flags
 
 ## Instalación
 
@@ -62,6 +63,14 @@ dotnet new install Dorn.Templates.WebApi
 dotnet new dorn-webapi -n MyApp
 ```
 
+Para un servicio gRPC en vez de REST, el template `grpc` genera el mismo tipo de arquitectura con un scope fijo (EF Core + SQLite + Aspire, sin flags de configuración):
+
+```bash
+dorn new grpc MyService
+```
+
+Ver [gRPC template reference](./docs/templates/grpc.md) para el detalle completo.
+
 ### Verbos de conveniencia en el proyecto generado
 
 Una vez generado, el proyecto incluye verbos que operan sobre él desde la raíz (o cualquier padre con `--project <path>`):
@@ -76,15 +85,16 @@ dorn coverage          # tests + cobertura + gate fijo al 80%
 Las dos formas de invocación son equivalentes:
 
 - **`dorn <verbo>`** — global tool (PATH).
-- **`dotnet dorn <verbo>`** — local tool resuelta por `.config/dotnet-tools.json`, que `dorn new webapi` ya genera (pinned a `Dorn.Cli`, restaurado automáticamente).
+- **`dotnet dorn <verbo>`** — local tool resuelta por `.config/dotnet-tools.json`, que `dorn new webapi`/`dorn new grpc` ya genera (pinned a `Dorn.Cli`, restaurado automáticamente).
 
 Ver [docs/templates/webapi.md](./docs/templates/webapi.md) para detalles.
 
-### Desarrollo local (desde source)
-
-Los flujos con paquetes `.nupkg` locales y feeds bajo `./artifacts` son solo para contributors y desarrollo local; para uso publicado, instalá `Dorn.Cli` desde NuGet. Ver [Getting started](./docs/getting-started.md).
+> [!NOTE]
+> Los flujos con paquetes `.nupkg` locales y feeds bajo `./artifacts` son solo para contributors y desarrollo local; para uso publicado, instalá `Dorn.Cli` desde NuGet. Ver [Getting started](./docs/getting-started.md).
 
 ## Opciones
+
+Flags del template `webapi` (el template `grpc` no expone flags de configuración — su scope es fijo, ver [su referencia](./docs/templates/grpc.md)):
 
 | Opción | Default | Descripción |
 |---|---|---|
@@ -159,7 +169,8 @@ Infrastructure/Repositories/
 - **Microsoft.TemplateEngine.Edge** embebido (no toca el cache global de `dotnet new`)
 - **Paquetes NuGet publicados** — `Dorn.Cli`, `Dorn.Templates.WebApi`, `Dorn.Messaging`, `Dorn.Messaging.Contracts` y `Dorn.SharedKernel`
 - **Mediator pattern** propio, MIT (sin MediatR)
-- **EF Core 10** o **Dapper 2.1** según la opción seleccionada
+- **EF Core 10** o **Dapper 2.1** según la opción seleccionada (template `webapi`)
+- **gRPC + Protobuf**, hosteado con **.NET Aspire** (template `grpc`)
 - **xUnit + NSubstitute + ArchUnitNET** para tests
 - **Spectre.Console** para la CLI interactiva
 
@@ -188,11 +199,3 @@ Ver [ADRs](./docs/adr) para el detalle de cada decisión de arquitectura.
 - [Architecture](./docs/architecture.md)
 - [Architecture decisions (ADRs)](./docs/adr)
 - [Contributing](./docs/contributing.md)
-
-## Contribuir
-
-Este proyecto acepta contribuciones. Ver [CONTRIBUTING](./docs/contributing.md) para guidelines, incluyendo cómo agregar un nuevo template.
-
-## License
-
-Este proyecto está bajo licencia MIT. Ver [LICENSE](./LICENSE) para más detalles.
