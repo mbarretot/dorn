@@ -6,15 +6,20 @@ licensing.
 
 ## Adding a new template
 
-`webapi` is the reference implementation — follow its pattern for a new template (the
-next one on the roadmap is `ui`, currently just a placeholder at `templates/ui/README.md`):
+`webapi` is the reference implementation. Follow its pattern for a new template. `grpc`
+(`templates/grpc/`, [`docs/templates/grpc.md`](./templates/grpc.md)) is a second, narrower
+worked example: it follows the same seven steps below but collapses `webapi`'s
+`--database`/`--orm`/`--orchestrator` choices into one fixed combination, so it's a good
+reference for a template that intentionally ships a smaller flag surface than `webapi`.
+The next template on the roadmap is `ui`, currently just a placeholder at
+`templates/ui/README.md`:
 
 1. Create `templates/<name>/` with its own `.template.config/template.json` (identity,
-   `shortName`, `sourceName`, any `symbols` the template exposes as parameters — see
+   `shortName`, `sourceName`, any `symbols` the template exposes as parameters; see
    `templates/webapi/.template.config/template.json` for the `IncludeTests` boolean
    parameter as an example).
 2. Give the template its own **self-contained** `Directory.Build.props` and
-   `Directory.Packages.props` — do not let it chain to the repo root's. MSBuild only
+   `Directory.Packages.props`; do not let it chain to the repo root's. MSBuild only
    auto-imports the nearest file up the directory tree; a template that accidentally
    inherits the repo's own props would (a) fail to compile once copied out of the repo,
    since the parent props wouldn't exist there, and (b) silently inherit Dorn's own
@@ -23,13 +28,13 @@ next one on the roadmap is `ui`, currently just a placeholder at `templates/ui/R
 3. If the template needs code that should stay identical across templates (currently:
    the domain base types and the custom mediator), add a `PackageReference` to
    `Dorn.SharedKernel`/`Dorn.Messaging.Contracts`/`Dorn.Messaging` as needed (pin the
-   version in the template's own `Directory.Packages.props`) — no copying required. See
+   version in the template's own `Directory.Packages.props`), no copying required. See
    `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`.
 4. Add the new template's projects to `Dorn.slnx` so `dotnet build Dorn.slnx` builds it as
    part of the normal solution build (this is how `templates/webapi` is wired in today).
 5. Add a `templates/tests/<Name>TemplateGenerationTests.cs`-style integration test (or extend
    `templates/tests`) that generates the template into a temp directory outside the
-   repo and runs `dotnet build` against it as a subprocess — this is what actually proves
+   repo and runs `dotnet build` against it as a subprocess; this is what actually proves
    the template is self-contained and buildable by an end user, not just inside this
    repo's solution.
 6. Wire a new CLI command under `src/Dorn.Cli/Commands/New/` (following
@@ -42,11 +47,11 @@ next one on the roadmap is `ui`, currently just a placeholder at `templates/ui/R
 - **Centrally-managed package versions.** Both `Directory.Packages.props` files in this
   repo (root, and `templates/webapi/Directory.Packages.props`) set
   `ManagePackageVersionsCentrally=true`. Do not add inline `Version="..."` attributes to
-  `<PackageReference>` in any `.csproj` — add or update the version in the relevant
+  `<PackageReference>` in any `.csproj`; add or update the version in the relevant
   `Directory.Packages.props` instead. The one exception is a transitive-version override,
   which needs both: a `<PackageVersion>` bump in `Directory.Packages.props` *and* a direct
   top-level `<PackageReference Include="..." />` (no version) in the `.csproj` that needs
-  the override — central package management only resolves a transitive package to a
+  the override: central package management only resolves a transitive package to a
   pinned version if something forces NuGet to consider it a direct reference. See the
   `Microsoft.OpenApi` override in `templates/webapi/Directory.Packages.props` and
   `templates/webapi/src/CleanArchWebApi.WebApi/CleanArchWebApi.WebApi.csproj` for a
@@ -54,9 +59,9 @@ next one on the roadmap is `ui`, currently just a placeholder at `templates/ui/R
   `Microsoft.AspNetCore.OpenApi` to patch GHSA-v5pm-xwqc-g5wc).
 - **No MediatR, FluentAssertions, or Moq.** See ADR 0003 and ADR 0006 for why. Use the
   custom mediator (`Dorn.Messaging.Contracts` + `Dorn.Messaging` NuGet packages, see ADR
-  0011) for CQRS in templates, and xUnit + NSubstitute (plain `Assert.*` — no fluent
+  0011) for CQRS in templates, and xUnit + NSubstitute (plain `Assert.*`, no fluent
   assertion library) for tests.
-- **English only** in code, comments, and docs — Dorn is a community OSS project.
+- **English only** in code, comments, and docs: Dorn is a community OSS project.
 
 ## Verification loop before opening a PR
 

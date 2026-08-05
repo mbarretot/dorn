@@ -1,53 +1,76 @@
-# Template: `webapi`
+# CleanArchWebApi
 
-Clean Architecture Minimal API con CQRS, EF Core y soporte para SQLite o SQL Server.
+[![Scaffolded with Dorn](https://img.shields.io/badge/scaffolded_with-Dorn-1A1A1A?style=flat-square)](https://github.com/mbarretot/dorn)
 
-## Estructura
+A Clean Architecture Web API: Domain, Application, Infrastructure, and WebApi fully wired, CQRS via a custom mediator, and a database provider/ORM combination fixed at generation time.
+
+## 🚀 Getting started
+
+```bash
+dotnet build
+dotnet run --project src/CleanArchWebApi.WebApi
+```
+
+If this project was generated with `--orchestrator aspire` (the default), run it through the AppHost instead so Aspire's dashboard and service discovery are wired up:
+
+```bash
+dotnet run --project src/CleanArchWebApi.AppHost
+```
+
+> [!TIP]
+> `dorn test`, `dorn run`, and `dorn coverage` also work from this project's root; see [CLI commands](#cli-commands) below.
+
+## 📁 Project structure
 
 ```
 src/
-├── ProjectName.Domain/            # Entidades, eventos de dominio, sin dependencias
-├── ProjectName.Application/       # Commands, queries, handlers, Validators, behaviors
-├── ProjectName.Infrastructure/    # EF Core DbContext, migraciones
-└── ProjectName.WebApi/           # Minimal API endpoints, Program.cs
+├── CleanArchWebApi.Domain/            # Entities, domain events, no dependencies
+├── CleanArchWebApi.Application/       # Commands, queries, handlers, validators, behaviors
+├── CleanArchWebApi.Infrastructure/    # EF Core or Dapper implementations, migrations
+└── CleanArchWebApi.WebApi/            # Minimal API endpoints, Program.cs
 tests/
-├── ProjectName.Application.Tests/    # Unit: handlers, provider-agnostic (SQLite in-memory)
-├── ProjectName.Integration.Tests/    # Integration: real DatabaseProvider (Testcontainers para SQL Server)
-├── ProjectName.Architecture.Tests/   # Architecture: reglas de layering (NetArchTest.Rules)
-└── ProjectName.Functional.Tests/     # Functional: WebApplicationFactory, HTTP end-to-end
+├── CleanArchWebApi.Application.Tests/    # Unit: handlers, validators, behaviors
+├── CleanArchWebApi.Integration.Tests/    # Real persistence against the chosen DatabaseProvider
+├── CleanArchWebApi.Architecture.Tests/   # Layering rules (ArchUnitNET)
+└── CleanArchWebApi.Functional.Tests/     # HTTP end-to-end (WebApplicationFactory)
 ```
 
-Con `--orchestrator aspire` se agrega `ProjectName.AppHost/` y `ProjectName.ServiceDefaults/`.
+`--orchestrator aspire` additionally generates `CleanArchWebApi.AppHost/` and `CleanArchWebApi.ServiceDefaults/`.
 
-## Capas
+## 🧱 Layers
 
-### Domain
+**Domain** depends on nothing but the language itself.
 
-Solo dependencias del lenguaje. Sin referencias a EF Core, frameworks ni librerias de aplicacion.
+- `Entity`: base type, identity-based equality
+- `AggregateRoot : Entity`, adding a `DomainEvents` collection; only the aggregate can raise its own events
+- `Result`: success/failure without exceptions
 
-- `Entity` — base con `Id` e igualdad basada en identidad
-- `AggregateRoot` — extiende `Entity` + coleccion de `DomainEvents`
-- `Result` — resultado sin excepciones para success/failure
+**Application** depends only on `Domain` and the mediator's contracts (`IRequest`, `IRequestHandler`, `ISender`).
 
-### Application
+```csharp
+public sealed record CreateTodoItemCommand(string Title) : IRequest<Guid>;
 
-Logica de negocio pura. Solo depende de `Domain` y de los contratos del mediator (`IRequest`, `IRequestHandler`, `ISender`).
+public sealed class CreateTodoItemCommandHandler : IRequestHandler<CreateTodoItemCommand, Guid>
+{
+    private readonly IApplicationDbContext _dbContext;
 
-- **Commands/Queries** — records que implementan `IRequest<T>` o `IRequest`
-- **Handlers** — implementan `IRequestHandler<TRequest, TResponse>`
-- **Validators** — FluentValidation, auto-descubiertos por assembly
-- **Behaviors** — pipeline de cross-cutting (validacion, logging, etc.)
+    public CreateTodoItemCommandHandler(IApplicationDbContext dbContext) => _dbContext = dbContext;
 
-### Infrastructure
+    public async Task<Guid> Handle(CreateTodoItemCommand request, CancellationToken ct)
+    {
+        var todoItem = TodoItem.Create(request.Title);
+        _dbContext.Items.Add(todoItem);
+        await _dbContext.SaveChangesAsync(ct);
+        return todoItem.Id;
+    }
+}
+```
 
-Implementa los puertos definidos en `Application`. Solo depende de `Application`.
+Validators (FluentValidation) are auto-discovered by assembly and run in a `ValidationBehavior` pipeline step before the handler. Domain events raised via `AddDomainEvent` dispatch automatically inside `SaveChangesAsync`. Only `AggregateRoot` can raise them.
 
-- `ApplicationDbContext` — DbContext que implementa `IApplicationDbContext`
-- Migraciones EF Core (SQLite o SQL Server segun `--database`)
+**Infrastructure** implements the ports `Application` defines (`IApplicationDbContext`, repository interfaces) and depends only on `Application`. Its EF Core and Dapper implementations live side by side under `Repositories/EfCore/` and `Repositories/Dapper/`; only the one selected at generation time is included.
 
-### WebApi
-
-Hosts la Minimal API. Solo depende de `Application`.
+**WebApi** hosts the Minimal API and depends only on `Application`:
 
 ```csharp
 var group = app.MapGroup("/api/todos").WithTags("Todos");
@@ -57,129 +80,48 @@ group.MapPost("/", async (CreateTodoItemCommand command, ISender sender, Cancell
     var id = await sender.Send(command, ct);
     return Results.Created($"/api/todos/{id}", id);
 });
-
-group.MapGet("/", async (ISender sender, CancellationToken ct) =>
-{
-    var items = await sender.Send(new GetTodoItemsQuery(), ct);
-    return Results.Ok(items);
-});
 ```
 
-## CQRS con el mediator
+## 🧪 Testing
 
-Commands y queries son records. Handlers solo reciben lo que necesitan (el DbContext via constructor, no el request completo).
+| Project | Verifies | Database | Docker |
+|---|---|---|---|
+| `Application.Tests` | Handlers, validators, behaviors | SQLite in-memory | No |
+| `Integration.Tests` | Real persistence against the chosen `DatabaseProvider` | SQLite file, or a real SQL Server/PostgreSQL via Testcontainers | Only with `--database sqlserver`/`postgres` |
+| `Architecture.Tests` | Layers don't leak into each other (ArchUnitNET) | N/A | No |
+| `Functional.Tests` | HTTP round-trip via `WebApplicationFactory<Program>` | SQLite, forced regardless of provider | No |
 
-```csharp
-// Command
-public sealed record CreateTodoItemCommand(string Title) : IRequest<Guid>;
+With the default `--database sqlite`, no test tier touches Docker. `Functional.Tests` always forces SQLite: its job is the HTTP pipeline, not provider fidelity, which `Integration.Tests` already covers.
 
-// Handler
-public sealed class CreateTodoItemCommandHandler : IRequestHandler<CreateTodoItemCommand, Guid>
-{
-    private readonly IApplicationDbContext _dbContext;
+## ⚙️ Configuration
 
-    public CreateTodoItemCommandHandler(IApplicationDbContext dbContext) =>
-        _dbContext = dbContext;
+These were generation-time choices. Change them by regenerating, not by editing this project:
 
-    public async Task<Guid> Handle(CreateTodoItemCommand request, CancellationToken ct)
-    {
-        var todoItem = new TodoItem { Title = request.Title };
-        _dbContext.Items.Add(todoItem);
-        await _dbContext.SaveChangesAsync(ct);
-        return todoItem.Id;
-    }
-}
+| Parameter | Default | Values |
+|---|---|---|
+| `Orm` | `efcore` | `efcore` (migrations, change tracking) or `dapper` (raw SQL, no tracking) |
+| `DatabaseProvider` | `sqlite` | `sqlite` (zero-config), `sqlserver`, or `postgres` (both via an Aspire-managed container) |
+| `Orchestrator` | `aspire` | `aspire`, `docker-compose`, or `none` |
+| `IncludeTests` | `true` | Whether the four test projects above were generated |
+
+## ⌨️ CLI commands
+
+If `Dorn.Cli` is available (globally, or as the local tool this project's `.config/dotnet-tools.json` already pins), these run from the project root:
+
+```bash
+dorn test              # all 4 tiers, or dorn test --tier <name> for one
+dorn run                # Aspire / Docker Compose / plain dotnet run, auto-detected
+dorn coverage           # tests + coverage, gated at 80%
 ```
 
-## Eventos de dominio
+## 🔄 CI
 
-Solo `AggregateRoot` puede generar eventos. Se dispatchean automaticamente en `SaveChangesAsync`.
+`.github/workflows/ci.yml` and a pinned `global.json` ship with every generation, ready from the first push.
 
-```csharp
-public class TodoItem : AggregateRoot
-{
-    public string Title { get; private set; }
-    public bool IsComplete { get; private set; }
+- **Triggers**: `push`, `pull_request`, and manual `workflow_dispatch` (with an `exclude_tiers` input to skip specific tiers). No `schedule`, no path filters.
+- **Matrix**: `os` (`ubuntu-latest`, `windows-latest`) × `orchestrator` (`aspire`, `docker-compose`, `none`): six cells. The database provider isn't a matrix axis; a `configuration` job reads it from a `.github/config/db-provider.txt` marker before the matrix starts.
+- **SQL Server/PostgreSQL on Windows are best-effort**: `windows-latest` runners have no Docker host, so `Integration.Tests` can't start a container there. The Linux cell runs a real container (`azure-sql-edge` / `postgres`) with a health check before testing; Windows is a documented caveat, not a bug.
 
-    public static TodoItem Create(string title)
-    {
-        var item = new TodoItem { Title = title };
-        item.AddDomainEvent(new TodoItemCreatedEvent(item.Id, item.Title));
-        return item;
-    }
-}
-```
+## 📚 Learn more
 
-```csharp
-public sealed class TodoItemCreatedEventHandler : INotificationHandler<TodoItemCreatedEvent>
-{
-    // puede disparar integrations events, logging, etc.
-}
-```
-
-## Validacion
-
-Validators de FluentValidation auto-registrados via `AddValidatorsFromAssembly`. El pipeline de `ValidationBehavior` los ejecuta antes del handler.
-
-```csharp
-public sealed class CreateTodoItemCommandValidator : AbstractValidator<CreateTodoItemCommand>
-{
-    public CreateTodoItemCommandValidator()
-    {
-        RuleFor(x => x.Title)
-            .NotEmpty()
-            .MaximumLength(200);
-    }
-}
-```
-
-## Estrategia de testing
-
-Cuatro niveles, cada uno con un objetivo distinto:
-
-| Proyecto             | Objetivo                                                                              | Base de datos                                | Docker                                           |
-| -------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------ |
-| `Application.Tests`  | Unit — handlers, validators, behaviors, rapido                                        | SQLite in-memory (`EnsureCreated`)           | No                                               |
-| `Integration.Tests`  | Persistencia real contra el `DatabaseProvider` elegido, via `Database.MigrateAsync()` | SQLite archivo o SQL Server real             | Solo con `--database sqlserver` (Testcontainers) |
-| `Architecture.Tests` | Fitness functions: Domain/Application/Infrastructure no se filtran entre capas        | —                                            | No                                               |
-| `Functional.Tests`   | Round-trip HTTP real via `WebApplicationFactory<Program>`                             | SQLite (forzado, independiente del provider) | No                                               |
-
-`Integration.Tests` es el unico nivel que puede requerir Docker, y solo cuando el proyecto
-se genero con `--database sqlserver`: usa `Testcontainers.MsSql` para levantar un SQL Server
-real y correr las migraciones EF Core reales contra el, en vez de `EnsureCreated()`. Con
-`--database sqlite` (default) no hay Docker involucrado en ningun nivel.
-
-`Functional.Tests` fuerza SQLite en un archivo temporal unico, sin importar el
-`DatabaseProvider` elegido — su objetivo es probar el pipeline HTTP (routing, validacion,
-serializacion), no la fidelidad del provider, que ya cubre `Integration.Tests`.
-
-Ver `docs/adr/0013-four-tier-test-strategy.md` para el detalle de esta decision.
-
-## CI
-
-El proyecto generado incluye `.github/workflows/ci.yml` listo para usar, mas un
-`global.json` estatico en la raiz que pinea la misma version del SDK de .NET que dorn
-usa internamente (asi el paso `setup-dotnet` de la matriz no apunta a un archivo
-inexistente). Ambos se generan siempre, sin flag ni symbol condicional. Detalle completo
-en `docs/adr/0014-scaffolded-ci-workflow.md`.
-
-- **Triggers**: `push`, `pull_request` y `workflow_dispatch` manual (con el input opcional
-  `exclude_tiers` para saltear tiers puntuales). Sin `schedule` ni filtros de paths.
-- **Matriz de seis celdas**: `os` (`ubuntu-latest`, `windows-latest`) x `orchestrator`
-  (`aspire`, `docker-compose`, `none`). El proveedor de base de datos no es un eje de la
-  matriz — se resuelve via un marker `.github/config/db-provider.txt` que un job de
-  `configuration` lee antes de arrancar la matriz.
-- **SQL Server best-effort en Windows**: los runners `windows-latest` de GitHub no
-  proveen un host Docker, asi que `PersistenceTestFixture` (tier `Integration.Tests`, ver
-  seccion "Estrategia de testing" arriba) no puede levantar SQL Server ahi. La celda
-  Linux + `sqlserver` si levanta un contenedor real (`azure-sql-edge`) con health check
-  antes de correr los tests; la celda Windows queda documentada como caveat conocido, no
-  como bug.
-
-## Options
-
-| Parametro          | Default  | Descripcion                                             |
-| ------------------ | -------- | ------------------------------------------------------- |
-| `DatabaseProvider` | `sqlite` | `sqlite` (zero-config) o `sqlserver` (Aspire container) |
-| `Orchestrator`     | `aspire` | `aspire` (AppHost), `docker-compose` o `none` (sin orquestador) |
-| `IncludeTests`     | `true`   | Incluir proyecto de tests                               |
+This project was generated by [Dorn](https://github.com/mbarretot/dorn), a .NET scaffolding CLI. See its [`webapi` template reference](https://github.com/mbarretot/dorn/blob/main/docs/templates/webapi.md) and [architecture decision records](https://github.com/mbarretot/dorn/tree/main/docs/adr) for the reasoning behind these choices.
