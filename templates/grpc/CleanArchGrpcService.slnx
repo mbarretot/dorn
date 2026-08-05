@@ -1,8 +1,10 @@
 <Solution>
+    <Project Path="src/CleanArchGrpcService.AppHost/CleanArchGrpcService.AppHost.csproj" />
     <Project Path="src/CleanArchGrpcService.Application/CleanArchGrpcService.Application.csproj" />
     <Project Path="src/CleanArchGrpcService.Domain/CleanArchGrpcService.Domain.csproj" />
     <Project Path="src/CleanArchGrpcService.Grpc/CleanArchGrpcService.Grpc.csproj" />
     <Project Path="src/CleanArchGrpcService.Infrastructure/CleanArchGrpcService.Infrastructure.csproj" />
+    <Project Path="src/CleanArchGrpcService.ServiceDefaults/CleanArchGrpcService.ServiceDefaults.csproj" />
     <Project Path="tests/CleanArchGrpcService.Application.Tests/CleanArchGrpcService.Application.Tests.csproj" />
     <Project Path="tests/CleanArchGrpcService.Architecture.Tests/CleanArchGrpcService.Architecture.Tests.csproj" />
     <Project Path="tests/CleanArchGrpcService.Functional.Tests/CleanArchGrpcService.Functional.Tests.csproj" />

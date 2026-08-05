@@ -6,6 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CleanArchGrpcService.Application\CleanArchGrpcService.Application.csproj" />
     <ProjectReference Include="..\CleanArchGrpcService.Infrastructure\CleanArchGrpcService.Infrastructure.csproj" />
+    <ProjectReference Include="..\CleanArchGrpcService.ServiceDefaults\CleanArchGrpcService.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <ItemGroup>

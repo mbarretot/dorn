@@ -16,10 +16,12 @@
     </Folder>
     <Folder Name="/templates/" />
     <Folder Name="/templates/grpc/">
+        <Project Path="templates/grpc/src/CleanArchGrpcService.AppHost/CleanArchGrpcService.AppHost.csproj" />
         <Project Path="templates/grpc/src/CleanArchGrpcService.Application/CleanArchGrpcService.Application.csproj" />
         <Project Path="templates/grpc/src/CleanArchGrpcService.Domain/CleanArchGrpcService.Domain.csproj" />
         <Project Path="templates/grpc/src/CleanArchGrpcService.Grpc/CleanArchGrpcService.Grpc.csproj" />
         <Project Path="templates/grpc/src/CleanArchGrpcService.Infrastructure/CleanArchGrpcService.Infrastructure.csproj" />
+        <Project Path="templates/grpc/src/CleanArchGrpcService.ServiceDefaults/CleanArchGrpcService.ServiceDefaults.csproj" />
         <Project Path="templates/grpc/tests/CleanArchGrpcService.Application.Tests/CleanArchGrpcService.Application.Tests.csproj" />
         <Project Path="templates/grpc/tests/CleanArchGrpcService.Architecture.Tests/CleanArchGrpcService.Architecture.Tests.csproj" />
         <Project Path="templates/grpc/tests/CleanArchGrpcService.Functional.Tests/CleanArchGrpcService.Functional.Tests.csproj" />
