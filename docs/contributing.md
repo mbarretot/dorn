@@ -6,8 +6,13 @@ licensing.
 
 ## Adding a new template
 
-`webapi` is the reference implementation — follow its pattern for a new template (the
-next one on the roadmap is `ui`, currently just a placeholder at `templates/ui/README.md`):
+`webapi` is the reference implementation — follow its pattern for a new template. `grpc`
+(`templates/grpc/`, [`docs/templates/grpc.md`](./templates/grpc.md)) is a second, narrower
+worked example: it follows the same seven steps below but collapses `webapi`'s
+`--database`/`--orm`/`--orchestrator` choices into one fixed combination, so it's a good
+reference for a template that intentionally ships a smaller flag surface than `webapi`.
+The next template on the roadmap is `ui`, currently just a placeholder at
+`templates/ui/README.md`:
 
 1. Create `templates/<name>/` with its own `.template.config/template.json` (identity,
    `shortName`, `sourceName`, any `symbols` the template exposes as parameters — see

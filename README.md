@@ -175,6 +175,7 @@ Infrastructure/Repositories/
 ## Roadmap
 
 - [x] Template `webapi` — Clean Architecture, CQRS, EF Core/Dapper, 4 tiers de tests
+- [x] Template `grpc` — Clean Architecture, CQRS, EF Core/SQLite, Aspire (scope fijo, sin `--database`/`--orm`/`--orchestrator`)
 - [ ] Template `ui` — placeholder en [`templates/ui/README.md`](./templates/ui/README.md)
 
 Ver [ADRs](./docs/adr) para el detalle de cada decisión de arquitectura.
@@ -183,6 +184,7 @@ Ver [ADRs](./docs/adr) para el detalle de cada decisión de arquitectura.
 
 - [Getting started](./docs/getting-started.md)
 - [WebAPI template reference](./docs/templates/webapi.md)
+- [gRPC template reference](./docs/templates/grpc.md)
 - [Architecture](./docs/architecture.md)
 - [Architecture decisions (ADRs)](./docs/adr)
 - [Contributing](./docs/contributing.md)
