@@ -5,7 +5,7 @@ using Dorn.Core.Templating;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace Templates.Tests;
+namespace Dorn.TemplateGeneration.Tests;
 
 /// <summary>
 /// Generates the real gRPC template outside the repo, builds it, and verifies that
