@@ -1,29 +1,32 @@
 # Templates
 
-Templates disponibles para generar proyectos con Dorn.
+Templates available for generating projects with Dorn.
 
-## Plantillas
+## Available templates
 
-| Nombre | Descripción |
-|---|---|
-| `webapi` | Clean Architecture Minimal API con CQRS y EF Core |
-| `ui` | Blazor template (proximamente) |
+| Name | Description | Reference |
+|---|---|---|
+| `webapi` | Clean Architecture REST API, CQRS, choice of ORM/database/orchestrator | [docs/templates/webapi.md](../docs/templates/webapi.md) |
+| `grpc` | Clean Architecture gRPC service, fixed SQLite + EF Core + Aspire MVP | [docs/templates/grpc.md](../docs/templates/grpc.md) |
+| `ui` | Blazor template, not yet implemented | [templates/ui/README.md](./ui/README.md) |
 
-## Building blocks compartidos
+## Shared building blocks
 
-El codigo comun a todos los templates (`Entity`, `AggregateRoot`, `Result`, mediator CQRS) vive en paquetes NuGet distribuidos en `packages/`:
+Code common to every template (`Entity`, `AggregateRoot`, `Result`, the CQRS mediator) lives in NuGet packages under `packages/`, not copied per template:
 
-- `Dorn.SharedKernel` — tipos de dominio base
-- `Dorn.Messaging.Contracts` — interfaces del mediator
-- `Dorn.Messaging` — implementacion del mediator
+- `Dorn.SharedKernel`: base domain types
+- `Dorn.Messaging.Contracts`: mediator interfaces
+- `Dorn.Messaging`: mediator implementation
 
-Se consumen via `PackageReference`, no se copian por template. Ver [ADR 0011](./docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md).
+Consumed via `PackageReference`. See [ADR 0011](../docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md).
 
-## Distribucion
+## Distribution
 
-Cada template se distribuye de dos formas:
+Every template generates from the same content in this directory, through up to two channels:
 
-1. **`dorn new <nombre>`** — via el CLI de Dorn
-2. **`dotnet new <nombre>`** — via paquete NuGet standalone
+1. **`dorn new <name>`**: via the Dorn CLI (all templates)
+2. **`dotnet new <name>`**: via a standalone NuGet template package (`webapi` only today; see [ADR 0009](../docs/adr/0009-dual-distribution-dotnet-new-template-pack.md) and [`grpc`'s current gap](../docs/templates/grpc.md#alternative-vanilla-dotnet-new-without-the-dorn-cli))
 
-Ambos canales generan desde el mismo contenido en este directorio.
+## Adding a new template
+
+See [Contributing](../docs/contributing.md#adding-a-new-template).
