@@ -1,42 +1,36 @@
 # Contributing
 
-Thanks for considering a contribution to Dorn. This document covers how to add a new
-template, coding conventions, the verification loop to run before opening a PR, and
-licensing.
+Thanks for considering a contribution to Dorn. This document covers adding a new
+template, coding conventions, the pre-PR verification loop, and licensing.
 
 ## Adding a new template
 
-`webapi` is the reference implementation. Follow its pattern for a new template. `grpc`
-(`templates/grpc/`, [`docs/templates/grpc.md`](./templates/grpc.md)) is a second, narrower
-worked example: it follows the same seven steps below but collapses `webapi`'s
-`--database`/`--orm`/`--orchestrator` choices into one fixed combination, so it's a good
-reference for a template that intentionally ships a smaller flag surface than `webapi`.
-The next template on the roadmap is `ui`, currently just a placeholder at
-`templates/ui/README.md`:
+| Template | Role | Notes |
+| -------- | ---- | ----- |
+| `webapi` | Reference implementation | Follow its pattern for a new template. |
+| `grpc` | Second, narrower worked example (`templates/grpc/`, [`docs/templates/grpc.md`](./templates/grpc.md)) | Same seven steps, fixed to one combination instead of `webapi`'s `--database`/`--orm`/`--orchestrator` choices. |
+| `ui` | Next on the roadmap | Currently just a placeholder at `templates/ui/README.md`. |
 
-1. Create `templates/<name>/` with its own `.template.config/template.json` (identity,
-   `shortName`, `sourceName`, any `symbols` the template exposes as parameters; see
-   `templates/webapi/.template.config/template.json` for the `IncludeTests` boolean
-   parameter as an example).
-2. Give the template its own **self-contained** `Directory.Build.props` and
-   `Directory.Packages.props`; do not let it chain to the repo root's. MSBuild only
-   auto-imports the nearest file up the directory tree; a template that accidentally
-   inherits the repo's own props would (a) fail to compile once copied out of the repo,
-   since the parent props wouldn't exist there, and (b) silently inherit Dorn's own
-   analyzer/package versions instead of choosing its own. See `docs/architecture.md` for
-   the full rationale.
-3. If the template needs code that should stay identical across templates (currently:
-   the domain base types and the custom mediator), add a `PackageReference` to
-   `Dorn.SharedKernel`/`Dorn.Messaging.Contracts`/`Dorn.Messaging` as needed (pin the
-   version in the template's own `Directory.Packages.props`), no copying required. See
-   `docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`.
-4. Add the new template's projects to `Dorn.slnx` so `dotnet build Dorn.slnx` builds it as
-   part of the normal solution build (this is how `templates/webapi` is wired in today).
-5. Add a `templates/tests/<Name>TemplateGenerationTests.cs`-style integration test (or extend
-   `templates/tests`) that generates the template into a temp directory outside the
-   repo and runs `dotnet build` against it as a subprocess; this is what actually proves
-   the template is self-contained and buildable by an end user, not just inside this
-   repo's solution.
+Steps to add a new template:
+
+1. Create `templates/<name>/` with `.template.config/template.json` (identity,
+   `shortName`, `sourceName`, any `symbols`); see `templates/webapi/.template.config/template.json`'s
+   `IncludeTests` boolean for an example.
+2. Give the template its own self-contained `Directory.Build.props`/`Directory.Packages.props`;
+   do not chain to the repo root's (MSBuild only auto-imports the nearest file up the tree).
+   Inheriting the repo's props breaks compilation once copied out of the repo and silently
+   pulls in Dorn's own analyzer/package versions. See `docs/architecture.md`.
+3. If the template needs code shared across templates (currently the domain base types
+   and the custom mediator), add a `PackageReference` to
+   `Dorn.SharedKernel`/`Dorn.Messaging.Contracts`/`Dorn.Messaging` (pinned in the
+   template's own `Directory.Packages.props`), no copying required. See
+   `docs/adr/0010-extract-messaging-and-shared-kernel-as-nuget-packages.md`.
+4. Add the new template's projects to `Dorn.slnx` so `dotnet build Dorn.slnx` builds it
+   (how `templates/webapi` is wired in today).
+5. Add a `templates/tests/<Name>TemplateGenerationTests.cs`-style integration test (or
+   extend `templates/tests`) that generates into a temp directory outside the repo and
+   runs `dotnet build` against it as a subprocess, proving the template is self-contained
+   and buildable by an end user.
 6. Wire a new CLI command under `src/Dorn.Cli/Commands/New/` (following
    `NewWebApiCommand`/`NewWebApiSettings`) and register it in `Program.cs`'s `new` branch.
 7. Write `docs/templates/<name>.md` documenting what the template generates, following
@@ -44,23 +38,21 @@ The next template on the roadmap is `ui`, currently just a placeholder at
 
 ## Coding conventions
 
-- **Centrally-managed package versions.** Both `Directory.Packages.props` files in this
-  repo (root, and `templates/webapi/Directory.Packages.props`) set
-  `ManagePackageVersionsCentrally=true`. Do not add inline `Version="..."` attributes to
-  `<PackageReference>` in any `.csproj`; add or update the version in the relevant
-  `Directory.Packages.props` instead. The one exception is a transitive-version override,
-  which needs both: a `<PackageVersion>` bump in `Directory.Packages.props` *and* a direct
-  top-level `<PackageReference Include="..." />` (no version) in the `.csproj` that needs
-  the override: central package management only resolves a transitive package to a
-  pinned version if something forces NuGet to consider it a direct reference. See the
-  `Microsoft.OpenApi` override in `templates/webapi/Directory.Packages.props` and
-  `templates/webapi/src/CleanArchWebApi.WebApi/CleanArchWebApi.WebApi.csproj` for a
-  worked example (overriding the `Microsoft.OpenApi` version pulled in transitively by
-  `Microsoft.AspNetCore.OpenApi` to patch GHSA-v5pm-xwqc-g5wc).
-- **No MediatR, FluentAssertions, or Moq.** See ADR 0003 and ADR 0006 for why. Use the
-  custom mediator (`Dorn.Messaging.Contracts` + `Dorn.Messaging` NuGet packages, see ADR
-  0011) for CQRS in templates, and xUnit + NSubstitute (plain `Assert.*`, no fluent
-  assertion library) for tests.
+- **Centrally-managed package versions.** Both `Directory.Packages.props` files (root,
+  and `templates/webapi/Directory.Packages.props`) set `ManagePackageVersionsCentrally=true`.
+  - **Rule:** no inline `Version="..."` on `<PackageReference>` in any `.csproj`; set it
+    in the relevant `Directory.Packages.props`.
+  - **Exception:** a transitive-version override needs both a `<PackageVersion>` bump in
+    `Directory.Packages.props` and a direct top-level `<PackageReference Include="..." />`
+    (no version) in the `.csproj`: central package management only pins a transitive
+    package once something forces NuGet to treat it as direct.
+  - **Example:** `templates/webapi/Directory.Packages.props` and
+    `templates/webapi/src/CleanArchWebApi.WebApi/CleanArchWebApi.WebApi.csproj` override
+    `Microsoft.OpenApi`'s transitive version from `Microsoft.AspNetCore.OpenApi` to patch
+    GHSA-v5pm-xwqc-g5wc.
+- **No MediatR, FluentAssertions, or Moq** (ADR 0003, ADR 0006). Use the custom mediator
+  (`Dorn.Messaging.Contracts` + `Dorn.Messaging`, ADR 0010) for CQRS, and xUnit +
+  NSubstitute (plain `Assert.*`) for tests.
 - **English only** in code, comments, and docs: Dorn is a community OSS project.
 
 ## Verification loop before opening a PR
@@ -73,15 +65,15 @@ dotnet build Dorn.slnx -c Release
 DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" dotnet test Dorn.slnx
 ```
 
-`pack-packages.ps1` must run first: `templates/webapi` resolves `Dorn.Messaging.Contracts`/
-`Dorn.Messaging`/`Dorn.SharedKernel` from the local `./artifacts` feed (see
-`docs/adr/0011-extract-messaging-and-shared-kernel-as-nuget-packages.md`), and
-`templates/tests` needs it too, for the same reason, via `DORN_LOCAL_NUGET_FEED`.
+`pack-packages.ps1` must run first: `templates/webapi` and `templates/tests` both resolve
+`Dorn.Messaging.Contracts`/`Dorn.Messaging`/`Dorn.SharedKernel` from the local
+`./artifacts` feed (`templates/tests` via `DORN_LOCAL_NUGET_FEED`; see
+`docs/adr/0010-extract-messaging-and-shared-kernel-as-nuget-packages.md`).
 
-All of the above are enforced in `.github/workflows/ci.yml` on every push and pull
-request (build + test run on an `ubuntu-latest`/`windows-latest` matrix).
+Enforced in `.github/workflows/ci.yml` on every push/PR (`ubuntu-latest`/`windows-latest`
+matrix).
 
 ## License
 
 Dorn is [MIT licensed](../LICENSE). By contributing, you agree your contribution is
-licensed under the same terms. See `docs/adr/0007-mit-license.md` for why MIT was chosen.
+licensed under the same terms.

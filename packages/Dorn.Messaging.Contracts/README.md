@@ -2,14 +2,12 @@
 
 > Zero-dependency mediator interfaces for CQRS and domain events. Safe to reference from any layer, including Domain.
 
-Contracts that power the mediator pattern: commands, queries, notifications, pipeline behaviors, and the sender/publisher surface.
-
 ## Interfaces
 
 | Interface | Purpose |
 |---|---|
 | `IRequest<TResponse>` | Marker for a request (command or query) that returns `TResponse` |
-| `IRequest` | Shorthand for `IRequest<Unit>` — fire-and-forget commands |
+| `IRequest` | Shorthand for `IRequest<Unit>` (fire-and-forget commands) |
 | `ISender` | Sends a request to its single handler |
 | `INotification` | Marker for domain/integration events |
 | `INotificationHandler<T>` | Handles a notification (zero to many per notification type) |

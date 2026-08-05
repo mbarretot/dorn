@@ -1,8 +1,8 @@
 namespace CleanArchWebApi.Architecture.Tests;
 
 /// <summary>
-/// Enforces the layering rules in README.md ("Capas") as executable checks (ArchUnitNET —
-/// see ADR 0013), since nothing stops an errant `using` from compiling otherwise.
+/// Enforces the layering rules in README.md ("Capas") as executable checks (ArchUnitNET,
+/// see ADR 0012), since nothing stops an errant `using` from compiling otherwise.
 /// </summary>
 public sealed class LayeringTests
 {

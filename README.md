@@ -21,9 +21,9 @@
 ---
 
 > [!TIP]
-> If this project is useful to you, leave a star. It helps more people find it.
+> If this project helps you, leave a star.
 
-Dorn is a .NET scaffolding CLI that generates production-ready services with **Clean Architecture**, **CQRS**, and configurable persistence. Every layer is wired end-to-end from the first commit, not an empty skeleton. It ships two templates: a full-featured **`webapi`** (REST, choice of ORM and database provider) and a scoped, minimal **`grpc`** service.
+Dorn is a .NET scaffolding CLI generating production-ready services with **Clean Architecture**, **CQRS**, and configurable persistence, wired end-to-end from commit one. Two templates ship today: a full-featured **`webapi`** (REST, choice of ORM/database) and a scoped, minimal **`grpc`** service.
 
 ## Quick start
 
@@ -33,7 +33,7 @@ dorn new webapi MyApp
 cd MyApp && dotnet build
 ```
 
-Prefer not to install a global tool? `webapi` also ships as a standard `dotnet new` template. See [Alternative installation](./docs/templates/webapi.md#alternative-vanilla-dotnet-new-without-the-dorn-cli).
+Prefer not to install a global tool? `webapi` also ships as a standard `dotnet new` template ([alternative installation](./docs/templates/webapi.md#alternative-vanilla-dotnet-new-without-the-dorn-cli)).
 
 ## Templates
 
@@ -51,7 +51,7 @@ dorn new webapi MyApp --database postgres --orm dapper   # configurable
 dorn new grpc MyService                                  # fixed scope, zero flags
 ```
 
-`grpc` isn't a smaller `webapi`: it's a deliberately fixed MVP, so there's nothing to configure and nothing that can drift from a known-good combination. See the [scope rationale](./docs/templates/grpc.md#scope-a-fixed-mvp-not-a-smaller-webapi) if you're deciding which one fits your project.
+`grpc` is a deliberately fixed MVP, not a smaller `webapi` ([scope rationale](./docs/templates/grpc.md#scope-a-fixed-mvp-not-a-smaller-webapi)).
 
 ## Why Dorn
 
@@ -59,11 +59,11 @@ dorn new grpc MyService                                  # fixed scope, zero fla
   <img src="./docs/images/architecture-illustrative.png" alt="A layered chevron mark: one command on the surface, a fully resolved architecture underneath" width="360">
 </p>
 
-Building a Clean Architecture project from scratch means re-solving the same problems every time: separating layers without coupling them, wiring CQRS without a commercially-licensed dependency, isolating the ORM from the domain, structuring tests across four tiers, making it all compile together on day one. `dorn new webapi MyApp` resolves that in one command. What you see is the tip of the iceberg.
+`dorn new webapi MyApp` resolves, in one command, what you'd otherwise re-solve from scratch every time:
 
 - **No commercial licenses anywhere**: a from-scratch, MIT-licensed CQRS mediator (no MediatR), xUnit + NSubstitute for tests (no FluentAssertions, no Moq)
 - **The dependency rule is enforced, not just documented**: ArchUnitNET tests fail the build if a layer imports something it shouldn't
-- **Four test tiers generated with the project**: Application, Integration, Architecture, and Functional, not left as an exercise for you
+- **Four test tiers generated with the project**: Application, Integration, Architecture, Functional
 - **Zero-config by default**: SQLite needs no external database; Aspire needs no Docker to get started
 - **CI from the first push**: every generated project ships a working GitHub Actions workflow and a pinned `global.json`
 
@@ -83,11 +83,17 @@ MyApp/
     └── MyApp.Integration.Tests/     # Real persistence (Testcontainers)
 ```
 
-Dependencies point strictly inward: `WebApi` depends on `Application`, `Infrastructure` implements interfaces `Application` defines, and `Domain` depends on nothing. `Infrastructure` ships both a Repository Pattern (`IRepository`, `IReadRepository`) and its EF Core and Dapper implementations side by side, so switching `--orm` is a generation-time choice, not a rewrite. See [docs/architecture.md](./docs/architecture.md) for the full breakdown, including the CLI's own architecture.
+Dependencies point strictly inward:
+
+- `WebApi` depends on `Application`
+- `Infrastructure` implements interfaces that `Application` defines
+- `Domain` depends on nothing
+
+`Infrastructure` ships a Repository Pattern (`IRepository`, `IReadRepository`) with EF Core and Dapper implementations side by side, so `--orm` is a generation-time choice. Full breakdown: [docs/architecture.md](./docs/architecture.md).
 
 ## CLI reference
 
-Every generated project ships verbs to operate on itself, from its root (or any parent, with `--project <path>`):
+Every generated project ships verbs to operate on itself, from its root or any parent (`--project <path>`):
 
 | Command         | Does                                                                                   |
 | --------------- | -------------------------------------------------------------------------------------- |
@@ -95,9 +101,9 @@ Every generated project ships verbs to operate on itself, from its root (or any 
 | `dorn run`      | Auto-detects AppHost → Aspire, `docker-compose.yml` → Compose, else plain `dotnet run` |
 | `dorn coverage` | Runs tests with coverage, gated at a fixed 80%                                         |
 
-`dorn <verb>` (global tool) and `dotnet dorn <verb>` (local tool, resolved via the `.config/dotnet-tools.json` every generated project already includes) are equivalent.
+`dorn <verb>` and `dotnet dorn <verb>` (local tool, via `.config/dotnet-tools.json`) are equivalent.
 
-`webapi`'s generation-time flags (`--orm`, `--database`, `--orchestrator`, and the rest) are documented in full in the [template reference](./docs/templates/webapi.md), including every supported combination.
+Flags (`--orm`, `--database`, `--orchestrator`) are documented in the [template reference](./docs/templates/webapi.md).
 
 ## Roadmap
 
@@ -105,7 +111,7 @@ Every generated project ships verbs to operate on itself, from its root (or any 
 - [x] `grpc`: Clean Architecture, CQRS, fixed EF Core/SQLite/Aspire MVP
 - [ ] `ui`: placeholder at [`templates/ui/README.md`](./templates/ui/README.md)
 
-Every architectural decision behind these is recorded in [`docs/adr`](./docs/adr).
+Decisions behind these are recorded in [`docs/adr`](./docs/adr).
 
 ## Documentation
 

@@ -2,12 +2,11 @@
 
 > MIT-licensed in-process mediator. No commercial licensing, no surprises.
 
-Implementation of `Dorn.Messaging.Contracts` — dispatches commands and queries to their handlers, and notifications to all registered handlers.
+Implementation of `Dorn.Messaging.Contracts`: dispatches commands and queries to their handlers, and notifications to all registered handlers.
 
 ## Registration
 
 ```csharp
-// One line to rule them all
 builder.Services.AddMediator(typeof(CreateTodoItemCommand).Assembly);
 ```
 
@@ -42,7 +41,7 @@ public class TodoItem : AggregateRoot
     }
 }
 
-// In your DbContext — dispatches after SaveChanges
+// In your DbContext: dispatches after SaveChanges
 public override async Task<int> SaveChangesAsync(CancellationToken ct)
 {
     var events = ChangeTracker
@@ -68,7 +67,7 @@ public override async Task<int> SaveChangesAsync(CancellationToken ct)
 
 ## Pipeline behaviors
 
-Behaviors execute in reverse registration order — the last registered behavior is the outermost wrapper.
+Behaviors execute in reverse registration order: the last registered behavior is the outermost wrapper.
 
 ```csharp
 // Registered first → runs first (innermost)
