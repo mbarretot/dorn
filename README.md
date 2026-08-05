@@ -5,7 +5,7 @@
 
 # Dorn
 
-**Scaffolding CLI para .NET con Clean Architecture real — no stubs, no placeholders.**
+**.NET scaffolding CLI with real Clean Architecture — no stubs, no placeholders.**
 
 [![CI](https://github.com/mbarretot/dorn/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarretot/dorn/actions/workflows/ci.yml)
 [![.NET](https://img.shields.io/badge/.NET-10.0-blue?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
@@ -14,117 +14,117 @@
 [![Dorn.Templates.WebApi](https://img.shields.io/nuget/v/Dorn.Templates.WebApi?style=flat-square&label=Dorn.Templates.WebApi)](https://www.nuget.org/packages/Dorn.Templates.WebApi)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](./docs/contributing.md)
 
-[Por qué Dorn](#por-qué-dorn) • [Instalación](#instalación) • [Uso](#uso) • [Opciones](#opciones) • [Arquitectura](#arquitectura) • [Roadmap](#roadmap) • [Documentación](#documentación)
+[Why Dorn](#why-dorn) • [Installation](#installation) • [Usage](#usage) • [Options](#options) • [Architecture](#architecture) • [Roadmap](#roadmap) • [Documentation](#documentation)
 
 </div>
 
 ---
 
 > [!TIP]
-> Si este proyecto te resulta útil, dejale una estrella — ayuda a que más gente lo encuentre.
+> If this project is useful to you, leave a star — it helps more people find it.
 
-Dorn es una CLI de scaffolding para .NET que genera proyectos de producción con **Clean Architecture**, **CQRS** y persistencia configurable. No genera un esqueleto vacío: cada capa está cableada de punta a punta desde el primer commit. Incluye dos templates: **`webapi`** (REST completo, ORM y proveedor de base de datos a elección) y **`grpc`** (servicio gRPC, scope fijo y minimalista).
+Dorn is a .NET scaffolding CLI that generates production-ready projects with **Clean Architecture**, **CQRS**, and configurable persistence. It doesn't generate an empty skeleton: every layer is wired end-to-end from the first commit. It ships two templates: **`webapi`** (full REST API, ORM and database provider of your choice) and **`grpc`** (gRPC service, fixed and minimal scope).
 
-## Por qué Dorn
+## Why Dorn
 
 <p align="center">
-  <img src="./docs/images/architecture-illustrative.png" alt="Un iceberg: lo visible es un comando de una línea, lo que queda debajo es toda la arquitectura resuelta" width="360">
+  <img src="./docs/images/architecture-illustrative.png" alt="An iceberg: what's visible is a one-line command, what's underneath is the whole architecture already solved" width="360">
 </p>
 
-Armar un proyecto .NET con Clean Architecture desde cero significa resolver, una y otra vez, las mismas decisiones: cómo separar capas sin acoplarlas, cómo cablear CQRS sin traer una librería con licencia comercial, qué ORM usar y cómo aislarlo del dominio, cómo estructurar cuatro tiers de tests, cómo hacer que todo compile junto desde el día uno.
+Building a .NET project with Clean Architecture from scratch means solving the same decisions over and over: how to separate layers without coupling them, how to wire CQRS without pulling in a commercially-licensed library, which ORM to use and how to isolate it from the domain, how to structure four test tiers, how to make it all compile together from day one.
 
-`dorn new webapi MyApp` resuelve eso en un comando. Lo que ves es la punta del iceberg — debajo hay una arquitectura completa, no una plantilla a medio hacer.
+`dorn new webapi MyApp` solves that in one command. What you see is the tip of the iceberg — underneath is a complete architecture, not a half-finished template.
 
-- **Arquitectura limpia real** — Domain, Application, Infrastructure, WebApi/Grpc completamente cableadas, con la regla de dependencias validada por tests (ArchUnitNET)
-- **CQRS nativo** — Commands y Queries separados con un mediator pattern propio, MIT, sin depender de MediatR
-- **ORM flexible** (template `webapi`) — EF Core o Dapper, elegís según tu caso de uso
-- **Testing de cuatro tiers** — Application, Integration, Architecture y Functional tests generados junto con el proyecto
-- **CLI interactiva** — el template `webapi` te pregunta por wizard las opciones que no pasaste como flags
+- **Real Clean Architecture** — Domain, Application, Infrastructure, WebApi/Grpc fully wired, with the dependency rule validated by tests (ArchUnitNET)
+- **Native CQRS** — Commands and Queries separated with a custom, MIT-licensed mediator pattern, no MediatR dependency
+- **Flexible ORM** (`webapi` template) — EF Core or Dapper, pick based on your use case
+- **Four-tier testing** — Application, Integration, Architecture, and Functional tests generated alongside the project
+- **Interactive CLI** — the `webapi` template prompts via wizard for any option you didn't pass as a flag
 
-## Instalación
+## Installation
 
 ```bash
 dotnet tool install --global Dorn.Cli
 ```
 
-El paquete publicado `Dorn.Cli` instala el ejecutable `dorn`.
+The published `Dorn.Cli` package installs the `dorn` executable.
 
-## Uso
+## Usage
 
 ```bash
 dorn new webapi MyApp
 cd MyApp && dotnet build
 ```
 
-O, opcionalmente, con el template publicado para `dotnet new`:
+Or, optionally, with the template published for `dotnet new`:
 
 ```bash
 dotnet new install Dorn.Templates.WebApi
 dotnet new dorn-webapi -n MyApp
 ```
 
-Para un servicio gRPC en vez de REST, el template `grpc` genera el mismo tipo de arquitectura con un scope fijo (EF Core + SQLite + Aspire, sin flags de configuración):
+For a gRPC service instead of REST, the `grpc` template generates the same kind of architecture with a fixed scope (EF Core + SQLite + Aspire, no configuration flags):
 
 ```bash
 dorn new grpc MyService
 ```
 
-Ver [gRPC template reference](./docs/templates/grpc.md) para el detalle completo.
+See the [gRPC template reference](./docs/templates/grpc.md) for the full detail.
 
-### Verbos de conveniencia en el proyecto generado
+### Convenience verbs in the generated project
 
-Una vez generado, el proyecto incluye verbos que operan sobre él desde la raíz (o cualquier padre con `--project <path>`):
+Once generated, the project ships verbs that operate on it from the root (or any parent, with `--project <path>`):
 
 ```bash
-dorn test              # corre los 4 tiers (Application / Integration / Architecture / Functional)
-dorn test --tier unit  # un solo tier
-dorn run               # auto-detecta AppHost → Aspire, docker-compose.yml → Compose, sino `dotnet run` plain
-dorn coverage          # tests + cobertura + gate fijo al 80%
+dorn test              # runs all 4 tiers (Application / Integration / Architecture / Functional)
+dorn test --tier unit  # a single tier
+dorn run               # auto-detects AppHost → Aspire, docker-compose.yml → Compose, else plain `dotnet run`
+dorn coverage          # tests + coverage + a fixed 80% gate
 ```
 
-Las dos formas de invocación son equivalentes:
+Both invocation forms are equivalent:
 
-- **`dorn <verbo>`** — global tool (PATH).
-- **`dotnet dorn <verbo>`** — local tool resuelta por `.config/dotnet-tools.json`, que `dorn new webapi`/`dorn new grpc` ya genera (pinned a `Dorn.Cli`, restaurado automáticamente).
+- **`dorn <verb>`** — global tool (PATH).
+- **`dotnet dorn <verb>`** — local tool resolved via `.config/dotnet-tools.json`, which `dorn new webapi`/`dorn new grpc` already generates (pinned to `Dorn.Cli`, restored automatically).
 
-Ver [docs/templates/webapi.md](./docs/templates/webapi.md) para detalles.
+See [docs/templates/webapi.md](./docs/templates/webapi.md) for details.
 
 > [!NOTE]
-> Los flujos con paquetes `.nupkg` locales y feeds bajo `./artifacts` son solo para contributors y desarrollo local; para uso publicado, instalá `Dorn.Cli` desde NuGet. Ver [Getting started](./docs/getting-started.md).
+> Workflows using local `.nupkg` packages and feeds under `./artifacts` are for contributors and local development only; for published use, install `Dorn.Cli` from NuGet. See [Getting started](./docs/getting-started.md).
 
-## Opciones
+## Options
 
-Flags del template `webapi` (el template `grpc` no expone flags de configuración — su scope es fijo, ver [su referencia](./docs/templates/grpc.md)):
+Flags for the `webapi` template (the `grpc` template exposes no configuration flags — its scope is fixed, see [its reference](./docs/templates/grpc.md)):
 
-| Opción | Default | Descripción |
+| Option | Default | Description |
 |---|---|---|
-| `--orm` | `efcore` | ORM: `efcore` (EF Core con migraciones) o `dapper` (micro-ORM con SQL crudo) |
-| `--database` | `sqlite` | Proveedor de base de datos: `sqlite` (zero-config), `sqlserver` o `postgres` (ambos vía contenedor Aspire) |
-| `--orchestrator` | `aspire` | Orquestador: `aspire`, `docker-compose` o `none` |
-| `-o`, `--output` | directorio actual | Carpeta de salida |
-| `--force` | — | Sobrescribe si la carpeta no está vacía |
-| `--no-restore` | — | Omite el `dotnet tool restore` automático post-generación |
+| `--orm` | `efcore` | ORM: `efcore` (EF Core with migrations) or `dapper` (micro-ORM with raw SQL) |
+| `--database` | `sqlite` | Database provider: `sqlite` (zero-config), `sqlserver`, or `postgres` (both via an Aspire-managed container) |
+| `--orchestrator` | `aspire` | Orchestrator: `aspire`, `docker-compose`, or `none` |
+| `-o`, `--output` | current directory | Output folder |
+| `--force` | — | Overwrite if the folder isn't empty |
+| `--no-restore` | — | Skip the automatic post-generation `dotnet tool restore` |
 
-### Ejemplos
+### Examples
 
 ```bash
-# Stack completo: Dapper + SQL Server + Docker Compose
+# Full stack: Dapper + SQL Server + Docker Compose
 dorn new webapi MyApp --orm dapper --database sqlserver --orchestrator docker-compose
 
-# PostgreSQL vía Aspire
+# PostgreSQL via Aspire
 dorn new webapi MyApp --database postgres
 
 # Default: EF Core + SQLite + Aspire
 dorn new webapi MyApp
 
-# Minimal: EF Core + SQLite + sin orquestador
+# Minimal: EF Core + SQLite, no orchestrator
 dorn new webapi MyApp --orchestrator none
 ```
 
-## Arquitectura
+## Architecture
 
 <p align="center">
-  <img src="./docs/images/architecture.png" alt="Capas de Clean Architecture: Domain, Application, Infrastructure, WebApi" width="640">
+  <img src="./docs/images/architecture.png" alt="Clean Architecture layers: Domain, Application, Infrastructure, WebApi" width="640">
 </p>
 
 ```
@@ -132,66 +132,66 @@ MyApp/
 ├── src/
 │   ├── MyApp.Domain/           # Entities, domain events, repository interfaces
 │   ├── MyApp.Application/      # Commands, queries, handlers (CQRS), DTOs
-│   ├── MyApp.Infrastructure/   # Implementaciones EF Core o Dapper
+│   ├── MyApp.Infrastructure/   # EF Core or Dapper implementations
 │   └── MyApp.WebApi/           # Minimal API endpoints
 └── tests/
     ├── MyApp.Application.Tests/     # Unit tests
-    ├── MyApp.Architecture.Tests/    # Validación de capas (ArchUnitNET)
+    ├── MyApp.Architecture.Tests/    # Layering validation (ArchUnitNET)
     ├── MyApp.Functional.Tests/      # HTTP endpoints (WebApplicationFactory)
-    └── MyApp.Integration.Tests/     # Persistencia real (Testcontainers)
+    └── MyApp.Integration.Tests/     # Real persistence (Testcontainers)
 ```
 
-### Selección de ORM
+### ORM selection
 
-| ORM | Cuándo usarlo | Características |
+| ORM | When to use it | Characteristics |
 |---|---|---|
-| **EF Core** | Default, migraciones automáticas, change tracking | `DbContext`, migrations, `SaveChanges` automático |
-| **Dapper** | Máximo control, queries optimizadas, SQL crudo | Connection factory, queries explícitas, máximo rendimiento |
+| **EF Core** | Default, automatic migrations, change tracking | `DbContext`, migrations, automatic `SaveChanges` |
+| **Dapper** | Maximum control, optimized queries, raw SQL | Connection factory, explicit queries, maximum throughput |
 
 ### Repository Pattern
 
-El template implementa Repository Pattern en el dominio:
+The template implements the Repository Pattern in the domain:
 
 ```
 Domain/Common/Interfaces/
-├── IRepository.cs          # Genérico: GetByIdAsync, Add, Update, Remove
-├── IReadRepository.cs      # Solo lectura: GetAllAsync, FindAsync, AnyAsync
-└── ITodoItemRepository.cs  # Específico de la entidad (extensible)
+├── IRepository.cs          # Generic: GetByIdAsync, Add, Update, Remove
+├── IReadRepository.cs      # Read-only: GetAllAsync, FindAsync, AnyAsync
+└── ITodoItemRepository.cs  # Entity-specific (extensible)
 
 Infrastructure/Repositories/
-├── EfCore/TodoItemRepository.cs   # Implementación EF Core
-└── Dapper/TodoItemRepository.cs   # Implementación Dapper
+├── EfCore/TodoItemRepository.cs   # EF Core implementation
+└── Dapper/TodoItemRepository.cs   # Dapper implementation
 ```
 
 ## Technology Stack
 
-- **.NET 10** con C# 13 (latest)
-- **Microsoft.TemplateEngine.Edge** embebido (no toca el cache global de `dotnet new`)
-- **Paquetes NuGet publicados** — `Dorn.Cli`, `Dorn.Templates.WebApi`, `Dorn.Messaging`, `Dorn.Messaging.Contracts` y `Dorn.SharedKernel`
-- **Mediator pattern** propio, MIT (sin MediatR)
-- **EF Core 10** o **Dapper 2.1** según la opción seleccionada (template `webapi`)
-- **gRPC + Protobuf**, hosteado con **.NET Aspire** (template `grpc`)
-- **xUnit + NSubstitute + ArchUnitNET** para tests
-- **Spectre.Console** para la CLI interactiva
+- **.NET 10** with C# 13 (latest)
+- **Microsoft.TemplateEngine.Edge** embedded (doesn't touch the global `dotnet new` cache)
+- **Published NuGet packages** — `Dorn.Cli`, `Dorn.Templates.WebApi`, `Dorn.Messaging`, `Dorn.Messaging.Contracts`, and `Dorn.SharedKernel`
+- **Custom mediator pattern**, MIT-licensed (no MediatR)
+- **EF Core 10** or **Dapper 2.1**, depending on the selected option (`webapi` template)
+- **gRPC + Protobuf**, hosted with **.NET Aspire** (`grpc` template)
+- **xUnit + NSubstitute + ArchUnitNET** for tests
+- **Spectre.Console** for the interactive CLI
 
 ## Features
 
-- **Sin licencias comerciales** — mediator CQRS MIT, sin FluentAssertions ni Moq
-- **Migraciones automáticas** — con EF Core (vía `dotnet ef migrations add`)
-- **Soporte Docker** — Docker Compose o Aspire para desarrollo local
-- **SQLite zero-config** — funciona out-of-the-box sin base de datos externa
-- **Validación type-safe** — FluentValidation para commands y queries
-- **CI lista para usar** — cada proyecto generado incluye un workflow de GitHub Actions (`.github/workflows/ci.yml`) y un `global.json` con el SDK pineado, listos desde el primer push
+- **No commercial licenses** — MIT CQRS mediator, no FluentAssertions or Moq
+- **Automatic migrations** — with EF Core (via `dotnet ef migrations add`)
+- **Docker support** — Docker Compose or Aspire for local development
+- **Zero-config SQLite** — works out of the box, no external database
+- **Type-safe validation** — FluentValidation for commands and queries
+- **CI ready to go** — every generated project ships a GitHub Actions workflow (`.github/workflows/ci.yml`) and a `global.json` with the SDK pinned, ready from the first push
 
 ## Roadmap
 
-- [x] Template `webapi` — Clean Architecture, CQRS, EF Core/Dapper, 4 tiers de tests
-- [x] Template `grpc` — Clean Architecture, CQRS, EF Core/SQLite, Aspire (scope fijo, sin `--database`/`--orm`/`--orchestrator`)
-- [ ] Template `ui` — placeholder en [`templates/ui/README.md`](./templates/ui/README.md)
+- [x] `webapi` template — Clean Architecture, CQRS, EF Core/Dapper, 4 test tiers
+- [x] `grpc` template — Clean Architecture, CQRS, EF Core/SQLite, Aspire (fixed scope, no `--database`/`--orm`/`--orchestrator`)
+- [ ] `ui` template — placeholder at [`templates/ui/README.md`](./templates/ui/README.md)
 
-Ver [ADRs](./docs/adr) para el detalle de cada decisión de arquitectura.
+See the [ADRs](./docs/adr) for the detail behind each architecture decision.
 
-## Documentación
+## Documentation
 
 - [Getting started](./docs/getting-started.md)
 - [WebAPI template reference](./docs/templates/webapi.md)
