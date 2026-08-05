@@ -37,14 +37,14 @@ Prefer not to install a global tool? `webapi` also ships as a standard `dotnet n
 
 ## Templates
 
-| | `webapi` | `grpc` |
-|---|---|---|
-| Generates | REST API (ASP.NET Core Minimal APIs) | gRPC service (Protobuf) |
-| Persistence | EF Core or Dapper, your choice | EF Core (fixed) |
-| Database | SQLite, SQL Server, or PostgreSQL | SQLite (fixed) |
-| Orchestration | Aspire, Docker Compose, or none | Aspire (fixed) |
-| Configuration | Flags or an interactive wizard | None (one fixed, opinionated MVP) |
-| Reference | [docs/templates/webapi.md](./docs/templates/webapi.md) | [docs/templates/grpc.md](./docs/templates/grpc.md) |
+|               | `webapi`                                               | `grpc`                                             |
+| ------------- | ------------------------------------------------------ | -------------------------------------------------- |
+| Generates     | REST API (ASP.NET Core Minimal APIs)                   | gRPC service (Protobuf)                            |
+| Persistence   | EF Core or Dapper, your choice                         | EF Core (fixed)                                    |
+| Database      | SQLite, SQL Server, or PostgreSQL                      | SQLite (fixed)                                     |
+| Orchestration | Aspire, Docker Compose, or none                        | Aspire (fixed)                                     |
+| Configuration | Flags or an interactive wizard                         | None (one fixed, opinionated MVP)                  |
+| Reference     | [docs/templates/webapi.md](./docs/templates/webapi.md) | [docs/templates/grpc.md](./docs/templates/grpc.md) |
 
 ```bash
 dorn new webapi MyApp --database postgres --orm dapper   # configurable
@@ -69,10 +69,6 @@ Building a Clean Architecture project from scratch means re-solving the same pro
 
 ## Architecture
 
-<p align="center">
-  <img src="./docs/images/architecture.png" alt="Clean Architecture layers: Domain, Application, Infrastructure, WebApi" width="640">
-</p>
-
 ```
 MyApp/
 ├── src/
@@ -93,11 +89,11 @@ Dependencies point strictly inward: `WebApi` depends on `Application`, `Infrastr
 
 Every generated project ships verbs to operate on itself, from its root (or any parent, with `--project <path>`):
 
-| Command | Does |
-|---|---|
-| `dorn test` | Runs all 4 tiers (`--tier` to filter to one) |
-| `dorn run` | Auto-detects AppHost → Aspire, `docker-compose.yml` → Compose, else plain `dotnet run` |
-| `dorn coverage` | Runs tests with coverage, gated at a fixed 80% |
+| Command         | Does                                                                                   |
+| --------------- | -------------------------------------------------------------------------------------- |
+| `dorn test`     | Runs all 4 tiers (`--tier` to filter to one)                                           |
+| `dorn run`      | Auto-detects AppHost → Aspire, `docker-compose.yml` → Compose, else plain `dotnet run` |
+| `dorn coverage` | Runs tests with coverage, gated at a fixed 80%                                         |
 
 `dorn <verb>` (global tool) and `dotnet dorn <verb>` (local tool, resolved via the `.config/dotnet-tools.json` every generated project already includes) are equivalent.
 
