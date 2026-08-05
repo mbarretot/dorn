@@ -28,7 +28,7 @@
         <Project Path="templates/grpc/tests/CleanArchGrpcService.Integration.Tests/CleanArchGrpcService.Integration.Tests.csproj" />
     </Folder>
     <Folder Name="/templates/tests/">
-        <Project Path="templates/tests/Dorn.TemplateGeneration.Tests.csproj" />
+        <Project Path="templates/tests/TemplateGenerationTests.csproj" />
     </Folder>
     <Folder Name="/templates/webapi/">
         <Project Path="templates/webapi/src/CleanArchWebApi.AppHost/CleanArchWebApi.AppHost.csproj" />

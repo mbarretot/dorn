@@ -6,7 +6,7 @@ using Xunit;
 namespace Dorn.Core.Tests.Templating;
 
 /// <summary>
-/// Exercises real template-engine wiring against a tiny fixture; full webapi generation/build coverage is kept in the slower templates/tests (Dorn.TemplateGeneration.Tests) suite.
+/// Exercises real template-engine wiring against a tiny fixture; full webapi generation/build coverage is kept in the slower templates/tests (TemplateGenerationTests) suite.
 /// </summary>
 public class TemplateEngineGenerationEngineTests : IDisposable
 {

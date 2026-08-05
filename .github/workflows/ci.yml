@@ -71,7 +71,7 @@ jobs:
           -reports:"**/coverage.cobertura.xml"
           -targetdir:"./coverage-report"
           -reporttypes:"Html;Cobertura;Badges"
-          -assemblyfilters:"-Dorn.Cli.Tests;-Dorn.Core.Tests;-Dorn.TemplateGeneration.Tests"
+          -assemblyfilters:"-Dorn.Cli.Tests;-Dorn.Core.Tests;-TemplateGenerationTests"
 
       - name: Upload coverage report as artifact
         if: matrix.os == 'ubuntu-latest'
