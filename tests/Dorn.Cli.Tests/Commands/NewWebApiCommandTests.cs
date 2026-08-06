@@ -8,6 +8,8 @@ using Spectre.Console.Cli;
 using Spectre.Console.Rendering;
 using Spectre.Console.Testing;
 using Xunit;
+using AuthCompatLib = Dorn.Core.Validation.AuthOrmCompatibilityValidator;
+using AuthValidatorLib = Dorn.Core.Validation.AuthValidator;
 
 namespace Dorn.Cli.Tests.Commands;
 
@@ -291,6 +293,73 @@ public class NewWebApiCommandTests
         await engine
             .DidNotReceive()
             .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithInvalidAuthOption_ReturnsExitCodeOneAndNeverCallsEngine()
+    {
+        var (engine, _, command) = CreateCommand();
+
+        var exitCode = await command.RunAsync(
+            new NewWebApiSettings { Name = "MyApp", Auth = "bogus" },
+            CancellationToken.None
+        );
+
+        Assert.Equal(1, exitCode);
+        var sanityCheck = AuthValidatorLib.Validate("bogus");
+        Assert.False(sanityCheck.IsValid);
+        Assert.Contains("Unknown auth mode", sanityCheck.ErrorMessage);
+        await engine
+            .DidNotReceive()
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithCustomAuthAndDapper_ReturnsExitCodeOneWithD2GuardMessage()
+    {
+        var (engine, _, command) = CreateCommand();
+
+        var exitCode = await command.RunAsync(
+            new NewWebApiSettings
+            {
+                Name = "MyApp",
+                Auth = "custom",
+                Orm = "dapper",
+            },
+            CancellationToken.None
+        );
+
+        Assert.Equal(1, exitCode);
+        var sanityCheck = AuthCompatLib.Validate("custom", "dapper");
+        Assert.False(sanityCheck.IsValid);
+        Assert.Contains("Auth='custom' requires Orm='efcore'", sanityCheck.ErrorMessage);
+        await engine
+            .DidNotReceive()
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task NewWebApi_WithCustomAuth_ForwardsAuthParameterToEngine()
+    {
+        var (engine, _, command) = CreateCommand();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
+
+        var exitCode = await command.RunAsync(
+            new NewWebApiSettings { Name = "MyApp", Auth = "custom" },
+            CancellationToken.None
+        );
+
+        Assert.Equal(0, exitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(
+                Arg.Is<GenerationRequest>(r =>
+                    r.Parameters != null && r.Parameters["Auth"] == "custom"
+                ),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]

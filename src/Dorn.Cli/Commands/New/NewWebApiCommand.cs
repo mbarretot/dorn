@@ -61,6 +61,13 @@ public sealed class NewWebApiCommand(
             return 1;
         }
 
+        var authValidation = AuthValidator.Validate(settings.Auth);
+        if (!authValidation.IsValid)
+        {
+            WriteErrorPanel("Invalid auth mode", authValidation.ErrorMessage);
+            return 1;
+        }
+
         var outputDirectory = Path.GetFullPath(settings.Output ?? Path.Combine(".", settings.Name));
 
         var orm =
@@ -108,6 +115,26 @@ public sealed class NewWebApiCommand(
                     : "aspire"
             );
 
+        var auth =
+            settings.Auth?.ToLowerInvariant()
+            ?? (
+                _console.Profile.Capabilities.Interactive
+                    ? _console.Prompt(
+                        new SelectionPrompt<string>()
+                            .Title("Select an [green]authentication scheme[/]:")
+                            .AddChoices("none", "custom", "azure-ad")
+                            .UseConverter(o =>
+                                o switch
+                                {
+                                    "azure-ad" => "Azure AD (validate Entra ID tokens)",
+                                    "custom" => "Custom JWT (self-issued, seeded user)",
+                                    _ => "None",
+                                }
+                            )
+                    )
+                    : "none"
+            );
+
         if (orchestrator == "aspire" && databaseProvider != "sqlite")
         {
             var aspireNameValidation = AspireResourceNameValidator.Validate(
@@ -121,6 +148,13 @@ public sealed class NewWebApiCommand(
             }
         }
 
+        var authCompatValidation = AuthOrmCompatibilityValidator.Validate(auth, orm);
+        if (!authCompatValidation.IsValid)
+        {
+            WriteErrorPanel("Incompatible auth/orm combination", authCompatValidation.ErrorMessage);
+            return 1;
+        }
+
         var request = new GenerationRequest(
             TemplateShortName: TemplateShortName,
             ProjectName: settings.Name,
@@ -130,6 +164,7 @@ public sealed class NewWebApiCommand(
                 ["Orm"] = orm,
                 ["DatabaseProvider"] = databaseProvider,
                 ["Orchestrator"] = orchestrator,
+                ["Auth"] = auth,
             },
             Force: settings.Force
         );

@@ -129,6 +129,187 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
+    /// Verifies the default <c>Auth=none</c> scaffold emits no auth files, no <c>Jwt</c> config block,
+    /// and no auth middleware wiring — protects the byte-identical constraint against the pre-change generator.
+    /// </summary>
+    [Fact]
+    public async Task GenerateAndBuild_DornWebApiTemplateWithNoAuth_EmitsNoAuthArtifacts()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-noauth-{Guid.NewGuid():N}");
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornNoAuthApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["Auth"] = "none" }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webApiDir = Path.Combine(outputDirectory, "src", "DornNoAuthApp.WebApi");
+            Assert.False(
+                File.Exists(Path.Combine(webApiDir, "Extensions", "AuthenticationExtensions.cs")),
+                "Auth=none must not emit AuthenticationExtensions.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(webApiDir, "Endpoints", "MeEndpoints.cs")),
+                "Auth=none must not emit MeEndpoints.cs"
+            );
+
+            var appsettingsPath = Path.Combine(webApiDir, "appsettings.json");
+            Assert.True(File.Exists(appsettingsPath));
+            var appsettings = await File.ReadAllTextAsync(appsettingsPath);
+            Assert.DoesNotContain("\"Jwt\"", appsettings, StringComparison.Ordinal);
+            Assert.DoesNotContain("SigningKey", appsettings, StringComparison.Ordinal);
+
+            var programCsPath = Path.Combine(webApiDir, "Program.cs");
+            Assert.True(File.Exists(programCsPath));
+            var programCs = await File.ReadAllTextAsync(programCsPath);
+            Assert.DoesNotContain("UseAuthentication", programCs, StringComparison.Ordinal);
+            Assert.DoesNotContain("UseAuthorization(", programCs, StringComparison.Ordinal);
+            Assert.DoesNotContain("MapMeEndpoints", programCs, StringComparison.Ordinal);
+
+            var csprojPath = Path.Combine(webApiDir, "DornNoAuthApp.WebApi.csproj");
+            Assert.True(File.Exists(csprojPath));
+            var csproj = await File.ReadAllTextAsync(csprojPath);
+            Assert.DoesNotContain(
+                "Microsoft.AspNetCore.Authentication.JwtBearer",
+                csproj,
+                StringComparison.Ordinal
+            );
+            Assert.DoesNotContain(
+                "Microsoft.Extensions.Identity.Core",
+                csproj,
+                StringComparison.Ordinal
+            );
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Verifies the <c>Auth=azure-ad</c> scaffold emits the auth files, the <c>Jwt</c> block in appsettings,
+    /// the JwtBearer PackageReference, the middleware wiring, and builds.
+    /// </summary>
+    [Fact]
+    public async Task GenerateAndBuild_DornWebApiTemplateWithAzureAd_EmitsAuthArtifactsAndBuilds()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-azuread-{Guid.NewGuid():N}");
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornAzureAdApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["Auth"] = "azure-ad" }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webApiDir = Path.Combine(outputDirectory, "src", "DornAzureAdApp.WebApi");
+            Assert.True(
+                File.Exists(Path.Combine(webApiDir, "Extensions", "AuthenticationExtensions.cs")),
+                "Auth=azure-ad must emit AuthenticationExtensions.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(webApiDir, "Endpoints", "MeEndpoints.cs")),
+                "Auth=azure-ad must emit MeEndpoints.cs"
+            );
+
+            var appsettingsPath = Path.Combine(webApiDir, "appsettings.json");
+            var appsettings = await File.ReadAllTextAsync(appsettingsPath);
+            Assert.Contains("\"Jwt\"", appsettings, StringComparison.Ordinal);
+
+            var programCsPath = Path.Combine(webApiDir, "Program.cs");
+            var programCs = await File.ReadAllTextAsync(programCsPath);
+            Assert.Contains("UseAuthentication", programCs, StringComparison.Ordinal);
+            Assert.Contains("MapMeEndpoints", programCs, StringComparison.Ordinal);
+
+            var csprojPath = Path.Combine(webApiDir, "DornAzureAdApp.WebApi.csproj");
+            var csproj = await File.ReadAllTextAsync(csprojPath);
+            Assert.Contains(
+                "Microsoft.AspNetCore.Authentication.JwtBearer",
+                csproj,
+                StringComparison.Ordinal
+            );
+            Assert.DoesNotContain(
+                "Microsoft.Extensions.Identity.Core",
+                csproj,
+                StringComparison.Ordinal
+            );
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
     /// Catches migration namespace collisions, bad #if/Condition/rename modifiers, and stray
     /// //#if markers in appsettings.json.
     /// </summary>
