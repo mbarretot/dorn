@@ -45,6 +45,8 @@
          the actual PackageReference in CleanArchWebApi.WebApi.csproj is condition-controlled). -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Identity.Stores" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.22.0" />
 
     <!-- Validation -->
     <PackageVersion Include="FluentValidation" Version="12.1.1" />

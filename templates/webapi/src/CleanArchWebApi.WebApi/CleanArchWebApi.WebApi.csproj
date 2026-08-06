@@ -24,6 +24,10 @@
       Condition="'$(UseAuth)' == 'True'"
     />
     <PackageReference
+      Include="Microsoft.IdentityModel.JsonWebTokens"
+      Condition="'$(UseAuth)' == 'True'"
+    />
+    <PackageReference
       Include="Microsoft.Extensions.Identity.Core"
       Condition="'$(UseCustomAuth)' == 'True'"
     />

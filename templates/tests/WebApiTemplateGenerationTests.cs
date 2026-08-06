@@ -310,6 +310,164 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
+    /// Verifies the <c>Auth=custom</c> scaffold emits the Domain AppUser + Identity packages,
+    /// the Application auth command/handler/validator, the Infrastructure JwtTokenService,
+    /// the AuthenticationExtensions.AddCustomJwtAuth with full AddJwtBearer + TokenValidationParameters
+    /// wiring, and that the generated solution builds with --auth custom --orm efcore.
+    /// </summary>
+    [Fact]
+    public async Task GenerateAndBuild_DornWebApiTemplateWithCustomAuth_EmitsAuthArtifactsAndBuilds()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-customauth-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornCustomAuthApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string>
+                {
+                    ["Auth"] = "custom",
+                    ["Orm"] = "efcore",
+                }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webApiDir = Path.Combine(outputDirectory, "src", "DornCustomAuthApp.WebApi");
+            var infraDir = Path.Combine(outputDirectory, "src", "DornCustomAuthApp.Infrastructure");
+            var applicationDir = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornCustomAuthApp.Application"
+            );
+            var domainDir = Path.Combine(outputDirectory, "src", "DornCustomAuthApp.Domain");
+
+            Assert.True(
+                File.Exists(Path.Combine(webApiDir, "Extensions", "AuthenticationExtensions.cs")),
+                "Auth=custom must emit AuthenticationExtensions.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(webApiDir, "Endpoints", "MeEndpoints.cs")),
+                "Auth=custom must emit MeEndpoints.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(domainDir, "Users", "AppUser.cs")),
+                "Auth=custom must emit Domain/Users/AppUser.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(applicationDir, "Auth", "Login", "LoginCommand.cs")),
+                "Auth=custom must emit Application/Auth/Login/LoginCommand.cs"
+            );
+            Assert.True(
+                File.Exists(
+                    Path.Combine(applicationDir, "Auth", "Login", "LoginCommandHandler.cs")
+                ),
+                "Auth=custom must emit Application/Auth/Login/LoginCommandHandler.cs"
+            );
+            Assert.True(
+                File.Exists(
+                    Path.Combine(applicationDir, "Auth", "Login", "LoginCommandValidator.cs")
+                ),
+                "Auth=custom must emit Application/Auth/Login/LoginCommandValidator.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(applicationDir, "Common", "Security", "ITokenService.cs")),
+                "Auth=custom must emit Application/Common/Security/ITokenService.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(infraDir, "Auth", "JwtTokenService.cs")),
+                "Auth=custom must emit Infrastructure/Auth/JwtTokenService.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(infraDir, "Auth", "JwtOptions.cs")),
+                "Auth=custom must emit Infrastructure/Auth/JwtOptions.cs"
+            );
+
+            var authExtensionsPath = Path.Combine(
+                webApiDir,
+                "Extensions",
+                "AuthenticationExtensions.cs"
+            );
+            var authExtensions = await File.ReadAllTextAsync(authExtensionsPath);
+            Assert.Contains("AddJwtBearer", authExtensions, StringComparison.Ordinal);
+            Assert.Contains("TokenValidationParameters", authExtensions, StringComparison.Ordinal);
+            Assert.Contains("IssuerSigningKey", authExtensions, StringComparison.Ordinal);
+            Assert.Contains("SymmetricSecurityKey", authExtensions, StringComparison.Ordinal);
+
+            var infraCsproj = await File.ReadAllTextAsync(
+                Path.Combine(infraDir, "DornCustomAuthApp.Infrastructure.csproj")
+            );
+            Assert.Contains(
+                "Microsoft.IdentityModel.JsonWebTokens",
+                infraCsproj,
+                StringComparison.Ordinal
+            );
+            Assert.Contains(
+                "Microsoft.Extensions.Identity.Core",
+                infraCsproj,
+                StringComparison.Ordinal
+            );
+
+            var domainCsproj = await File.ReadAllTextAsync(
+                Path.Combine(domainDir, "DornCustomAuthApp.Domain.csproj")
+            );
+            Assert.Contains(
+                "Microsoft.Extensions.Identity.Stores",
+                domainCsproj,
+                StringComparison.Ordinal
+            );
+
+            var infraDiPath = Path.Combine(
+                infraDir,
+                "DependencyInjection",
+                "ServiceCollectionExtensions.cs"
+            );
+            var infraDi = await File.ReadAllTextAsync(infraDiPath);
+            Assert.Contains("PasswordHasher<AppUser>", infraDi, StringComparison.Ordinal);
+            Assert.Contains("ITokenService, JwtTokenService", infraDi, StringComparison.Ordinal);
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
     /// Catches migration namespace collisions, bad #if/Condition/rename modifiers, and stray
     /// //#if markers in appsettings.json.
     /// </summary>

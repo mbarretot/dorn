@@ -59,6 +59,14 @@
     <!-- Dapper packages — only when Orm=dapper -->
     <PackageReference Include="Dapper" Condition="'$(UseDapper)' == 'True'" />
     <PackageReference
+      Include="Microsoft.Extensions.Identity.Core"
+      Condition="'$(UseCustomAuth)' == 'True'"
+    />
+    <PackageReference
+      Include="Microsoft.IdentityModel.JsonWebTokens"
+      Condition="'$(UseCustomAuth)' == 'True'"
+    />
+    <PackageReference
       Include="Microsoft.Data.Sqlite"
       Condition="'$(UseDapper)' == 'True' And '$(UseSqlite)' == 'True'"
     />
