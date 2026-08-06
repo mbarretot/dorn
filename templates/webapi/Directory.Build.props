@@ -15,6 +15,9 @@
     <UseSqlite Condition="'$(UseSqlite)' == ''">True</UseSqlite>
     <UseSqlServer Condition="'$(UseSqlServer)' == ''">False</UseSqlServer>
     <UsePostgres Condition="'$(UsePostgres)' == ''">False</UsePostgres>
+    <UseCustomAuth Condition="'$(UseCustomAuth)' == ''">False</UseCustomAuth>
+    <UseAzureAdAuth Condition="'$(UseAzureAdAuth)' == ''">False</UseAzureAdAuth>
+    <UseAuth Condition="'$(UseAuth)' == ''">False</UseAuth>
   </PropertyGroup>
 
   <!-- In-place builds need C# symbols because generation-time #if directives are not evaluated by MSBuild. -->
@@ -32,5 +35,14 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(UsePostgres)' == 'True' OR '$(UsePostgres)' == 'true'">
     <DefineConstants>$(DefineConstants);UsePostgres</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(UseCustomAuth)' == 'True' OR '$(UseCustomAuth)' == 'true'">
+    <DefineConstants>$(DefineConstants);UseCustomAuth</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(UseAzureAdAuth)' == 'True' OR '$(UseAzureAdAuth)' == 'true'">
+    <DefineConstants>$(DefineConstants);UseAzureAdAuth</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(UseAuth)' == 'True' OR '$(UseAuth)' == 'true'">
+    <DefineConstants>$(DefineConstants);UseAuth</DefineConstants>
   </PropertyGroup>
 </Project>

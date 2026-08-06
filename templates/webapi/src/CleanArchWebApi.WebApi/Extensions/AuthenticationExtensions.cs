@@ -1,4 +1,9 @@
 #if (UseAuth)
+using System.Text;
+#if (UseCustomAuth)
+using CleanArchWebApi.Infrastructure.Auth;
+using Microsoft.IdentityModel.Tokens;
+#endif
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -16,20 +21,38 @@ public static class AuthenticationExtensions
         IWebHostEnvironment environment
     )
     {
-        var signingKey = configuration["Jwt:SigningKey"];
-        if (
+        var jwt =
+            configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+        var signingKey = jwt.SigningKey ?? string.Empty;
+        var isPlaceholder =
             string.IsNullOrWhiteSpace(signingKey)
-            || signingKey.StartsWith("REPLACE", StringComparison.Ordinal)
-        )
+            || signingKey.StartsWith("REPLACE_ME", StringComparison.Ordinal);
+
+        if (isPlaceholder && !environment.IsDevelopment())
         {
-            if (!environment.IsDevelopment())
-            {
-                throw new InvalidOperationException(
-                    "Jwt:SigningKey is missing or a placeholder outside the Development environment. "
-                        + "Configure a real signing key via 'dotnet user-secrets' (id: a51cf652-fca9-43cd-b972-18af75625fa1) or an environment variable before deploying."
-                );
-            }
+            throw new InvalidOperationException(
+                "Jwt:SigningKey is missing or a placeholder. Configure a real signing key (env var Jwt__SigningKey or user-secrets) before deploying."
+            );
         }
+
+        services
+            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = jwt.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwt.Audience,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+                    ClockSkew = TimeSpan.FromMinutes(1),
+                };
+            });
+
+        services.AddAuthorization();
 
         return services;
     }
@@ -55,6 +78,8 @@ public static class AuthenticationExtensions
                 options.MetadataAddress = options.Authority + "/.well-known/openid-configuration";
             }
         );
+
+        services.AddAuthorization();
 
         return services;
     }
