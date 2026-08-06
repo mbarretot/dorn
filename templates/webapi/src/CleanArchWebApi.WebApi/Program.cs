@@ -4,6 +4,10 @@ using CleanArchWebApi.WebApi;
 using CleanArchWebApi.WebApi.Endpoints;
 using Dorn.Messaging;
 using FluentValidation;
+#if (UseAuth)
+using CleanArchWebApi.WebApi.Extensions;
+#endif
+
 #if (UseEfCore)
 using CleanArchWebApi.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +26,15 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
 builder.Services.AddProblemDetails();
+
+#if (UseAuth)
+#if (UseCustomAuth)
+builder.Services.AddCustomJwtAuth(builder.Configuration, builder.Environment);
+#elif (UseAzureAdAuth)
+builder.Services.AddAzureAdAuth(builder.Configuration);
+#endif
+builder.Services.AddAuthorization();
+#endif
 
 var app = builder.Build();
 
@@ -46,7 +59,15 @@ app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
 
+#if (UseAuth)
+app.UseAuthentication();
+app.UseAuthorization();
+#endif
+
 app.MapTodoEndpoints();
+#if (UseAuth)
+app.MapMeEndpoints();
+#endif
 #if (UseAspire)
 app.MapDefaultEndpoints();
 #endif
