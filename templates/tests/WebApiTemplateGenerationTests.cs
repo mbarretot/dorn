@@ -287,8 +287,10 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Verifies the <c>Auth=azure-ad</c> scaffold emits the auth files, the <c>Jwt</c> block in appsettings,
-    /// the JwtBearer PackageReference, the middleware wiring, and builds.
+    /// Verifies the <c>Auth=azure-ad</c> + <c>Orm=efcore</c> scaffold emits the auth files, the
+    /// <c>Jwt</c> block in appsettings, the JwtBearer PackageReference, the middleware wiring,
+    /// builds, and that the generated Functional tests (D3 PostConfigure CI override) actually
+    /// pass — end to end, not just compile-checked.
     /// </summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithAzureAd_EmitsAuthArtifactsAndBuilds()
@@ -308,7 +310,11 @@ public class WebApiTemplateGenerationTests
                 "dorn-webapi",
                 "DornAzureAdApp",
                 outputDirectory,
-                Parameters: new Dictionary<string, string> { ["Auth"] = "azure-ad" }
+                Parameters: new Dictionary<string, string>
+                {
+                    ["Auth"] = "azure-ad",
+                    ["Orm"] = "efcore",
+                }
             );
             var result = await engine.GenerateAsync(request);
 
@@ -330,7 +336,9 @@ public class WebApiTemplateGenerationTests
 
             var appsettingsPath = Path.Combine(webApiDir, "appsettings.json");
             var appsettings = await File.ReadAllTextAsync(appsettingsPath);
-            Assert.Contains("\"Jwt\"", appsettings, StringComparison.Ordinal);
+            Assert.Contains("\"AzureAd\"", appsettings, StringComparison.Ordinal);
+            Assert.Contains("\"ClientId\"", appsettings, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"Jwt\"", appsettings, StringComparison.Ordinal);
 
             var programCsPath = Path.Combine(webApiDir, "Program.cs");
             var programCs = await File.ReadAllTextAsync(programCsPath);
@@ -363,6 +371,33 @@ public class WebApiTemplateGenerationTests
                 $"dotnet build exited with {buildResult.ExitCode}."
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+
+            // Compile-checking alone does not prove the D3 PostConfigure CI override actually
+            // beats AddAzureAdAuth's own wiring at runtime — run the generated Functional tests
+            // (AzureAdMeEndpointsTests) to prove Auth=azure-ad works end to end without any live
+            // Entra ID dependency.
+            var functionalProject = Path.Combine(
+                outputDirectory,
+                "tests",
+                "DornAzureAdApp.Functional.Tests",
+                "DornAzureAdApp.Functional.Tests.csproj"
+            );
+            var functionalTestResult = await RunProcessAsync(
+                slnFiles[0],
+                "test",
+                functionalProject,
+                "-c",
+                "Release",
+                "--no-build",
+                "--filter",
+                "Auth"
+            );
+            Assert.True(
+                functionalTestResult.ExitCode == 0,
+                $"Generated azure-ad functional tests exited with {functionalTestResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{functionalTestResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{functionalTestResult.StdErr}"
             );
         }
         finally
