@@ -177,6 +177,10 @@ public class WebApiTemplateGenerationTests
                 "Auth=none must not emit MeEndpoints.cs"
             );
             Assert.False(
+                File.Exists(Path.Combine(webApiDir, "Endpoints", "AuthEndpoints.cs")),
+                "Auth=none must not emit AuthEndpoints.cs"
+            );
+            Assert.False(
                 File.Exists(Path.Combine(domainDir, "Users", "AppUser.cs")),
                 "Auth=none must not emit AppUser.cs"
             );
@@ -211,6 +215,24 @@ public class WebApiTemplateGenerationTests
             Assert.False(
                 File.Exists(Path.Combine(infrastructureDir, "Auth", "JwtTokenService.cs")),
                 "Auth=none must not emit JwtTokenService.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(infrastructureDir, "Auth", "AuthSeedOptions.cs")),
+                "Auth=none must not emit AuthSeedOptions.cs"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(infrastructureDir, "Persistence", "Seed", "AuthSeeder.cs")
+                ),
+                "Auth=none must not emit AuthSeeder.cs"
+            );
+            var migrationsDir = Path.Combine(infrastructureDir, "Persistence", "Migrations");
+            Assert.False(
+                Directory.Exists(migrationsDir)
+                    && Directory
+                        .GetFiles(migrationsDir, "*_AddAuthUser*", SearchOption.AllDirectories)
+                        .Length > 0,
+                "Auth=none must not emit any *_AddAuthUser* migration file"
             );
 
             var appsettingsPath = Path.Combine(webApiDir, "appsettings.json");
@@ -265,8 +287,10 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Verifies the <c>Auth=azure-ad</c> scaffold emits the auth files, the <c>Jwt</c> block in appsettings,
-    /// the JwtBearer PackageReference, the middleware wiring, and builds.
+    /// Verifies the <c>Auth=azure-ad</c> + <c>Orm=efcore</c> scaffold emits the auth files, the
+    /// <c>Jwt</c> block in appsettings, the JwtBearer PackageReference, the middleware wiring,
+    /// builds, and that the generated Functional tests (D3 PostConfigure CI override) actually
+    /// pass — end to end, not just compile-checked.
     /// </summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithAzureAd_EmitsAuthArtifactsAndBuilds()
@@ -286,7 +310,11 @@ public class WebApiTemplateGenerationTests
                 "dorn-webapi",
                 "DornAzureAdApp",
                 outputDirectory,
-                Parameters: new Dictionary<string, string> { ["Auth"] = "azure-ad" }
+                Parameters: new Dictionary<string, string>
+                {
+                    ["Auth"] = "azure-ad",
+                    ["Orm"] = "efcore",
+                }
             );
             var result = await engine.GenerateAsync(request);
 
@@ -308,7 +336,9 @@ public class WebApiTemplateGenerationTests
 
             var appsettingsPath = Path.Combine(webApiDir, "appsettings.json");
             var appsettings = await File.ReadAllTextAsync(appsettingsPath);
-            Assert.Contains("\"Jwt\"", appsettings, StringComparison.Ordinal);
+            Assert.Contains("\"AzureAd\"", appsettings, StringComparison.Ordinal);
+            Assert.Contains("\"ClientId\"", appsettings, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"Jwt\"", appsettings, StringComparison.Ordinal);
 
             var programCsPath = Path.Combine(webApiDir, "Program.cs");
             var programCs = await File.ReadAllTextAsync(programCsPath);
@@ -341,6 +371,33 @@ public class WebApiTemplateGenerationTests
                 $"dotnet build exited with {buildResult.ExitCode}."
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+
+            // Compile-checking alone does not prove the D3 PostConfigure CI override actually
+            // beats AddAzureAdAuth's own wiring at runtime — run the generated Functional tests
+            // (AzureAdMeEndpointsTests) to prove Auth=azure-ad works end to end without any live
+            // Entra ID dependency.
+            var functionalProject = Path.Combine(
+                outputDirectory,
+                "tests",
+                "DornAzureAdApp.Functional.Tests",
+                "DornAzureAdApp.Functional.Tests.csproj"
+            );
+            var functionalTestResult = await RunProcessAsync(
+                slnFiles[0],
+                "test",
+                functionalProject,
+                "-c",
+                "Release",
+                "--no-build",
+                "--filter",
+                "Auth"
+            );
+            Assert.True(
+                functionalTestResult.ExitCode == 0,
+                $"Generated azure-ad functional tests exited with {functionalTestResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{functionalTestResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{functionalTestResult.StdErr}"
             );
         }
         finally
@@ -499,6 +556,29 @@ public class WebApiTemplateGenerationTests
                 $"dotnet build exited with {buildResult.ExitCode}."
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+
+            var functionalProject = Path.Combine(
+                outputDirectory,
+                "tests",
+                "DornCustomAuthApp.Functional.Tests",
+                "DornCustomAuthApp.Functional.Tests.csproj"
+            );
+            var functionalTestResult = await RunProcessAsync(
+                slnFiles[0],
+                "test",
+                functionalProject,
+                "-c",
+                "Release",
+                "--no-build",
+                "--filter",
+                "Auth"
+            );
+            Assert.True(
+                functionalTestResult.ExitCode == 0,
+                $"Generated custom-auth functional tests exited with {functionalTestResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{functionalTestResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{functionalTestResult.StdErr}"
             );
         }
         finally
@@ -908,6 +988,51 @@ public class WebApiTemplateGenerationTests
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
             );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Scaffold_CustomAuthWithDapper_ExitsOneBeforeGeneration()
+    {
+        var dornRoot = Path.GetDirectoryName(ResolveDornRootGlobalJsonPath())!;
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-d2-{Guid.NewGuid():N}");
+        try
+        {
+            var result = await RunProcessAsync(
+                Path.Combine(dornRoot, "Dorn.slnx"),
+                "run",
+                "--project",
+                Path.Combine(dornRoot, "src", "Dorn.Cli", "Dorn.Cli.csproj"),
+                "-c",
+                "Release",
+                "--no-restore",
+                "--",
+                "new",
+                "webapi",
+                "DornD2RejectedApp",
+                "--auth",
+                "custom",
+                "--orm",
+                "dapper",
+                "--output",
+                outputDirectory,
+                "--no-restore"
+            );
+
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains(
+                "requires Orm='efcore'",
+                result.StdOut + result.StdErr,
+                StringComparison.Ordinal
+            );
+            Assert.False(Directory.Exists(outputDirectory));
         }
         finally
         {

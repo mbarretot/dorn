@@ -31,5 +31,6 @@
       Include="Microsoft.Extensions.Identity.Core"
       Condition="'$(UseCustomAuth)' == 'True'"
     />
+    <PackageReference Include="Microsoft.Identity.Web" Condition="'$(UseAzureAdAuth)' == 'True'" />
   </ItemGroup>
 </Project>
