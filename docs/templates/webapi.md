@@ -14,6 +14,7 @@
 - [CQRS with the custom mediator](#cqrs-with-the-custom-mediator)
 - [Domain events with `INotification`](#domain-events-with-inotification)
 - [Persistence: EF Core, database provider selection](#persistence-ef-core-database-provider-selection)
+- [Authentication: none, self-issued JWT, or Microsoft Entra ID](#authentication-none-self-issued-jwt-or-microsoft-entra-id)
 
 The `webapi` template (short name `dorn-webapi`, identity `Dorn.Templates.WebApi`)
 generates an ASP.NET Core Minimal API project in Clean Architecture, using a
@@ -26,7 +27,9 @@ dorn new webapi MyApp --database sqlserver        # SQL Server, run via an Aspir
 dorn new webapi MyApp --database postgres         # PostgreSQL, run via an Aspire-managed container
 dorn new webapi MyApp --orchestrator docker-compose  # Docker Compose scaffolding, no Aspire dependency
 dorn new webapi MyApp --orchestrator none         # no orchestration scaffolding, run the API directly
-dorn new webapi MyApp                             # omit --database/--orchestrator in an interactive terminal to be prompted
+dorn new webapi MyApp --auth custom               # self-issued JWT, seeded demo user, no external setup
+dorn new webapi MyApp --auth azure-ad             # validate Microsoft Entra ID tokens, no client secret
+dorn new webapi MyApp                             # omit --database/--orchestrator/--auth in an interactive terminal to be prompted
 # or, from a repo checkout during development:
 dotnet run --project src/Dorn.Cli -- new webapi MyApp
 ```
@@ -520,5 +523,49 @@ See `docs/adr/0005-ef-core-sqlite-default-persistence.md` (original SQLite-only
 rationale), `docs/adr/0011-database-provider-selection.md` (SQL Server as a first-class,
 Aspire-hosted choice), and `docs/adr/0014-postgresql-database-provider.md` (PostgreSQL at
 the same parity).
+
+[⬆ Back to top](#contents)
+
+## Authentication: none, self-issued JWT, or Microsoft Entra ID
+
+`--auth none|custom|azure-ad` is chosen independently of the other axes. `none` is the
+default and emits zero new files.
+
+| `--auth` value | Setup required | `/api/me` | `/auth/login` |
+|---|---|---|---|
+| `none` (default) | None | Not generated | Not generated |
+| `custom` | None, a demo user seeds itself at startup | Returns claims from a self-issued JWT | Issues the JWT (60-minute lifetime) |
+| `azure-ad` | An Entra ID app registration (`AzureAd:Instance`/`TenantId`/`ClientId`) | Returns claims from a validated Entra ID token | Not generated; Entra ID issues tokens directly to callers |
+
+```csharp
+// Extensions/AuthenticationExtensions.cs
+#if (UseCustomAuth)
+services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options => options.TokenValidationParameters = /* signing key from Jwt:SigningKey */);
+#elif (UseAzureAdAuth)
+services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApi(configuration.GetSection("AzureAd"));
+#endif
+```
+
+`custom` seeds one demo user (`AuthSeed:DemoEmail`, password from `AuthSeed:DemoPassword`
+or a random one if unset) at startup, hashed with `PasswordHasher<AppUser>`. The JWT
+signing key is never committed: set `Jwt:SigningKey` via `dotnet user-secrets set` (a
+`UserSecretsId` is generated on the WebApi project) or the `Jwt__SigningKey` environment
+variable. Missing or placeholder outside `Development` fails the app at startup rather
+than booting insecurely.
+
+`azure-ad` validates tokens only, it never issues them and never needs a client secret:
+`AzureAd:ClientId` alone lets `Microsoft.Identity.Web` derive the expected audience
+(both the bare `ClientId` and `api://{ClientId}` forms). Point `AzureAd:Instance`/
+`TenantId`/`ClientId` at a real Entra ID app registration to protect the API; there is no
+demo/dev fallback for this flavor.
+
+`custom` requires `--orm efcore` (`dorn new webapi MyApp --auth custom --orm dapper`
+exits 1): the seeded user and its migrations need `ApplicationDbContext`, which the
+Dapper path excludes entirely.
+
+Full rationale, including why the demo user seeds at startup instead of via EF
+`HasData`, in `docs/adr/0016-opt-in-jwt-auth-scaffolding.md`.
 
 [⬆ Back to top](#contents)
