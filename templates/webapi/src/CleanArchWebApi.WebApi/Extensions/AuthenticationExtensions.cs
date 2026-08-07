@@ -4,6 +4,9 @@ using System.Text;
 using CleanArchWebApi.Infrastructure.Auth;
 using Microsoft.IdentityModel.Tokens;
 #endif
+#if (UseAzureAdAuth)
+using Microsoft.Identity.Web;
+#endif
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -66,24 +69,7 @@ public static class AuthenticationExtensions
     {
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, _ => { });
-
-        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme);
-        services.PostConfigure<JwtBearerOptions>(
-            JwtBearerDefaults.AuthenticationScheme,
-            options =>
-            {
-                options.Authority =
-                    configuration["AzureAd:Instance"] + configuration["AzureAd:TenantId"] + "/v2.0";
-                options.MetadataAddress = options.Authority + "/.well-known/openid-configuration";
-                options.TokenValidationParameters.ValidateAudience = true;
-                options.TokenValidationParameters.ValidAudiences =
-                [
-                    configuration["AzureAd:ClientId"] ?? string.Empty,
-                    $"api://{configuration["AzureAd:ClientId"]}",
-                ];
-            }
-        );
+            .AddMicrosoftIdentityWebApi(configuration.GetSection("AzureAd"));
 
         services.AddAuthorization();
 
