@@ -210,7 +210,25 @@
         },
         {
           "condition": "(!UseCustomAuth)",
-          "exclude": ["src/CleanArchWebApi.WebApi/Endpoints/AuthEndpoints.cs"]
+          "exclude": [
+            "src/CleanArchWebApi.WebApi/Endpoints/AuthEndpoints.cs",
+            "src/CleanArchWebApi.Domain/Users/AppUser.cs",
+            "src/CleanArchWebApi.Application/Auth/Login/LoginCommand.cs",
+            "src/CleanArchWebApi.Application/Auth/Login/LoginCommandHandler.cs",
+            "src/CleanArchWebApi.Application/Auth/Login/LoginCommandValidator.cs",
+            "src/CleanArchWebApi.Application/Auth/Login/LoginResponse.cs",
+            "src/CleanArchWebApi.Application/Common/Security/ITokenService.cs",
+            "src/CleanArchWebApi.Infrastructure/Auth/JwtOptions.cs",
+            "src/CleanArchWebApi.Infrastructure/Auth/JwtTokenService.cs",
+            "src/CleanArchWebApi.Infrastructure/Auth/AuthSeedOptions.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Seed/AuthSeeder.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/20260807050632_AddAuthUser.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/20260807050632_AddAuthUser.Designer.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/20260807050702_AddAuthUser.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/20260807050702_AddAuthUser.Designer.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Postgres/20260807050712_AddAuthUser.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Postgres/20260807050712_AddAuthUser.Designer.cs"
+          ]
         }
       ]
     }
