@@ -4,6 +4,7 @@ using CleanArchWebApi.Application.Common.Security;
 using CleanArchWebApi.Domain.Users;
 using Dorn.SharedKernel;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace CleanArchWebApi.Application.Auth.Login;
 
@@ -29,7 +30,10 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<L
     public async Task<Result<LoginResponse>> Handle(LoginCommand request, CancellationToken ct)
     {
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
-        var user = _dbContext.Users.FirstOrDefault(u => u.NormalizedEmail == normalizedEmail);
+        var user = await _dbContext.Users.FirstOrDefaultAsync(
+            u => u.NormalizedEmail == normalizedEmail,
+            ct
+        );
         if (user is null)
         {
             return Result.Failure<LoginResponse>(InvalidCredentialsMessage);

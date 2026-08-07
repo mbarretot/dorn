@@ -161,6 +161,13 @@ public class WebApiTemplateGenerationTests
             );
 
             var webApiDir = Path.Combine(outputDirectory, "src", "DornNoAuthApp.WebApi");
+            var domainDir = Path.Combine(outputDirectory, "src", "DornNoAuthApp.Domain");
+            var applicationDir = Path.Combine(outputDirectory, "src", "DornNoAuthApp.Application");
+            var infrastructureDir = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornNoAuthApp.Infrastructure"
+            );
             Assert.False(
                 File.Exists(Path.Combine(webApiDir, "Extensions", "AuthenticationExtensions.cs")),
                 "Auth=none must not emit AuthenticationExtensions.cs"
@@ -168,6 +175,42 @@ public class WebApiTemplateGenerationTests
             Assert.False(
                 File.Exists(Path.Combine(webApiDir, "Endpoints", "MeEndpoints.cs")),
                 "Auth=none must not emit MeEndpoints.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(domainDir, "Users", "AppUser.cs")),
+                "Auth=none must not emit AppUser.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(applicationDir, "Auth", "Login", "LoginCommand.cs")),
+                "Auth=none must not emit LoginCommand.cs"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(applicationDir, "Auth", "Login", "LoginCommandHandler.cs")
+                ),
+                "Auth=none must not emit LoginCommandHandler.cs"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(applicationDir, "Auth", "Login", "LoginCommandValidator.cs")
+                ),
+                "Auth=none must not emit LoginCommandValidator.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(applicationDir, "Auth", "Login", "LoginResponse.cs")),
+                "Auth=none must not emit LoginResponse.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(applicationDir, "Common", "Security", "ITokenService.cs")),
+                "Auth=none must not emit ITokenService.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(infrastructureDir, "Auth", "JwtOptions.cs")),
+                "Auth=none must not emit JwtOptions.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(infrastructureDir, "Auth", "JwtTokenService.cs")),
+                "Auth=none must not emit JwtTokenService.cs"
             );
 
             var appsettingsPath = Path.Combine(webApiDir, "appsettings.json");

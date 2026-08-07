@@ -68,7 +68,7 @@ public sealed class LoginCommandHandlerTests : IDisposable
             .Returns(new TokenResult("token-jws-value", expectedExpires));
 
         var handler = new LoginCommandHandler(_dbContext, passwordHasher, tokenService);
-        var command = new LoginCommand(email, "Passw0rd!");
+        var command = new LoginCommand(email, TestCredentials.DemoPassword);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -87,7 +87,7 @@ public sealed class LoginCommandHandlerTests : IDisposable
         var passwordHasher = Substitute.For<IPasswordHasher<AppUser>>();
         var tokenService = Substitute.For<ITokenService>();
         var handler = new LoginCommandHandler(_dbContext, passwordHasher, tokenService);
-        var command = new LoginCommand("nobody@example.com", "Passw0rd!");
+        var command = new LoginCommand("nobody@example.com", TestCredentials.DemoPassword);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -132,7 +132,7 @@ public sealed class LoginCommandHandlerTests : IDisposable
 
         var tokenService = new RecordingTokenService();
         var handler = new LoginCommandHandler(_dbContext, passwordHasher, tokenService);
-        var command = new LoginCommand(email, "Passw0rd!");
+        var command = new LoginCommand(email, TestCredentials.DemoPassword);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
