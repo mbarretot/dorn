@@ -457,6 +457,29 @@ public class WebApiTemplateGenerationTests
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
             );
+
+            var functionalProject = Path.Combine(
+                outputDirectory,
+                "tests",
+                "DornCustomAuthApp.Functional.Tests",
+                "DornCustomAuthApp.Functional.Tests.csproj"
+            );
+            var functionalTestResult = await RunProcessAsync(
+                slnFiles[0],
+                "test",
+                functionalProject,
+                "-c",
+                "Release",
+                "--no-build",
+                "--filter",
+                "Auth"
+            );
+            Assert.True(
+                functionalTestResult.ExitCode == 0,
+                $"Generated custom-auth functional tests exited with {functionalTestResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{functionalTestResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{functionalTestResult.StdErr}"
+            );
         }
         finally
         {
@@ -865,6 +888,51 @@ public class WebApiTemplateGenerationTests
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
             );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Scaffold_CustomAuthWithDapper_ExitsOneBeforeGeneration()
+    {
+        var dornRoot = Path.GetDirectoryName(ResolveDornRootGlobalJsonPath())!;
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-d2-{Guid.NewGuid():N}");
+        try
+        {
+            var result = await RunProcessAsync(
+                Path.Combine(dornRoot, "Dorn.slnx"),
+                "run",
+                "--project",
+                Path.Combine(dornRoot, "src", "Dorn.Cli", "Dorn.Cli.csproj"),
+                "-c",
+                "Release",
+                "--no-restore",
+                "--",
+                "new",
+                "webapi",
+                "DornD2RejectedApp",
+                "--auth",
+                "custom",
+                "--orm",
+                "dapper",
+                "--output",
+                outputDirectory,
+                "--no-restore"
+            );
+
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains(
+                "requires Orm='efcore'",
+                result.StdOut + result.StdErr,
+                StringComparison.Ordinal
+            );
+            Assert.False(Directory.Exists(outputDirectory));
         }
         finally
         {

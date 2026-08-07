@@ -11,7 +11,7 @@ public sealed class LoginCommandValidatorTests
     [Fact]
     public void Validate_WithEmptyEmail_Fails()
     {
-        var command = new LoginCommand(string.Empty, "Passw0rd!");
+        var command = new LoginCommand(string.Empty, TestCredentials.DemoPassword);
 
         var result = _validator.TestValidate(command);
 
@@ -21,7 +21,7 @@ public sealed class LoginCommandValidatorTests
     [Fact]
     public void Validate_WithMalformedEmail_Fails()
     {
-        var command = new LoginCommand("not-an-email", "Passw0rd!");
+        var command = new LoginCommand("not-an-email", TestCredentials.DemoPassword);
 
         var result = _validator.TestValidate(command);
 
@@ -51,7 +51,7 @@ public sealed class LoginCommandValidatorTests
     [Fact]
     public void Validate_WithValidCommand_Passes()
     {
-        var command = new LoginCommand("user@example.com", "Passw0rd!");
+        var command = new LoginCommand("user@example.com", TestCredentials.DemoPassword);
 
         var result = _validator.TestValidate(command);
 

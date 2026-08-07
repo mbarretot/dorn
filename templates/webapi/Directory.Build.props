@@ -17,6 +17,9 @@
     <UsePostgres Condition="'$(UsePostgres)' == ''">False</UsePostgres>
     <UseCustomAuth Condition="'$(UseCustomAuth)' == ''">False</UseCustomAuth>
     <UseAzureAdAuth Condition="'$(UseAzureAdAuth)' == ''">False</UseAzureAdAuth>
+    <UseAuth
+      Condition="'$(UseAuth)' == '' And ('$(UseCustomAuth)' == 'True' Or '$(UseCustomAuth)' == 'true' Or '$(UseAzureAdAuth)' == 'True' Or '$(UseAzureAdAuth)' == 'true')"
+      >True</UseAuth>
     <UseAuth Condition="'$(UseAuth)' == ''">False</UseAuth>
   </PropertyGroup>
 

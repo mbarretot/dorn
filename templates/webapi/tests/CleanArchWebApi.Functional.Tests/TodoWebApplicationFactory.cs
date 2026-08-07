@@ -1,3 +1,7 @@
+#if (UseCustomAuth)
+using CleanArchWebApi.Functional.Tests.Auth;
+#endif
+
 namespace CleanArchWebApi.Functional.Tests;
 
 /// <summary>
@@ -12,6 +16,13 @@ public sealed class TodoWebApplicationFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+#if (UseCustomAuth)
+        builder
+            .UseSetting("Jwt:SigningKey", AuthWebApplicationFactory.SigningKey)
+            .UseSetting("Jwt:Issuer", AuthWebApplicationFactory.Issuer)
+            .UseSetting("Jwt:Audience", AuthWebApplicationFactory.Audience)
+            .UseSetting("Jwt:LifetimeMinutes", "60");
+#endif
         builder.ConfigureServices(services =>
         {
             // AddDbContext appends config via Add, not TryAdd — removing only

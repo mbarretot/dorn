@@ -48,6 +48,9 @@ public static class ServiceCollectionExtensions
 
 #if (UseCustomAuth)
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<AuthSeedOptions>(
+            configuration.GetSection(AuthSeedOptions.SectionName)
+        );
         services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
         services.AddScoped<ITokenService, JwtTokenService>();
 #endif
