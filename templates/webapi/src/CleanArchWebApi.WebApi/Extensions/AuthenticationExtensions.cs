@@ -76,6 +76,12 @@ public static class AuthenticationExtensions
                 options.Authority =
                     configuration["AzureAd:Instance"] + configuration["AzureAd:TenantId"] + "/v2.0";
                 options.MetadataAddress = options.Authority + "/.well-known/openid-configuration";
+                options.TokenValidationParameters.ValidateAudience = true;
+                options.TokenValidationParameters.ValidAudiences =
+                [
+                    configuration["AzureAd:ClientId"] ?? string.Empty,
+                    $"api://{configuration["AzureAd:ClientId"]}",
+                ];
             }
         );
 
