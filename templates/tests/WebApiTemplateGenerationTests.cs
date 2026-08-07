@@ -161,6 +161,13 @@ public class WebApiTemplateGenerationTests
             );
 
             var webApiDir = Path.Combine(outputDirectory, "src", "DornNoAuthApp.WebApi");
+            var domainDir = Path.Combine(outputDirectory, "src", "DornNoAuthApp.Domain");
+            var applicationDir = Path.Combine(outputDirectory, "src", "DornNoAuthApp.Application");
+            var infrastructureDir = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornNoAuthApp.Infrastructure"
+            );
             Assert.False(
                 File.Exists(Path.Combine(webApiDir, "Extensions", "AuthenticationExtensions.cs")),
                 "Auth=none must not emit AuthenticationExtensions.cs"
@@ -168,6 +175,64 @@ public class WebApiTemplateGenerationTests
             Assert.False(
                 File.Exists(Path.Combine(webApiDir, "Endpoints", "MeEndpoints.cs")),
                 "Auth=none must not emit MeEndpoints.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(webApiDir, "Endpoints", "AuthEndpoints.cs")),
+                "Auth=none must not emit AuthEndpoints.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(domainDir, "Users", "AppUser.cs")),
+                "Auth=none must not emit AppUser.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(applicationDir, "Auth", "Login", "LoginCommand.cs")),
+                "Auth=none must not emit LoginCommand.cs"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(applicationDir, "Auth", "Login", "LoginCommandHandler.cs")
+                ),
+                "Auth=none must not emit LoginCommandHandler.cs"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(applicationDir, "Auth", "Login", "LoginCommandValidator.cs")
+                ),
+                "Auth=none must not emit LoginCommandValidator.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(applicationDir, "Auth", "Login", "LoginResponse.cs")),
+                "Auth=none must not emit LoginResponse.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(applicationDir, "Common", "Security", "ITokenService.cs")),
+                "Auth=none must not emit ITokenService.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(infrastructureDir, "Auth", "JwtOptions.cs")),
+                "Auth=none must not emit JwtOptions.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(infrastructureDir, "Auth", "JwtTokenService.cs")),
+                "Auth=none must not emit JwtTokenService.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(infrastructureDir, "Auth", "AuthSeedOptions.cs")),
+                "Auth=none must not emit AuthSeedOptions.cs"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(infrastructureDir, "Persistence", "Seed", "AuthSeeder.cs")
+                ),
+                "Auth=none must not emit AuthSeeder.cs"
+            );
+            var migrationsDir = Path.Combine(infrastructureDir, "Persistence", "Migrations");
+            Assert.False(
+                Directory.Exists(migrationsDir)
+                    && Directory
+                        .GetFiles(migrationsDir, "*_AddAuthUser*", SearchOption.AllDirectories)
+                        .Length > 0,
+                "Auth=none must not emit any *_AddAuthUser* migration file"
             );
 
             var appsettingsPath = Path.Combine(webApiDir, "appsettings.json");
@@ -456,6 +521,29 @@ public class WebApiTemplateGenerationTests
                 $"dotnet build exited with {buildResult.ExitCode}."
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+
+            var functionalProject = Path.Combine(
+                outputDirectory,
+                "tests",
+                "DornCustomAuthApp.Functional.Tests",
+                "DornCustomAuthApp.Functional.Tests.csproj"
+            );
+            var functionalTestResult = await RunProcessAsync(
+                slnFiles[0],
+                "test",
+                functionalProject,
+                "-c",
+                "Release",
+                "--no-build",
+                "--filter",
+                "Auth"
+            );
+            Assert.True(
+                functionalTestResult.ExitCode == 0,
+                $"Generated custom-auth functional tests exited with {functionalTestResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{functionalTestResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{functionalTestResult.StdErr}"
             );
         }
         finally
@@ -865,6 +953,51 @@ public class WebApiTemplateGenerationTests
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
             );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Scaffold_CustomAuthWithDapper_ExitsOneBeforeGeneration()
+    {
+        var dornRoot = Path.GetDirectoryName(ResolveDornRootGlobalJsonPath())!;
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-d2-{Guid.NewGuid():N}");
+        try
+        {
+            var result = await RunProcessAsync(
+                Path.Combine(dornRoot, "Dorn.slnx"),
+                "run",
+                "--project",
+                Path.Combine(dornRoot, "src", "Dorn.Cli", "Dorn.Cli.csproj"),
+                "-c",
+                "Release",
+                "--no-restore",
+                "--",
+                "new",
+                "webapi",
+                "DornD2RejectedApp",
+                "--auth",
+                "custom",
+                "--orm",
+                "dapper",
+                "--output",
+                outputDirectory,
+                "--no-restore"
+            );
+
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains(
+                "requires Orm='efcore'",
+                result.StdOut + result.StdErr,
+                StringComparison.Ordinal
+            );
+            Assert.False(Directory.Exists(outputDirectory));
         }
         finally
         {

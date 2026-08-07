@@ -55,7 +55,7 @@ public sealed class LoginCommandHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithValidCredentials_ReturnsSuccessWithToken()
     {
-        var email = "demo@example.com";
+        var email = TestCredentials.DemoEmail;
         await SeedUserAsync(email, "hashed:password");
         var passwordHasher = Substitute.For<IPasswordHasher<AppUser>>();
         passwordHasher
@@ -68,7 +68,7 @@ public sealed class LoginCommandHandlerTests : IDisposable
             .Returns(new TokenResult("token-jws-value", expectedExpires));
 
         var handler = new LoginCommandHandler(_dbContext, passwordHasher, tokenService);
-        var command = new LoginCommand(email, "Passw0rd!");
+        var command = new LoginCommand(email, TestCredentials.DemoPassword);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -87,7 +87,7 @@ public sealed class LoginCommandHandlerTests : IDisposable
         var passwordHasher = Substitute.For<IPasswordHasher<AppUser>>();
         var tokenService = Substitute.For<ITokenService>();
         var handler = new LoginCommandHandler(_dbContext, passwordHasher, tokenService);
-        var command = new LoginCommand("nobody@example.com", "Passw0rd!");
+        var command = new LoginCommand("nobody@example.com", TestCredentials.DemoPassword);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -101,7 +101,7 @@ public sealed class LoginCommandHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithWrongPassword_ReturnsFailureWithSameGenericMessage()
     {
-        var email = "demo@example.com";
+        var email = TestCredentials.DemoEmail;
         await SeedUserAsync(email, "hashed:password");
         var passwordHasher = Substitute.For<IPasswordHasher<AppUser>>();
         passwordHasher
@@ -123,7 +123,7 @@ public sealed class LoginCommandHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithValidCredentials_GeneratesJwsWithCorrectSubClaim()
     {
-        var email = "demo@example.com";
+        var email = TestCredentials.DemoEmail;
         var seeded = await SeedUserAsync(email, "hashed:password");
         var passwordHasher = Substitute.For<IPasswordHasher<AppUser>>();
         passwordHasher
@@ -132,7 +132,7 @@ public sealed class LoginCommandHandlerTests : IDisposable
 
         var tokenService = new RecordingTokenService();
         var handler = new LoginCommandHandler(_dbContext, passwordHasher, tokenService);
-        var command = new LoginCommand(email, "Passw0rd!");
+        var command = new LoginCommand(email, TestCredentials.DemoPassword);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -151,5 +151,4 @@ public sealed class LoginCommandHandlerTests : IDisposable
         }
     }
 }
-
 #endif

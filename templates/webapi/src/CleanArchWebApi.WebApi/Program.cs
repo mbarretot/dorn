@@ -12,6 +12,13 @@ using CleanArchWebApi.WebApi.Extensions;
 using CleanArchWebApi.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 #endif
+#if (UseCustomAuth)
+using CleanArchWebApi.Domain.Users;
+using CleanArchWebApi.Infrastructure.Auth;
+using CleanArchWebApi.Infrastructure.Persistence.Seed;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+#endif
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +54,25 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await dbContext.Database.MigrateAsync();
+#if (UseCustomAuth)
+    var seededPassword = await AuthSeeder.SeedAsync(
+        dbContext,
+        scope.ServiceProvider.GetRequiredService<IPasswordHasher<AppUser>>(),
+        scope.ServiceProvider.GetRequiredService<IOptions<AuthSeedOptions>>(),
+        CancellationToken.None
+    );
+    if (!string.IsNullOrEmpty(seededPassword))
+    {
+        var seedEmail = scope
+            .ServiceProvider.GetRequiredService<IOptions<AuthSeedOptions>>()
+            .Value.DemoEmail;
+        app.Logger.LogWarning(
+            "Seeded demo user '{Email}' with password '{Password}' (development convenience only; configure or seed your own user in production).",
+            seedEmail,
+            seededPassword
+        );
+    }
+#endif
 }
 #endif
 
@@ -67,6 +93,9 @@ app.UseAuthorization();
 app.MapTodoEndpoints();
 #if (UseAuth)
 app.MapMeEndpoints();
+#endif
+#if (UseCustomAuth)
+app.MapAuthEndpoints();
 #endif
 #if (UseAspire)
 app.MapDefaultEndpoints();
