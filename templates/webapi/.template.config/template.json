@@ -143,7 +143,10 @@
           "exclude": [
             "docker-compose.yml",
             "docker-compose.SqlServer.yml",
-            "docker-compose.Postgres.yml"
+            "docker-compose.Postgres.yml",
+            "otel-collector-config.yaml",
+            "tempo.yaml",
+            "grafana/provisioning/datasources/datasources.yaml"
           ]
         },
         {

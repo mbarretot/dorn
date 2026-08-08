@@ -11,3 +11,6 @@
 **/.dockerignore
 **/docker-compose*.yml
 **/appsettings.Development.json
+otel-collector-config.yaml
+tempo.yaml
+grafana/

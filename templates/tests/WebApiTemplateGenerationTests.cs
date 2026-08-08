@@ -971,6 +971,26 @@ public class WebApiTemplateGenerationTests
             Assert.False(
                 File.Exists(Path.Combine(outputDirectory, "docker-compose.SqlServer.yml"))
             );
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "otel-collector-config.yaml")),
+                "Orchestrator=none must not emit otel-collector-config.yaml"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "tempo.yaml")),
+                "Orchestrator=none must not emit tempo.yaml"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(
+                        outputDirectory,
+                        "grafana",
+                        "provisioning",
+                        "datasources",
+                        "datasources.yaml"
+                    )
+                ),
+                "Orchestrator=none must not emit grafana/provisioning/datasources/datasources.yaml"
+            );
 
             var slnFiles = Directory.GetFiles(
                 outputDirectory,
@@ -1186,6 +1206,112 @@ public class WebApiTemplateGenerationTests
                 Directory.Delete(outputDirectory, recursive: true);
             }
         }
+    }
+
+    /// <summary>
+    /// Verifies the 3 generated observability config files are valid YAML and the collector
+    /// pipeline routes traces to Tempo's native OTLP receiver, logs to Loki's native OTLP
+    /// endpoint (via <c>otlphttp</c>, not the deprecated <c>loki</c> exporter), and metrics via
+    /// Prometheus remote-write.
+    /// </summary>
+    [Fact]
+    public async Task GivenDockerComposeOrchestrator_EmitsValidObservabilityConfigFiles()
+    {
+        await WithGeneratedWebApiProjectAsync(
+            "DornOtelComposeConfigApp",
+            outputDirectory =>
+            {
+                var pipelines = GetMapping(
+                    GetMapping(
+                        LoadYamlMappingRoot(
+                            Path.Combine(outputDirectory, "otel-collector-config.yaml")
+                        ),
+                        "service"
+                    ),
+                    "pipelines"
+                );
+
+                Assert.Contains("otlp/tempo", GetExporterNames(pipelines, "traces"));
+                Assert.Contains("otlphttp/loki", GetExporterNames(pipelines, "logs"));
+                Assert.Contains("prometheusremotewrite", GetExporterNames(pipelines, "metrics"));
+
+                LoadYamlMappingRoot(Path.Combine(outputDirectory, "tempo.yaml"));
+                LoadYamlMappingRoot(
+                    Path.Combine(
+                        outputDirectory,
+                        "grafana",
+                        "provisioning",
+                        "datasources",
+                        "datasources.yaml"
+                    )
+                );
+
+                return Task.CompletedTask;
+            },
+            orchestrator: "docker-compose"
+        );
+    }
+
+    /// <summary>
+    /// Verifies the generated <c>docker-compose.yml</c> declares all 5 observability services,
+    /// only publishes host ports for <c>grafana</c> and <c>otel-collector</c>, points
+    /// <c>webapi</c> at the collector's OTLP endpoint, and pins every image (no <c>:latest</c>).
+    /// </summary>
+    [Fact]
+    public async Task GivenDockerComposeOrchestrator_ComposeFileDeclaresObservabilityServices()
+    {
+        await WithGeneratedWebApiProjectAsync(
+            "DornOtelComposeServicesApp",
+            async outputDirectory =>
+            {
+                var composePath = Path.Combine(outputDirectory, "docker-compose.yml");
+                var composeContent = await File.ReadAllTextAsync(composePath);
+                Assert.DoesNotContain(":latest", composeContent, StringComparison.Ordinal);
+
+                var services = GetMapping(LoadYamlMappingRoot(composePath), "services");
+
+                foreach (
+                    var serviceName in new[]
+                    {
+                        "otel-collector",
+                        "grafana",
+                        "loki",
+                        "prometheus",
+                        "tempo",
+                    }
+                )
+                {
+                    Assert.True(
+                        TryGetChild(services, serviceName) is not null,
+                        $"docker-compose.yml must declare a '{serviceName}' service"
+                    );
+                }
+
+                foreach (var serviceName in new[] { "loki", "prometheus", "tempo" })
+                {
+                    Assert.Null(TryGetChild(GetMapping(services, serviceName), "ports"));
+                }
+
+                foreach (var serviceName in new[] { "grafana", "otel-collector" })
+                {
+                    Assert.NotNull(TryGetChild(GetMapping(services, serviceName), "ports"));
+                }
+
+                var webapiEnvironment = GetSequence(GetMapping(services, "webapi"), "environment")
+                    .Children.Select(node => ((YamlScalarNode)node).Value)
+                    .ToList();
+                Assert.Contains(
+                    webapiEnvironment,
+                    value =>
+                        value is not null
+                        && value.StartsWith(
+                            "OTEL_EXPORTER_OTLP_ENDPOINT=",
+                            StringComparison.Ordinal
+                        )
+                );
+            },
+            orchestrator: "docker-compose"
+        );
     }
 
     [Fact]
@@ -2232,16 +2358,24 @@ public class WebApiTemplateGenerationTests
     private static string ReadCiWorkflowRawText(string outputDirectory) =>
         File.ReadAllText(GetCiWorkflowPath(outputDirectory));
 
-    private static YamlMappingNode LoadCiWorkflowRoot(string outputDirectory)
+    private static YamlMappingNode LoadCiWorkflowRoot(string outputDirectory) =>
+        LoadYamlMappingRoot(GetCiWorkflowPath(outputDirectory));
+
+    private static YamlMappingNode LoadYamlMappingRoot(string path)
     {
-        var path = GetCiWorkflowPath(outputDirectory);
-        Assert.True(File.Exists(path), $"Expected CI workflow at '{path}'.");
+        Assert.True(File.Exists(path), $"Expected YAML file at '{path}'.");
 
         var yaml = new YamlStream();
         using var reader = new StringReader(File.ReadAllText(path));
         yaml.Load(reader);
         return (YamlMappingNode)yaml.Documents[0].RootNode;
     }
+
+    /// <summary>Reads the <c>exporters</c> sequence of a collector pipeline (traces/logs/metrics).</summary>
+    private static List<string?> GetExporterNames(YamlMappingNode pipelines, string pipelineName) =>
+        GetSequence(GetMapping(pipelines, pipelineName), "exporters")
+            .Children.Select(node => ((YamlScalarNode)node).Value)
+            .ToList();
 
     private static YamlNode? TryGetChild(YamlMappingNode node, string key) =>
         node.Children.TryGetValue(new YamlScalarNode(key), out var value) ? value : null;
