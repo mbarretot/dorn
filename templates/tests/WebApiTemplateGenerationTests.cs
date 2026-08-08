@@ -998,6 +998,196 @@ public class WebApiTemplateGenerationTests
         }
     }
 
+    /// <summary>
+    /// Verifies the orchestrator-agnostic OTel extraction: <c>Orchestrator=none</c> emits
+    /// <c>ObservabilityExtensions.cs</c>, wires it unconditionally from <c>Program.cs</c>, references
+    /// all 5 OTel packages from <c>WebApi.csproj</c>, and never emits <c>ServiceDefaults/</c>.
+    /// </summary>
+    [Fact]
+    public async Task GivenNoneOrchestrator_ProducesObservabilityExtension()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-otel-none-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornOtelNoneApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["Orchestrator"] = "none" }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webApiDir = Path.Combine(outputDirectory, "src", "DornOtelNoneApp.WebApi");
+
+            Assert.True(
+                File.Exists(Path.Combine(webApiDir, "Extensions", "ObservabilityExtensions.cs")),
+                "Orchestrator=none must emit ObservabilityExtensions.cs"
+            );
+            Assert.False(
+                Directory.Exists(
+                    Path.Combine(outputDirectory, "src", "DornOtelNoneApp.ServiceDefaults")
+                ),
+                "Orchestrator=none must not emit the ServiceDefaults project"
+            );
+
+            var programCs = await File.ReadAllTextAsync(Path.Combine(webApiDir, "Program.cs"));
+            Assert.Contains("AddObservability()", programCs, StringComparison.Ordinal);
+            Assert.DoesNotContain("AddServiceDefaults()", programCs, StringComparison.Ordinal);
+
+            var csproj = await File.ReadAllTextAsync(
+                Path.Combine(webApiDir, "DornOtelNoneApp.WebApi.csproj")
+            );
+            foreach (
+                var package in new[]
+                {
+                    "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+                    "OpenTelemetry.Extensions.Hosting",
+                    "OpenTelemetry.Instrumentation.AspNetCore",
+                    "OpenTelemetry.Instrumentation.Http",
+                    "OpenTelemetry.Instrumentation.Runtime",
+                }
+            )
+            {
+                Assert.Contains(
+                    $"PackageReference Include=\"{package}\"",
+                    csproj,
+                    StringComparison.Ordinal
+                );
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Verifies the default <c>Orchestrator=aspire</c> scaffold registers OTel exactly once: the
+    /// moved methods are gone from <c>ServiceDefaults/Extensions.cs</c>, its csproj carries no OTel
+    /// package reference, and the Aspire-only health-check wiring is untouched.
+    /// </summary>
+    [Fact]
+    public async Task GivenAspireOrchestrator_NoDoubleOtelRegistration()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-otel-aspire-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornOtelAspireApp",
+                outputDirectory
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var serviceDefaultsPath = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornOtelAspireApp.ServiceDefaults",
+                "Extensions.cs"
+            );
+            Assert.True(File.Exists(serviceDefaultsPath));
+            var serviceDefaultsSource = await File.ReadAllTextAsync(serviceDefaultsPath);
+            Assert.DoesNotContain(
+                "ConfigureOpenTelemetry",
+                serviceDefaultsSource,
+                StringComparison.Ordinal
+            );
+            Assert.DoesNotContain(
+                "AddOpenTelemetryExporters",
+                serviceDefaultsSource,
+                StringComparison.Ordinal
+            );
+            Assert.Contains(
+                "AddDefaultHealthChecks",
+                serviceDefaultsSource,
+                StringComparison.Ordinal
+            );
+            Assert.Contains("MapDefaultEndpoints", serviceDefaultsSource, StringComparison.Ordinal);
+            Assert.Contains("HealthEndpointPath", serviceDefaultsSource, StringComparison.Ordinal);
+            Assert.Contains(
+                "AlivenessEndpointPath",
+                serviceDefaultsSource,
+                StringComparison.Ordinal
+            );
+
+            var serviceDefaultsCsproj = await File.ReadAllTextAsync(
+                Path.Combine(
+                    outputDirectory,
+                    "src",
+                    "DornOtelAspireApp.ServiceDefaults",
+                    "DornOtelAspireApp.ServiceDefaults.csproj"
+                )
+            );
+            Assert.DoesNotContain(
+                "OpenTelemetry.",
+                serviceDefaultsCsproj,
+                StringComparison.Ordinal
+            );
+
+            var observabilityExtensionsPath = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornOtelAspireApp.WebApi",
+                "Extensions",
+                "ObservabilityExtensions.cs"
+            );
+            Assert.True(
+                File.Exists(observabilityExtensionsPath),
+                "ObservabilityExtensions.cs must be emitted for every orchestrator, including aspire"
+            );
+
+            var programCs = await File.ReadAllTextAsync(
+                Path.Combine(outputDirectory, "src", "DornOtelAspireApp.WebApi", "Program.cs")
+            );
+            Assert.Contains("AddObservability()", programCs, StringComparison.Ordinal);
+            Assert.Contains("AddServiceDefaults()", programCs, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
     [Fact]
     public async Task Scaffold_CustomAuthWithDapper_ExitsOneBeforeGeneration()
     {

@@ -2,12 +2,9 @@ using CleanArchWebApi.Application.Todos.CreateTodoItem;
 using CleanArchWebApi.Infrastructure.DependencyInjection;
 using CleanArchWebApi.WebApi;
 using CleanArchWebApi.WebApi.Endpoints;
+using CleanArchWebApi.WebApi.Extensions;
 using Dorn.Messaging;
 using FluentValidation;
-#if (UseAuth)
-using CleanArchWebApi.WebApi.Extensions;
-#endif
-
 #if (UseEfCore)
 using CleanArchWebApi.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +18,8 @@ using Microsoft.Extensions.Options;
 #endif
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddObservability();
 
 #if (UseAspire)
 builder.AddServiceDefaults();
