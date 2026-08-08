@@ -103,7 +103,7 @@ Every generated project ships verbs to operate on itself, from its root or any p
 
 `dorn <verb>` and `dotnet dorn <verb>` (local tool, via `.config/dotnet-tools.json`) are equivalent.
 
-Flags (`--orm`, `--database`, `--orchestrator`) are documented in the [template reference](./docs/templates/webapi.md).
+Flags (`--orm`, `--database`, `--orchestrator`, `--auth`) are documented in the [template reference](./docs/templates/webapi.md).
 
 ## Roadmap
 
