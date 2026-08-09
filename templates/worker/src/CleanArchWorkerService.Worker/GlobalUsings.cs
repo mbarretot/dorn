@@ -1,0 +1,11 @@
+global using CleanArchWorkerService.Application.Todos.ProcessPendingTodoItems;
+global using CleanArchWorkerService.Domain.Entities;
+global using CleanArchWorkerService.Infrastructure.DependencyInjection;
+global using CleanArchWorkerService.Infrastructure.Persistence;
+global using CleanArchWorkerService.Worker;
+global using CleanArchWorkerService.Worker.DependencyInjection;
+global using Dorn.Messaging;
+global using Dorn.Messaging.Contracts;
+global using FluentValidation;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.Extensions.Options;
