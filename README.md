@@ -23,7 +23,7 @@
 > [!TIP]
 > If this project helps you, leave a star.
 
-Dorn is a .NET scaffolding CLI generating production-ready services with **Clean Architecture**, **CQRS**, and configurable persistence, wired end-to-end from commit one. Two templates ship today: a full-featured **`webapi`** (REST, choice of ORM/database) and a scoped, minimal **`grpc`** service.
+Dorn is a .NET scaffolding CLI generating production-ready services with **Clean Architecture**, **CQRS**, and configurable persistence, wired end-to-end from commit one. Three templates ship today: a full-featured **`webapi`** (REST, choice of ORM/database), a scoped, minimal **`grpc`** service, and a scoped **`worker`** background service.
 
 ## Features
 
@@ -43,21 +43,22 @@ Dorn is a .NET scaffolding CLI generating production-ready services with **Clean
 
 ## Templates
 
-|               | `webapi`                                               | `grpc`                                             |
-| ------------- | ------------------------------------------------------ | -------------------------------------------------- |
-| Generates     | REST API (ASP.NET Core Minimal APIs)                   | gRPC service (Protobuf)                            |
-| Persistence   | EF Core or Dapper, your choice                         | EF Core (fixed)                                    |
-| Database      | SQLite, SQL Server, or PostgreSQL                      | SQLite (fixed)                                     |
-| Orchestration | Aspire, Docker Compose, or none                        | Aspire (fixed)                                     |
-| Configuration | Flags or an interactive wizard                         | None (one fixed, opinionated MVP)                  |
-| Reference     | [docs/templates/webapi.md](./docs/templates/webapi.md) | [docs/templates/grpc.md](./docs/templates/grpc.md) |
+|               | `webapi`                                               | `grpc`                                             | `worker`                                               |
+| ------------- | ------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------------------- |
+| Generates     | REST API (ASP.NET Core Minimal APIs)                   | gRPC service (Protobuf)                            | Background service (`PeriodicTimer` + `BackgroundService`) |
+| Persistence   | EF Core or Dapper, your choice                         | EF Core (fixed)                                    | EF Core (fixed)                                        |
+| Database      | SQLite, SQL Server, or PostgreSQL                      | SQLite (fixed)                                     | SQLite (fixed)                                         |
+| Orchestration | Aspire, Docker Compose, or none                        | Aspire (fixed)                                     | Aspire (fixed)                                          |
+| Configuration | Flags or an interactive wizard                         | None (one fixed, opinionated MVP)                  | None (one fixed, opinionated MVP)                       |
+| Reference     | [docs/templates/webapi.md](./docs/templates/webapi.md) | [docs/templates/grpc.md](./docs/templates/grpc.md) | [docs/templates/worker.md](./docs/templates/worker.md) |
 
 ```bash
 dorn new webapi MyApp --database postgres --orm dapper   # configurable
 dorn new grpc MyService                                  # fixed scope, zero flags
+dorn new worker MyWorker                                 # fixed scope, zero flags
 ```
 
-`grpc` is a deliberately fixed MVP, not a smaller `webapi` ([scope rationale](./docs/templates/grpc.md#scope-a-fixed-mvp-not-a-smaller-webapi)).
+`grpc` and `worker` are deliberately fixed MVPs, not a smaller `webapi` ([`grpc` scope rationale](./docs/templates/grpc.md#scope-a-fixed-mvp-not-a-smaller-webapi), [`worker` scope rationale](./docs/templates/worker.md#scope-a-fixed-mvp-not-a-smaller-webapi)).
 
 ## Quick start
 
@@ -121,6 +122,7 @@ Flags (`--orm`, `--database`, `--orchestrator`, `--auth`) are documented in the 
 
 - [x] `webapi`: Clean Architecture, CQRS, EF Core/Dapper, 4 test tiers
 - [x] `grpc`: Clean Architecture, CQRS, fixed EF Core/SQLite/Aspire MVP
+- [x] `worker`: Clean Architecture, CQRS, `PeriodicTimer`-driven background service, fixed EF Core/SQLite/Aspire MVP
 - [ ] `ui`: placeholder at [`templates/ui/README.md`](./templates/ui/README.md)
 
 Decisions behind these are recorded in [`docs/adr`](./docs/adr).
@@ -130,6 +132,7 @@ Decisions behind these are recorded in [`docs/adr`](./docs/adr).
 - [Getting started](./docs/getting-started.md): local development, from source
 - [`webapi` template reference](./docs/templates/webapi.md)
 - [`grpc` template reference](./docs/templates/grpc.md)
+- [`worker` template reference](./docs/templates/worker.md)
 - [Architecture](./docs/architecture.md): how Dorn itself is built
 - [Architecture decisions (ADRs)](./docs/adr)
 - [Contributing](./docs/contributing.md)

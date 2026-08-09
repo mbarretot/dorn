@@ -10,6 +10,7 @@ format, and licensing.
 | -------- | ---- | ----- |
 | `webapi` | Reference implementation | Follow its pattern for a new template. |
 | `grpc` | Second, narrower worked example (`templates/grpc/`, [`docs/templates/grpc.md`](./templates/grpc.md)) | Same seven steps, fixed to one combination instead of `webapi`'s `--database`/`--orm`/`--orchestrator` choices. |
+| `worker` | Third worked example, non-transport trigger (`templates/worker/`, [`docs/templates/worker.md`](./templates/worker.md)) | Same seven steps, fixed scope like `grpc`; the presentation layer is a `PeriodicTimer`-driven `BackgroundService` instead of an inbound request. |
 | `ui` | Next on the roadmap | Currently just a placeholder at `templates/ui/README.md`. |
 
 Steps to add a new template:
