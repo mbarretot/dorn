@@ -1,4 +1,5 @@
 using Dorn.Cli.Commands.Coverage;
+using Dorn.Cli.Commands.Doctor;
 using Dorn.Cli.Commands.New;
 using Dorn.Cli.Commands.Run;
 using Dorn.Cli.Commands.Test;
@@ -6,6 +7,7 @@ using Dorn.Cli.Coverage;
 using Dorn.Cli.Execution;
 using Dorn.Cli.Infrastructure;
 using Dorn.Cli.Projects;
+using Dorn.Cli.Templating;
 using Dorn.Cli.Testing;
 using Dorn.Core.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +26,7 @@ services.AddSingleton(AnsiConsole.Console);
 services.AddSingleton<IProcessRunner, ProcessRunner>();
 services.AddSingleton<ISignalRegistration, SignalRegistration>();
 services.AddSingleton<IProjectContextResolver, ProjectContextResolver>();
+services.AddSingleton<ITemplatesRootLocator, TemplatesRootLocator>();
 services.AddSingleton<DotnetTestRunner>();
 services.AddSingleton<IDotnetTestRunner>(sp => sp.GetRequiredService<DotnetTestRunner>());
 services.AddSingleton<CoverageReporter>();
@@ -57,6 +60,9 @@ app.Configure(config =>
     config
         .AddCommand<CoverageCommand>("coverage")
         .WithDescription("Run tests with coverage and apply the 80% threshold gate.");
+    config
+        .AddCommand<DoctorCommand>("doctor")
+        .WithDescription("Check that the local environment is ready to run dorn.");
 });
 
 return await app.RunAsync(args);
@@ -81,6 +87,7 @@ static void ShowWelcome()
         "Run the generated project (auto-detects AppHost/Compose/Plain)."
     );
     table.AddRow("[green]coverage[/]", "Run tests with coverage; gate at 80%.");
+    table.AddRow("[green]doctor[/]", "Check the local environment (templates, .NET SDK, Docker).");
     AnsiConsole.Write(table);
 
     AnsiConsole.WriteLine();
