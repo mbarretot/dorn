@@ -1,64 +1,52 @@
 <Project>
-  <!-- Self-contained on purpose: not shared with the Dorn repo root, see Directory.Build.props. -->
+  <!-- Self-contained; not shared with the Dorn repo root, see Directory.Build.props. -->
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Dorn's own packages - resolved from a local feed during development, from NuGet.org
-         for end-user installs. See nuget.config, eng/scripts/pack-packages.ps1, and
-         docs/adr/0011-*.md. -->
+    <!-- Local feed in dev, NuGet.org for end users; see docs/adr/0011-*.md. -->
     <PackageVersion Include="Dorn.Messaging.Contracts" Version="1.0.1" />
     <PackageVersion Include="Dorn.Messaging" Version="1.0.1" />
     <PackageVersion Include="Dorn.SharedKernel" Version="1.0.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Persistence — sqlite + EF Core only, no provider axis (see design D2).
-         Microsoft.EntityFrameworkCore.Sqlite 10.0.9 pulls SQLitePCLRaw.lib.e_sqlite3 2.1.11,
-         flagged by GHSA-2m69-gcr7-jv3q (bundled SQLite older than 3.50.2). No patched
-         SQLitePCLRaw version exists yet (first_patched_version is null upstream); tracked,
-         not fixable via override. -->
+    <!-- Sqlite + EF Core only (design D2). 10.0.9 pulls a SQLitePCLRaw flagged by
+         GHSA-2m69-gcr7-jv3q; no patched version exists upstream yet. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
-    <!-- Direct ADO.NET provider used by PersistenceTestFixture for SqliteConnection.ClearAllPools(). -->
+    <!-- ADO.NET provider for PersistenceTestFixture's SqliteConnection.ClearAllPools(). -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Validation -->
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
 
-    <!-- DI / Configuration abstractions used outside the ASP.NET Core host (Application, Infrastructure) -->
     <PackageVersion
       Include="Microsoft.Extensions.DependencyInjection.Abstractions"
       Version="10.0.9"
     />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
-    <!-- Concrete DI container (not just abstractions), needed by MediatorPublishTests to build
-         a real IServiceProvider. -->
+    <!-- Concrete container, not just abstractions — MediatorPublishTests needs a real IServiceProvider. -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
 
-    <!-- Testing -->
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.3" />
-    <!-- Drives PeriodicTimer(TimeSpan, TimeProvider) deterministically in the Functional tier
-         (D6/D7) — the worker has no HTTP surface to round-trip, so Mvc.Testing is not needed. -->
+    <!-- Drives PeriodicTimer(TimeSpan, TimeProvider) deterministically in Functional tests (D6/D7). -->
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.8.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Aspire orchestration / ServiceDefaults: telemetry, health checks, service discovery,
-         resilience. No Aspire.Hosting.SqlServer/PostgreSQL — sqlite is the only provider
-         (see design D2), and aspire is the only orchestrator (see design D9). -->
+    <!-- Aspire only; sqlite is the only provider (D2), aspire the only orchestrator (D9). -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.7.0" />
