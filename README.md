@@ -101,6 +101,7 @@ Every generated project ships verbs to operate on itself, from its root or any p
 | `dorn test`     | Runs all 4 tiers (`--tier` to filter to one)                                           |
 | `dorn run`      | Auto-detects AppHost → Aspire, `docker-compose.yml` → Compose, else plain `dotnet run` |
 | `dorn coverage` | Runs tests with coverage, gated at a fixed 80%                                         |
+| `dorn doctor`   | Checks environment readiness (templates root, dotnet SDK, Docker when Compose)         |
 
 `dorn <verb>` and `dotnet dorn <verb>` (local tool, via `.config/dotnet-tools.json`) are equivalent.
 
