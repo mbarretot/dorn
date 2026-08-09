@@ -1,7 +1,8 @@
 # Contributing
 
 Thanks for considering a contribution to Dorn. This document covers adding a new
-template, coding conventions, the pre-PR verification loop, and licensing.
+template, coding conventions, the pre-PR verification loop, PR title/description
+format, and licensing.
 
 ## Adding a new template
 
@@ -72,6 +73,45 @@ DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" 
 
 Enforced in `.github/workflows/ci.yml` on every push/PR (`ubuntu-latest`/`windows-latest`
 matrix).
+
+## Pull request title and description
+
+**Title**: an emoji matching the change type, then a conventional-commit-style summary.
+
+| Emoji | Type | Example |
+|---|---|---|
+| ✨ | `feat` | `✨ feat: opt-in JWT auth for the webapi template` |
+| 🐛 | `fix` | `🐛 fix: audience validation missing on azure-ad tokens` |
+| 📚 | `docs` | `📚 docs: ADR 0017 + observability template reference` |
+| ♻️ | `refactor` | `♻️ refactor: comment cleanup round 7` |
+| 🔀 | `merge` | `🔀 merge: develop → main` |
+
+**Description**: sections with emoji headers, tables for structured info, bullets/checklists
+for the rest. Not running prose.
+
+```markdown
+## 🎯 What & Why
+1-2 sentences: what changed, why it was needed.
+
+## 📦 What's Included
+| Area | Change |
+|---|---|
+| `AddAzureAdAuth` | Real Microsoft.Identity.Web, not hand-rolled |
+
+## ✅ Verification
+- [x] `dotnet build` → 0 errors
+- [x] 44/44 TemplateGenerationTests
+- [x] `csharpier check` clean
+
+## 📊 Stats
+| Metric | Value |
+|---|---|
+| Files | 7 |
+| Lines | +234 / -9 |
+```
+
+Scale sections to the change: a one-file docs fix doesn't need a Stats table, a multi-service
+feature does.
 
 ## License
 
