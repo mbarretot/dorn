@@ -638,6 +638,28 @@ public class WebApiTemplateGenerationTests
                 path => Path.GetFileName(path) == "ApplicationDbContextModelSnapshot.cs"
             );
 
+            // Exclusion is gated on UseCompose alone, orthogonal to DatabaseProvider.
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "otel-collector-config.yaml")),
+                "DatabaseProvider=sqlserver with Orchestrator=aspire must not emit otel-collector-config.yaml"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "tempo.yaml")),
+                "DatabaseProvider=sqlserver with Orchestrator=aspire must not emit tempo.yaml"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(
+                        outputDirectory,
+                        "grafana",
+                        "provisioning",
+                        "datasources",
+                        "datasources.yaml"
+                    )
+                ),
+                "DatabaseProvider=sqlserver with Orchestrator=aspire must not emit grafana/provisioning/datasources/datasources.yaml"
+            );
+
             var slnFiles = Directory.GetFiles(
                 outputDirectory,
                 "*.slnx",
@@ -713,6 +735,28 @@ public class WebApiTemplateGenerationTests
             Assert.Single(
                 Directory.GetFiles(migrationsDirectory, "*ModelSnapshot.cs"),
                 path => Path.GetFileName(path) == "ApplicationDbContextModelSnapshot.cs"
+            );
+
+            // Exclusion is gated on UseCompose alone, orthogonal to DatabaseProvider.
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "otel-collector-config.yaml")),
+                "DatabaseProvider=postgres with Orchestrator=aspire must not emit otel-collector-config.yaml"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "tempo.yaml")),
+                "DatabaseProvider=postgres with Orchestrator=aspire must not emit tempo.yaml"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(
+                        outputDirectory,
+                        "grafana",
+                        "provisioning",
+                        "datasources",
+                        "datasources.yaml"
+                    )
+                ),
+                "DatabaseProvider=postgres with Orchestrator=aspire must not emit grafana/provisioning/datasources/datasources.yaml"
             );
 
             var slnFiles = Directory.GetFiles(
@@ -1311,6 +1355,86 @@ public class WebApiTemplateGenerationTests
                 );
             },
             orchestrator: "docker-compose"
+        );
+    }
+
+    /// <summary>
+    /// Verifies the SqlServer and Postgres compose variants each declare all 5 observability
+    /// services with the same port-publishing asymmetry and no <c>:latest</c> tags, the webapi
+    /// OTLP endpoint env var, and a map-form <c>depends_on</c> that includes BOTH the DB service
+    /// (<c>service_healthy</c>) AND <c>otel-collector</c> (<c>service_started</c>): a
+    /// cross-dependency shape the base sqlite compose file never had to cover.
+    /// </summary>
+    [Theory]
+    [InlineData("sqlserver", "sqlserver")]
+    [InlineData("postgres", "postgres")]
+    public async Task GivenDockerComposeOrchestrator_DbVariantComposeFileDeclaresObservabilityServices(
+        string databaseProvider,
+        string dbServiceName
+    )
+    {
+        await WithGeneratedWebApiProjectAsync(
+            $"DornOtelCompose{databaseProvider}App",
+            async outputDirectory =>
+            {
+                // The DB-specific template file is renamed to docker-compose.yml on emission;
+                // there is only ever one compose file in the generated output.
+                var composePath = Path.Combine(outputDirectory, "docker-compose.yml");
+                var composeContent = await File.ReadAllTextAsync(composePath);
+                Assert.DoesNotContain(":latest", composeContent, StringComparison.Ordinal);
+
+                var services = GetMapping(LoadYamlMappingRoot(composePath), "services");
+
+                foreach (
+                    var serviceName in new[]
+                    {
+                        "otel-collector",
+                        "grafana",
+                        "loki",
+                        "prometheus",
+                        "tempo",
+                    }
+                )
+                {
+                    Assert.True(
+                        TryGetChild(services, serviceName) is not null,
+                        $"docker-compose.yml (from {databaseProvider} variant) must declare a '{serviceName}' service"
+                    );
+                }
+
+                foreach (var serviceName in new[] { "loki", "prometheus", "tempo" })
+                {
+                    Assert.Null(TryGetChild(GetMapping(services, serviceName), "ports"));
+                }
+
+                foreach (var serviceName in new[] { "grafana", "otel-collector" })
+                {
+                    Assert.NotNull(TryGetChild(GetMapping(services, serviceName), "ports"));
+                }
+
+                var webapi = GetMapping(services, "webapi");
+                var webapiEnvironment = GetSequence(webapi, "environment")
+                    .Children.Select(node => ((YamlScalarNode)node).Value)
+                    .ToList();
+                Assert.Contains(
+                    webapiEnvironment,
+                    value =>
+                        value is not null
+                        && value.StartsWith(
+                            "OTEL_EXPORTER_OTLP_ENDPOINT=",
+                            StringComparison.Ordinal
+                        )
+                );
+
+                var webapiDependsOn = GetMapping(webapi, "depends_on");
+                var dbDependsOn = GetMapping(webapiDependsOn, dbServiceName);
+                Assert.Equal("service_healthy", GetScalar(dbDependsOn, "condition"));
+
+                var otelDependsOn = GetMapping(webapiDependsOn, "otel-collector");
+                Assert.Equal("service_started", GetScalar(otelDependsOn, "condition"));
+            },
+            orchestrator: "docker-compose",
+            databaseProvider: databaseProvider
         );
     }
 
