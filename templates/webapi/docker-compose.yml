@@ -38,9 +38,8 @@ services:
       - /loki
   prometheus:
     image: prom/prometheus:v3.13.2
-    # Overriding `command` replaces the image CMD, so --config.file and --storage.tsdb.path
-    # must be restated. The image's bundled /etc/prometheus/prometheus.yml is sufficient:
-    # every sample arrives via remote-write, so no scrape config is shipped.
+    # Overriding `command` drops the image CMD; --config.file/--storage.tsdb.path must be
+    # restated. Bundled prometheus.yml is fine: samples arrive via remote-write only.
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
