@@ -14,7 +14,7 @@
 [![Dorn.Templates.WebApi](https://img.shields.io/nuget/v/Dorn.Templates.WebApi?style=flat-square&label=Dorn.Templates.WebApi)](https://www.nuget.org/packages/Dorn.Templates.WebApi)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](./docs/contributing.md)
 
-[Quick start](#quick-start) • [Templates](#templates) • [Why Dorn](#why-dorn) • [Architecture](#architecture) • [CLI reference](#cli-reference) • [Documentation](#documentation)
+[Features](#features) • [Templates](#templates) • [Quick start](#quick-start) • [Prerequisites](#prerequisites) • [Architecture](#architecture) • [CLI reference](#cli-reference) • [Documentation](#documentation)
 
 </div>
 
@@ -25,15 +25,21 @@
 
 Dorn is a .NET scaffolding CLI generating production-ready services with **Clean Architecture**, **CQRS**, and configurable persistence, wired end-to-end from commit one. Two templates ship today: a full-featured **`webapi`** (REST, choice of ORM/database) and a scoped, minimal **`grpc`** service.
 
-## Quick start
+## Features
 
-```bash
-dotnet tool install --global Dorn.Cli
-dorn new webapi MyApp
-cd MyApp && dotnet build
-```
+`dorn new webapi MyApp` resolves, in one command, what you'd otherwise re-solve from scratch every time:
 
-Prefer not to install a global tool? `webapi` also ships as a standard `dotnet new` template ([alternative installation](./docs/templates/webapi.md#alternative-vanilla-dotnet-new-without-the-dorn-cli)).
+- 🎯 **Zero-config by default** — SQLite needs no external database; Aspire needs no Docker to get started
+- 🏛️ **The dependency rule is enforced, not just documented** — ArchUnitNET tests fail the build if a layer imports something it shouldn't
+- 🧪 **Four test tiers generated with the project** — Application, Integration, Architecture, Functional
+- 📦 **No commercial licenses anywhere** — a from-scratch, MIT-licensed CQRS mediator (no MediatR), xUnit + NSubstitute for tests (no FluentAssertions, no Moq)
+- 🔄 **CI from the first push** — every generated project ships a working GitHub Actions workflow and a pinned `global.json`
+- 📊 **Observability on every orchestrator, not just Aspire** — `docker-compose` gets a real Grafana + Loki + Prometheus + Tempo stack out of the box
+- 🩺 **Preflight checks** — `dorn doctor` verifies your environment before you scaffold anything
+
+<p align="center">
+  <img src="./docs/images/architecture-illustrative.png" alt="A layered chevron mark: one command on the surface, a fully resolved architecture underneath" width="360">
+</p>
 
 ## Templates
 
@@ -53,20 +59,24 @@ dorn new grpc MyService                                  # fixed scope, zero fla
 
 `grpc` is a deliberately fixed MVP, not a smaller `webapi` ([scope rationale](./docs/templates/grpc.md#scope-a-fixed-mvp-not-a-smaller-webapi)).
 
-## Why Dorn
+## Quick start
 
-<p align="center">
-  <img src="./docs/images/architecture-illustrative.png" alt="A layered chevron mark: one command on the surface, a fully resolved architecture underneath" width="360">
-</p>
+```bash
+dotnet tool install --global Dorn.Cli
+dorn new webapi MyApp
+cd MyApp && dotnet build
+```
 
-`dorn new webapi MyApp` resolves, in one command, what you'd otherwise re-solve from scratch every time:
+Prefer not to install a global tool? `webapi` also ships as a standard `dotnet new` template ([alternative installation](./docs/templates/webapi.md#alternative-vanilla-dotnet-new-without-the-dorn-cli)).
 
-- **No commercial licenses anywhere**: a from-scratch, MIT-licensed CQRS mediator (no MediatR), xUnit + NSubstitute for tests (no FluentAssertions, no Moq)
-- **The dependency rule is enforced, not just documented**: ArchUnitNET tests fail the build if a layer imports something it shouldn't
-- **Four test tiers generated with the project**: Application, Integration, Architecture, Functional
-- **Zero-config by default**: SQLite needs no external database; Aspire needs no Docker to get started
-- **CI from the first push**: every generated project ships a working GitHub Actions workflow and a pinned `global.json`
-- **Observability on every orchestrator, not just Aspire**: `docker-compose` gets a real Grafana + Loki + Prometheus + Tempo stack out of the box
+## Prerequisites
+
+- [.NET SDK 10.0](https://dotnet.microsoft.com/download) or higher (see [`global.json`](./global.json) for the exact pinned version)
+- Optional: [Docker](https://www.docker.com/), for Compose-orchestrated projects or non-SQLite integration tests
+- Optional: an IDE — Visual Studio 2022, VS Code, or JetBrains Rider
+
+> [!TIP]
+> Run `dorn doctor` after installing to confirm your environment is ready.
 
 ## Architecture
 
@@ -97,7 +107,7 @@ Dependencies point strictly inward:
 Every generated project ships verbs to operate on itself, from its root or any parent (`--project <path>`):
 
 | Command         | Does                                                                                   |
-| --------------- | -------------------------------------------------------------------------------------- |
+| --------------- | --------------------------------------------------------------------------------------- |
 | `dorn test`     | Runs all 4 tiers (`--tier` to filter to one)                                           |
 | `dorn run`      | Auto-detects AppHost → Aspire, `docker-compose.yml` → Compose, else plain `dotnet run` |
 | `dorn coverage` | Runs tests with coverage, gated at a fixed 80%                                         |
