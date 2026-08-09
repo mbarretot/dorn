@@ -7,10 +7,7 @@ using OpenTelemetry.Trace;
 
 namespace CleanArchWebApi.WebApi.Extensions;
 
-/// <summary>
-/// OpenTelemetry logging, metrics, and tracing for every orchestrator. The OTLP exporter
-/// activates only when OTEL_EXPORTER_OTLP_ENDPOINT is set, so this is inert by default.
-/// </summary>
+/// <summary>Inert by default: the OTLP exporter only activates when OTEL_EXPORTER_OTLP_ENDPOINT is set.</summary>
 public static class ObservabilityExtensions
 {
     // Duplicated, not moved: ServiceDefaults (Aspire-only) still needs its own private
