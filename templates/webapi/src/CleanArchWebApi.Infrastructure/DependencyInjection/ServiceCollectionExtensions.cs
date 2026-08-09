@@ -1,5 +1,15 @@
 using CleanArchWebApi.Application.Common.Persistence;
+#if (UseCustomAuth)
+using CleanArchWebApi.Application.Common.Security;
+#endif
 using CleanArchWebApi.Domain.Common.Interfaces;
+#if (UseCustomAuth)
+using CleanArchWebApi.Domain.Users;
+using CleanArchWebApi.Infrastructure.Auth;
+#endif
+#if (UseCustomAuth)
+using Microsoft.AspNetCore.Identity;
+#endif
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -34,6 +44,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<Repositories.Dapper.DapperContext>();
 
         services.AddScoped<ITodoItemRepository, Repositories.Dapper.TodoItemRepository>();
+#endif
+
+#if (UseCustomAuth)
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<AuthSeedOptions>(
+            configuration.GetSection(AuthSeedOptions.SectionName)
+        );
+        services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
+        services.AddScoped<ITokenService, JwtTokenService>();
 #endif
 
         return services;

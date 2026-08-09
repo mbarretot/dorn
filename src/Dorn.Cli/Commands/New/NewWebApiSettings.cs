@@ -35,6 +35,12 @@ public sealed class NewWebApiSettings : CommandSettings
     )]
     public string? Orchestrator { get; init; }
 
+    [CommandOption("--auth")]
+    [Description(
+        "Authentication scheme: none (default), custom (self-issued JWT with seeded user), or azure-ad (validates Microsoft Entra ID tokens). Prompted interactively if omitted and the session is interactive."
+    )]
+    public string? Auth { get; init; }
+
     [CommandOption("--no-restore")]
     [Description(
         "Skip the automatic `dotnet tool restore` after generation. By default, dorn restores local tools (e.g. dorn.cli) so `dotnet dorn <verb>` works immediately."

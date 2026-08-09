@@ -1,3 +1,8 @@
+#if (UseCustomAuth)
+using CleanArchWebApi.Domain.Users;
+using Microsoft.AspNetCore.Identity;
+#endif
+
 namespace CleanArchWebApi.Infrastructure.Persistence;
 
 public class ApplicationDbContext : DbContext, IApplicationDbContext
@@ -14,6 +19,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     }
 
     public DbSet<TodoItem> Items => Set<TodoItem>();
+
+#if (UseCustomAuth)
+    public DbSet<AppUser> Users => Set<AppUser>();
+#endif
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -46,6 +55,14 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             builder.HasKey(item => item.Id);
             builder.Property(item => item.Title).IsRequired().HasMaxLength(200);
         });
+
+#if (UseCustomAuth)
+        modelBuilder.Entity<AppUser>(builder =>
+        {
+            builder.HasIndex(u => u.Email).IsUnique();
+            builder.HasIndex(u => u.NormalizedEmail).IsUnique();
+        });
+#endif
 
         base.OnModelCreating(modelBuilder);
     }

@@ -62,7 +62,21 @@
       "description": "Local orchestration approach for the generated service."
     },
     "UseAspire": { "type": "computed", "value": "(Orchestrator == \"aspire\")" },
-    "UseCompose": { "type": "computed", "value": "(Orchestrator == \"docker-compose\")" }
+    "UseCompose": { "type": "computed", "value": "(Orchestrator == \"docker-compose\")" },
+    "Auth": {
+      "type": "parameter",
+      "datatype": "choice",
+      "choices": [
+        { "choice": "none", "description": "No authentication (default)." },
+        { "choice": "custom", "description": "Self-issued JWT with a seeded demo user." },
+        { "choice": "azure-ad", "description": "Validate Microsoft Entra ID tokens (validation only)." }
+      ],
+      "defaultValue": "none",
+      "description": "Authentication scheme for the generated API."
+    },
+    "UseCustomAuth": { "type": "computed", "value": "(Auth == \"custom\")" },
+    "UseAzureAdAuth": { "type": "computed", "value": "(Auth == \"azure-ad\")" },
+    "UseAuth": { "type": "computed", "value": "(UseCustomAuth || UseAzureAdAuth)" }
   },
   "sources": [
     {
@@ -129,7 +143,10 @@
           "exclude": [
             "docker-compose.yml",
             "docker-compose.SqlServer.yml",
-            "docker-compose.Postgres.yml"
+            "docker-compose.Postgres.yml",
+            "otel-collector-config.yaml",
+            "tempo.yaml",
+            "grafana/provisioning/datasources/datasources.yaml"
           ]
         },
         {
@@ -185,6 +202,35 @@
           "exclude": [
             ".github/config/db-provider.txt.tpl-sqlite",
             ".github/config/db-provider.txt.tpl-sqlserver"
+          ]
+        },
+        {
+          "condition": "(!UseAuth)",
+          "exclude": [
+            "src/CleanArchWebApi.WebApi/Extensions/AuthenticationExtensions.cs",
+            "src/CleanArchWebApi.WebApi/Endpoints/MeEndpoints.cs"
+          ]
+        },
+        {
+          "condition": "(!UseCustomAuth)",
+          "exclude": [
+            "src/CleanArchWebApi.WebApi/Endpoints/AuthEndpoints.cs",
+            "src/CleanArchWebApi.Domain/Users/AppUser.cs",
+            "src/CleanArchWebApi.Application/Auth/Login/LoginCommand.cs",
+            "src/CleanArchWebApi.Application/Auth/Login/LoginCommandHandler.cs",
+            "src/CleanArchWebApi.Application/Auth/Login/LoginCommandValidator.cs",
+            "src/CleanArchWebApi.Application/Auth/Login/LoginResponse.cs",
+            "src/CleanArchWebApi.Application/Common/Security/ITokenService.cs",
+            "src/CleanArchWebApi.Infrastructure/Auth/JwtOptions.cs",
+            "src/CleanArchWebApi.Infrastructure/Auth/JwtTokenService.cs",
+            "src/CleanArchWebApi.Infrastructure/Auth/AuthSeedOptions.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Seed/AuthSeeder.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/20260807050632_AddAuthUser.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Sqlite/20260807050632_AddAuthUser.Designer.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/20260807050702_AddAuthUser.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/20260807050702_AddAuthUser.Designer.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Postgres/20260807050712_AddAuthUser.cs",
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Postgres/20260807050712_AddAuthUser.Designer.cs"
           ]
         }
       ]

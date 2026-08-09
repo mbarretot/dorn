@@ -1,10 +1,8 @@
 <Project>
   <!-- Self-contained on purpose: not shared with the Dorn repo root, see Directory.Build.props. -->
-
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
-
   <ItemGroup>
     <!-- Dorn's own packages - resolved from a local feed during development, from NuGet.org
              for end-user installs. See nuget.config, eng/scripts/pack-packages.ps1, and
@@ -13,7 +11,6 @@
     <PackageVersion Include="Dorn.Messaging" Version="1.0.1" />
     <PackageVersion Include="Dorn.SharedKernel" Version="1.0.1" />
   </ItemGroup>
-
   <ItemGroup>
     <!-- Persistence -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
@@ -28,24 +25,34 @@
     <!-- Npgsql's EF provider tracks EF Core's major.minor, not its exact patch — 10.0.3 is the
          latest stable on the 10.0.x line as of this pin, confirmed against nuget.org. -->
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-
     <!-- Micro-ORM: Only Infrastructure references this, and only when Orm=dapper. -->
     <PackageVersion Include="Dapper" Version="2.1.35" />
     <!-- Direct ADO.NET providers for Dapper -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
-
     <!-- Web -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
     <!-- Transitive override: Microsoft.AspNetCore.OpenApi 10.0.9 still pulls Microsoft.OpenApi 2.0.0,
              vulnerable to GHSA-v5pm-xwqc-g5wc (stack overflow parsing circular schema refs), patched in 2.7.5+. -->
     <PackageVersion Include="Microsoft.OpenApi" Version="2.10.0" />
-
+    <!-- Auth (declared unconditionally so central package management validates the conditional reference;
+         the actual PackageReference in CleanArchWebApi.WebApi.csproj is condition-controlled). -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Identity.Stores" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.22.0" />
+    <!-- Only restored when Auth=azure-ad — wraps AddJwtBearer with Entra ID-specific
+         defaults (Authority/audience derivation from AzureAd:TenantId/ClientId, no
+         client secret needed for the validate-only scenario). -->
+    <PackageVersion
+      Include="Microsoft.Identity.Web"
+      Version="4.14.2"
+      Condition="'$(UseAzureAdAuth)' == 'True'"
+    />
     <!-- Validation -->
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-
     <!-- DI / Configuration abstractions used outside the ASP.NET Core host (Application, Infrastructure) -->
     <PackageVersion
       Include="Microsoft.Extensions.DependencyInjection.Abstractions"
@@ -56,7 +63,6 @@
     <!-- Concrete DI container (not just abstractions), needed by MediatorPublishTests to build
              a real IServiceProvider. -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
-
     <!-- Testing -->
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
@@ -81,14 +87,16 @@
     />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
   </ItemGroup>
-
   <ItemGroup>
-    <!-- Aspire orchestration / ServiceDefaults: telemetry, health checks, service discovery, resilience. -->
+    <!-- Aspire orchestration / ServiceDefaults: health checks, service discovery, resilience. -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.7.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Observability: referenced unconditionally by WebApi (all orchestrators). -->
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />

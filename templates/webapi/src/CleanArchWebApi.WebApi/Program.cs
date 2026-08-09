@@ -2,14 +2,24 @@ using CleanArchWebApi.Application.Todos.CreateTodoItem;
 using CleanArchWebApi.Infrastructure.DependencyInjection;
 using CleanArchWebApi.WebApi;
 using CleanArchWebApi.WebApi.Endpoints;
+using CleanArchWebApi.WebApi.Extensions;
 using Dorn.Messaging;
 using FluentValidation;
 #if (UseEfCore)
 using CleanArchWebApi.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 #endif
+#if (UseCustomAuth)
+using CleanArchWebApi.Domain.Users;
+using CleanArchWebApi.Infrastructure.Auth;
+using CleanArchWebApi.Infrastructure.Persistence.Seed;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+#endif
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddObservability();
 
 #if (UseAspire)
 builder.AddServiceDefaults();
@@ -23,6 +33,15 @@ builder.Services.AddOpenApi();
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
 builder.Services.AddProblemDetails();
 
+#if (UseAuth)
+#if (UseCustomAuth)
+builder.Services.AddCustomJwtAuth(builder.Configuration, builder.Environment);
+#elif (UseAzureAdAuth)
+builder.Services.AddAzureAdAuth(builder.Configuration);
+#endif
+builder.Services.AddAuthorization();
+#endif
+
 var app = builder.Build();
 
 #if (UseEfCore)
@@ -34,6 +53,25 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await dbContext.Database.MigrateAsync();
+#if (UseCustomAuth)
+    var seededPassword = await AuthSeeder.SeedAsync(
+        dbContext,
+        scope.ServiceProvider.GetRequiredService<IPasswordHasher<AppUser>>(),
+        scope.ServiceProvider.GetRequiredService<IOptions<AuthSeedOptions>>(),
+        CancellationToken.None
+    );
+    if (!string.IsNullOrEmpty(seededPassword))
+    {
+        var seedEmail = scope
+            .ServiceProvider.GetRequiredService<IOptions<AuthSeedOptions>>()
+            .Value.DemoEmail;
+        app.Logger.LogWarning(
+            "Seeded demo user '{Email}' with password '{Password}' (development convenience only; configure or seed your own user in production).",
+            seedEmail,
+            seededPassword
+        );
+    }
+#endif
 }
 #endif
 
@@ -46,7 +84,18 @@ app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
 
+#if (UseAuth)
+app.UseAuthentication();
+app.UseAuthorization();
+#endif
+
 app.MapTodoEndpoints();
+#if (UseAuth)
+app.MapMeEndpoints();
+#endif
+#if (UseCustomAuth)
+app.MapAuthEndpoints();
+#endif
 #if (UseAspire)
 app.MapDefaultEndpoints();
 #endif

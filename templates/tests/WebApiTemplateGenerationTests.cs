@@ -128,6 +128,450 @@ public class WebApiTemplateGenerationTests
         }
     }
 
+    [Fact]
+    public async Task GenerateAndBuild_DornWebApiTemplateWithNoAuth_EmitsNoAuthArtifacts()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-noauth-{Guid.NewGuid():N}");
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornNoAuthApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["Auth"] = "none" }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webApiDir = Path.Combine(outputDirectory, "src", "DornNoAuthApp.WebApi");
+            var domainDir = Path.Combine(outputDirectory, "src", "DornNoAuthApp.Domain");
+            var applicationDir = Path.Combine(outputDirectory, "src", "DornNoAuthApp.Application");
+            var infrastructureDir = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornNoAuthApp.Infrastructure"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(webApiDir, "Extensions", "AuthenticationExtensions.cs")),
+                "Auth=none must not emit AuthenticationExtensions.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(webApiDir, "Endpoints", "MeEndpoints.cs")),
+                "Auth=none must not emit MeEndpoints.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(webApiDir, "Endpoints", "AuthEndpoints.cs")),
+                "Auth=none must not emit AuthEndpoints.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(domainDir, "Users", "AppUser.cs")),
+                "Auth=none must not emit AppUser.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(applicationDir, "Auth", "Login", "LoginCommand.cs")),
+                "Auth=none must not emit LoginCommand.cs"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(applicationDir, "Auth", "Login", "LoginCommandHandler.cs")
+                ),
+                "Auth=none must not emit LoginCommandHandler.cs"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(applicationDir, "Auth", "Login", "LoginCommandValidator.cs")
+                ),
+                "Auth=none must not emit LoginCommandValidator.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(applicationDir, "Auth", "Login", "LoginResponse.cs")),
+                "Auth=none must not emit LoginResponse.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(applicationDir, "Common", "Security", "ITokenService.cs")),
+                "Auth=none must not emit ITokenService.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(infrastructureDir, "Auth", "JwtOptions.cs")),
+                "Auth=none must not emit JwtOptions.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(infrastructureDir, "Auth", "JwtTokenService.cs")),
+                "Auth=none must not emit JwtTokenService.cs"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(infrastructureDir, "Auth", "AuthSeedOptions.cs")),
+                "Auth=none must not emit AuthSeedOptions.cs"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(infrastructureDir, "Persistence", "Seed", "AuthSeeder.cs")
+                ),
+                "Auth=none must not emit AuthSeeder.cs"
+            );
+            var migrationsDir = Path.Combine(infrastructureDir, "Persistence", "Migrations");
+            Assert.False(
+                Directory.Exists(migrationsDir)
+                    && Directory
+                        .GetFiles(migrationsDir, "*_AddAuthUser*", SearchOption.AllDirectories)
+                        .Length > 0,
+                "Auth=none must not emit any *_AddAuthUser* migration file"
+            );
+
+            var appsettingsPath = Path.Combine(webApiDir, "appsettings.json");
+            Assert.True(File.Exists(appsettingsPath));
+            var appsettings = await File.ReadAllTextAsync(appsettingsPath);
+            Assert.DoesNotContain("\"Jwt\"", appsettings, StringComparison.Ordinal);
+            Assert.DoesNotContain("SigningKey", appsettings, StringComparison.Ordinal);
+
+            var programCsPath = Path.Combine(webApiDir, "Program.cs");
+            Assert.True(File.Exists(programCsPath));
+            var programCs = await File.ReadAllTextAsync(programCsPath);
+            Assert.DoesNotContain("UseAuthentication", programCs, StringComparison.Ordinal);
+            Assert.DoesNotContain("UseAuthorization(", programCs, StringComparison.Ordinal);
+            Assert.DoesNotContain("MapMeEndpoints", programCs, StringComparison.Ordinal);
+
+            var csprojPath = Path.Combine(webApiDir, "DornNoAuthApp.WebApi.csproj");
+            Assert.True(File.Exists(csprojPath));
+            var csproj = await File.ReadAllTextAsync(csprojPath);
+            Assert.DoesNotContain(
+                "Microsoft.AspNetCore.Authentication.JwtBearer",
+                csproj,
+                StringComparison.Ordinal
+            );
+            Assert.DoesNotContain(
+                "Microsoft.Extensions.Identity.Core",
+                csproj,
+                StringComparison.Ordinal
+            );
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>Also runs the generated Functional tests (D3), not just a compile check.</summary>
+    [Fact]
+    public async Task GenerateAndBuild_DornWebApiTemplateWithAzureAd_EmitsAuthArtifactsAndBuilds()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-azuread-{Guid.NewGuid():N}");
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornAzureAdApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string>
+                {
+                    ["Auth"] = "azure-ad",
+                    ["Orm"] = "efcore",
+                }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webApiDir = Path.Combine(outputDirectory, "src", "DornAzureAdApp.WebApi");
+            Assert.True(
+                File.Exists(Path.Combine(webApiDir, "Extensions", "AuthenticationExtensions.cs")),
+                "Auth=azure-ad must emit AuthenticationExtensions.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(webApiDir, "Endpoints", "MeEndpoints.cs")),
+                "Auth=azure-ad must emit MeEndpoints.cs"
+            );
+
+            var appsettingsPath = Path.Combine(webApiDir, "appsettings.json");
+            var appsettings = await File.ReadAllTextAsync(appsettingsPath);
+            Assert.Contains("\"AzureAd\"", appsettings, StringComparison.Ordinal);
+            Assert.Contains("\"ClientId\"", appsettings, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"Jwt\"", appsettings, StringComparison.Ordinal);
+
+            var programCsPath = Path.Combine(webApiDir, "Program.cs");
+            var programCs = await File.ReadAllTextAsync(programCsPath);
+            Assert.Contains("UseAuthentication", programCs, StringComparison.Ordinal);
+            Assert.Contains("MapMeEndpoints", programCs, StringComparison.Ordinal);
+
+            var csprojPath = Path.Combine(webApiDir, "DornAzureAdApp.WebApi.csproj");
+            var csproj = await File.ReadAllTextAsync(csprojPath);
+            Assert.Contains(
+                "Microsoft.AspNetCore.Authentication.JwtBearer",
+                csproj,
+                StringComparison.Ordinal
+            );
+            Assert.DoesNotContain(
+                "Microsoft.Extensions.Identity.Core",
+                csproj,
+                StringComparison.Ordinal
+            );
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+
+            // Proves D3's PostConfigure override actually wins at runtime, not just at compile time.
+            var functionalProject = Path.Combine(
+                outputDirectory,
+                "tests",
+                "DornAzureAdApp.Functional.Tests",
+                "DornAzureAdApp.Functional.Tests.csproj"
+            );
+            var functionalTestResult = await RunProcessAsync(
+                slnFiles[0],
+                "test",
+                functionalProject,
+                "-c",
+                "Release",
+                "--no-build",
+                "--filter",
+                "Auth"
+            );
+            Assert.True(
+                functionalTestResult.ExitCode == 0,
+                $"Generated azure-ad functional tests exited with {functionalTestResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{functionalTestResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{functionalTestResult.StdErr}"
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task GenerateAndBuild_DornWebApiTemplateWithCustomAuth_EmitsAuthArtifactsAndBuilds()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-customauth-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornCustomAuthApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string>
+                {
+                    ["Auth"] = "custom",
+                    ["Orm"] = "efcore",
+                }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webApiDir = Path.Combine(outputDirectory, "src", "DornCustomAuthApp.WebApi");
+            var infraDir = Path.Combine(outputDirectory, "src", "DornCustomAuthApp.Infrastructure");
+            var applicationDir = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornCustomAuthApp.Application"
+            );
+            var domainDir = Path.Combine(outputDirectory, "src", "DornCustomAuthApp.Domain");
+
+            Assert.True(
+                File.Exists(Path.Combine(webApiDir, "Extensions", "AuthenticationExtensions.cs")),
+                "Auth=custom must emit AuthenticationExtensions.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(webApiDir, "Endpoints", "MeEndpoints.cs")),
+                "Auth=custom must emit MeEndpoints.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(domainDir, "Users", "AppUser.cs")),
+                "Auth=custom must emit Domain/Users/AppUser.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(applicationDir, "Auth", "Login", "LoginCommand.cs")),
+                "Auth=custom must emit Application/Auth/Login/LoginCommand.cs"
+            );
+            Assert.True(
+                File.Exists(
+                    Path.Combine(applicationDir, "Auth", "Login", "LoginCommandHandler.cs")
+                ),
+                "Auth=custom must emit Application/Auth/Login/LoginCommandHandler.cs"
+            );
+            Assert.True(
+                File.Exists(
+                    Path.Combine(applicationDir, "Auth", "Login", "LoginCommandValidator.cs")
+                ),
+                "Auth=custom must emit Application/Auth/Login/LoginCommandValidator.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(applicationDir, "Common", "Security", "ITokenService.cs")),
+                "Auth=custom must emit Application/Common/Security/ITokenService.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(infraDir, "Auth", "JwtTokenService.cs")),
+                "Auth=custom must emit Infrastructure/Auth/JwtTokenService.cs"
+            );
+            Assert.True(
+                File.Exists(Path.Combine(infraDir, "Auth", "JwtOptions.cs")),
+                "Auth=custom must emit Infrastructure/Auth/JwtOptions.cs"
+            );
+
+            var authExtensionsPath = Path.Combine(
+                webApiDir,
+                "Extensions",
+                "AuthenticationExtensions.cs"
+            );
+            var authExtensions = await File.ReadAllTextAsync(authExtensionsPath);
+            Assert.Contains("AddJwtBearer", authExtensions, StringComparison.Ordinal);
+            Assert.Contains("TokenValidationParameters", authExtensions, StringComparison.Ordinal);
+            Assert.Contains("IssuerSigningKey", authExtensions, StringComparison.Ordinal);
+            Assert.Contains("SymmetricSecurityKey", authExtensions, StringComparison.Ordinal);
+
+            var infraCsproj = await File.ReadAllTextAsync(
+                Path.Combine(infraDir, "DornCustomAuthApp.Infrastructure.csproj")
+            );
+            Assert.Contains(
+                "Microsoft.IdentityModel.JsonWebTokens",
+                infraCsproj,
+                StringComparison.Ordinal
+            );
+            Assert.Contains(
+                "Microsoft.Extensions.Identity.Core",
+                infraCsproj,
+                StringComparison.Ordinal
+            );
+
+            var domainCsproj = await File.ReadAllTextAsync(
+                Path.Combine(domainDir, "DornCustomAuthApp.Domain.csproj")
+            );
+            Assert.Contains(
+                "Microsoft.Extensions.Identity.Stores",
+                domainCsproj,
+                StringComparison.Ordinal
+            );
+
+            var infraDiPath = Path.Combine(
+                infraDir,
+                "DependencyInjection",
+                "ServiceCollectionExtensions.cs"
+            );
+            var infraDi = await File.ReadAllTextAsync(infraDiPath);
+            Assert.Contains("PasswordHasher<AppUser>", infraDi, StringComparison.Ordinal);
+            Assert.Contains("ITokenService, JwtTokenService", infraDi, StringComparison.Ordinal);
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0]);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+
+            var functionalProject = Path.Combine(
+                outputDirectory,
+                "tests",
+                "DornCustomAuthApp.Functional.Tests",
+                "DornCustomAuthApp.Functional.Tests.csproj"
+            );
+            var functionalTestResult = await RunProcessAsync(
+                slnFiles[0],
+                "test",
+                functionalProject,
+                "-c",
+                "Release",
+                "--no-build",
+                "--filter",
+                "Auth"
+            );
+            Assert.True(
+                functionalTestResult.ExitCode == 0,
+                $"Generated custom-auth functional tests exited with {functionalTestResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{functionalTestResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{functionalTestResult.StdErr}"
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
     /// <summary>
     /// Catches migration namespace collisions, bad #if/Condition/rename modifiers, and stray
     /// //#if markers in appsettings.json.
@@ -174,6 +618,28 @@ public class WebApiTemplateGenerationTests
             Assert.Single(
                 Directory.GetFiles(migrationsDirectory, "*ModelSnapshot.cs"),
                 path => Path.GetFileName(path) == "ApplicationDbContextModelSnapshot.cs"
+            );
+
+            // Exclusion is gated on UseCompose alone, orthogonal to DatabaseProvider.
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "otel-collector-config.yaml")),
+                "DatabaseProvider=sqlserver with Orchestrator=aspire must not emit otel-collector-config.yaml"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "tempo.yaml")),
+                "DatabaseProvider=sqlserver with Orchestrator=aspire must not emit tempo.yaml"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(
+                        outputDirectory,
+                        "grafana",
+                        "provisioning",
+                        "datasources",
+                        "datasources.yaml"
+                    )
+                ),
+                "DatabaseProvider=sqlserver with Orchestrator=aspire must not emit grafana/provisioning/datasources/datasources.yaml"
             );
 
             var slnFiles = Directory.GetFiles(
@@ -251,6 +717,28 @@ public class WebApiTemplateGenerationTests
             Assert.Single(
                 Directory.GetFiles(migrationsDirectory, "*ModelSnapshot.cs"),
                 path => Path.GetFileName(path) == "ApplicationDbContextModelSnapshot.cs"
+            );
+
+            // Exclusion is gated on UseCompose alone, orthogonal to DatabaseProvider.
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "otel-collector-config.yaml")),
+                "DatabaseProvider=postgres with Orchestrator=aspire must not emit otel-collector-config.yaml"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "tempo.yaml")),
+                "DatabaseProvider=postgres with Orchestrator=aspire must not emit tempo.yaml"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(
+                        outputDirectory,
+                        "grafana",
+                        "provisioning",
+                        "datasources",
+                        "datasources.yaml"
+                    )
+                ),
+                "DatabaseProvider=postgres with Orchestrator=aspire must not emit grafana/provisioning/datasources/datasources.yaml"
             );
 
             var slnFiles = Directory.GetFiles(
@@ -509,6 +997,26 @@ public class WebApiTemplateGenerationTests
             Assert.False(
                 File.Exists(Path.Combine(outputDirectory, "docker-compose.SqlServer.yml"))
             );
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "otel-collector-config.yaml")),
+                "Orchestrator=none must not emit otel-collector-config.yaml"
+            );
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, "tempo.yaml")),
+                "Orchestrator=none must not emit tempo.yaml"
+            );
+            Assert.False(
+                File.Exists(
+                    Path.Combine(
+                        outputDirectory,
+                        "grafana",
+                        "provisioning",
+                        "datasources",
+                        "datasources.yaml"
+                    )
+                ),
+                "Orchestrator=none must not emit grafana/provisioning/datasources/datasources.yaml"
+            );
 
             var slnFiles = Directory.GetFiles(
                 outputDirectory,
@@ -526,6 +1034,402 @@ public class WebApiTemplateGenerationTests
                     + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
             );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task GivenNoneOrchestrator_ProducesObservabilityExtension()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-otel-none-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornOtelNoneApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["Orchestrator"] = "none" }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webApiDir = Path.Combine(outputDirectory, "src", "DornOtelNoneApp.WebApi");
+
+            Assert.True(
+                File.Exists(Path.Combine(webApiDir, "Extensions", "ObservabilityExtensions.cs")),
+                "Orchestrator=none must emit ObservabilityExtensions.cs"
+            );
+            Assert.False(
+                Directory.Exists(
+                    Path.Combine(outputDirectory, "src", "DornOtelNoneApp.ServiceDefaults")
+                ),
+                "Orchestrator=none must not emit the ServiceDefaults project"
+            );
+
+            var programCs = await File.ReadAllTextAsync(Path.Combine(webApiDir, "Program.cs"));
+            Assert.Contains("AddObservability()", programCs, StringComparison.Ordinal);
+            Assert.DoesNotContain("AddServiceDefaults()", programCs, StringComparison.Ordinal);
+
+            var csproj = await File.ReadAllTextAsync(
+                Path.Combine(webApiDir, "DornOtelNoneApp.WebApi.csproj")
+            );
+            foreach (
+                var package in new[]
+                {
+                    "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+                    "OpenTelemetry.Extensions.Hosting",
+                    "OpenTelemetry.Instrumentation.AspNetCore",
+                    "OpenTelemetry.Instrumentation.Http",
+                    "OpenTelemetry.Instrumentation.Runtime",
+                }
+            )
+            {
+                Assert.Contains(
+                    $"PackageReference Include=\"{package}\"",
+                    csproj,
+                    StringComparison.Ordinal
+                );
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task GivenAspireOrchestrator_NoDoubleOtelRegistration()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-otel-aspire-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-webapi",
+                "DornOtelAspireApp",
+                outputDirectory
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var serviceDefaultsPath = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornOtelAspireApp.ServiceDefaults",
+                "Extensions.cs"
+            );
+            Assert.True(File.Exists(serviceDefaultsPath));
+            var serviceDefaultsSource = await File.ReadAllTextAsync(serviceDefaultsPath);
+            Assert.DoesNotContain(
+                "ConfigureOpenTelemetry",
+                serviceDefaultsSource,
+                StringComparison.Ordinal
+            );
+            Assert.DoesNotContain(
+                "AddOpenTelemetryExporters",
+                serviceDefaultsSource,
+                StringComparison.Ordinal
+            );
+            Assert.Contains(
+                "AddDefaultHealthChecks",
+                serviceDefaultsSource,
+                StringComparison.Ordinal
+            );
+            Assert.Contains("MapDefaultEndpoints", serviceDefaultsSource, StringComparison.Ordinal);
+            Assert.Contains("HealthEndpointPath", serviceDefaultsSource, StringComparison.Ordinal);
+            Assert.Contains(
+                "AlivenessEndpointPath",
+                serviceDefaultsSource,
+                StringComparison.Ordinal
+            );
+
+            var serviceDefaultsCsproj = await File.ReadAllTextAsync(
+                Path.Combine(
+                    outputDirectory,
+                    "src",
+                    "DornOtelAspireApp.ServiceDefaults",
+                    "DornOtelAspireApp.ServiceDefaults.csproj"
+                )
+            );
+            Assert.DoesNotContain(
+                "OpenTelemetry.",
+                serviceDefaultsCsproj,
+                StringComparison.Ordinal
+            );
+
+            var observabilityExtensionsPath = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornOtelAspireApp.WebApi",
+                "Extensions",
+                "ObservabilityExtensions.cs"
+            );
+            Assert.True(
+                File.Exists(observabilityExtensionsPath),
+                "ObservabilityExtensions.cs must be emitted for every orchestrator, including aspire"
+            );
+
+            var programCs = await File.ReadAllTextAsync(
+                Path.Combine(outputDirectory, "src", "DornOtelAspireApp.WebApi", "Program.cs")
+            );
+            Assert.Contains("AddObservability()", programCs, StringComparison.Ordinal);
+            Assert.Contains("AddServiceDefaults()", programCs, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>Logs route via otlphttp, not the collector's deprecated dedicated loki exporter.</summary>
+    [Fact]
+    public async Task GivenDockerComposeOrchestrator_EmitsValidObservabilityConfigFiles()
+    {
+        await WithGeneratedWebApiProjectAsync(
+            "DornOtelComposeConfigApp",
+            outputDirectory =>
+            {
+                var pipelines = GetMapping(
+                    GetMapping(
+                        LoadYamlMappingRoot(
+                            Path.Combine(outputDirectory, "otel-collector-config.yaml")
+                        ),
+                        "service"
+                    ),
+                    "pipelines"
+                );
+
+                Assert.Contains("otlp/tempo", GetExporterNames(pipelines, "traces"));
+                Assert.Contains("otlphttp/loki", GetExporterNames(pipelines, "logs"));
+                Assert.Contains("prometheusremotewrite", GetExporterNames(pipelines, "metrics"));
+
+                LoadYamlMappingRoot(Path.Combine(outputDirectory, "tempo.yaml"));
+                LoadYamlMappingRoot(
+                    Path.Combine(
+                        outputDirectory,
+                        "grafana",
+                        "provisioning",
+                        "datasources",
+                        "datasources.yaml"
+                    )
+                );
+
+                return Task.CompletedTask;
+            },
+            orchestrator: "docker-compose"
+        );
+    }
+
+    /// <summary>Also asserts the port-publishing asymmetry and the no-:latest tag guard.</summary>
+    [Fact]
+    public async Task GivenDockerComposeOrchestrator_ComposeFileDeclaresObservabilityServices()
+    {
+        await WithGeneratedWebApiProjectAsync(
+            "DornOtelComposeServicesApp",
+            async outputDirectory =>
+            {
+                var composePath = Path.Combine(outputDirectory, "docker-compose.yml");
+                var composeContent = await File.ReadAllTextAsync(composePath);
+                Assert.DoesNotContain(":latest", composeContent, StringComparison.Ordinal);
+
+                var services = GetMapping(LoadYamlMappingRoot(composePath), "services");
+
+                foreach (
+                    var serviceName in new[]
+                    {
+                        "otel-collector",
+                        "grafana",
+                        "loki",
+                        "prometheus",
+                        "tempo",
+                    }
+                )
+                {
+                    Assert.True(
+                        TryGetChild(services, serviceName) is not null,
+                        $"docker-compose.yml must declare a '{serviceName}' service"
+                    );
+                }
+
+                foreach (var serviceName in new[] { "loki", "prometheus", "tempo" })
+                {
+                    Assert.Null(TryGetChild(GetMapping(services, serviceName), "ports"));
+                }
+
+                foreach (var serviceName in new[] { "grafana", "otel-collector" })
+                {
+                    Assert.NotNull(TryGetChild(GetMapping(services, serviceName), "ports"));
+                }
+
+                var webapiEnvironment = GetSequence(GetMapping(services, "webapi"), "environment")
+                    .Children.Select(node => ((YamlScalarNode)node).Value)
+                    .ToList();
+                Assert.Contains(
+                    webapiEnvironment,
+                    value =>
+                        value is not null
+                        && value.StartsWith(
+                            "OTEL_EXPORTER_OTLP_ENDPOINT=",
+                            StringComparison.Ordinal
+                        )
+                );
+            },
+            orchestrator: "docker-compose"
+        );
+    }
+
+    /// <summary>Covers the map-form depends_on the base sqlite compose file never needed.</summary>
+    [Theory]
+    [InlineData("sqlserver", "sqlserver")]
+    [InlineData("postgres", "postgres")]
+    public async Task GivenDockerComposeOrchestrator_DbVariantComposeFileDeclaresObservabilityServices(
+        string databaseProvider,
+        string dbServiceName
+    )
+    {
+        await WithGeneratedWebApiProjectAsync(
+            $"DornOtelCompose{databaseProvider}App",
+            async outputDirectory =>
+            {
+                // The DB-specific template file is renamed to docker-compose.yml on emission;
+                // there is only ever one compose file in the generated output.
+                var composePath = Path.Combine(outputDirectory, "docker-compose.yml");
+                var composeContent = await File.ReadAllTextAsync(composePath);
+                Assert.DoesNotContain(":latest", composeContent, StringComparison.Ordinal);
+
+                var services = GetMapping(LoadYamlMappingRoot(composePath), "services");
+
+                foreach (
+                    var serviceName in new[]
+                    {
+                        "otel-collector",
+                        "grafana",
+                        "loki",
+                        "prometheus",
+                        "tempo",
+                    }
+                )
+                {
+                    Assert.True(
+                        TryGetChild(services, serviceName) is not null,
+                        $"docker-compose.yml (from {databaseProvider} variant) must declare a '{serviceName}' service"
+                    );
+                }
+
+                foreach (var serviceName in new[] { "loki", "prometheus", "tempo" })
+                {
+                    Assert.Null(TryGetChild(GetMapping(services, serviceName), "ports"));
+                }
+
+                foreach (var serviceName in new[] { "grafana", "otel-collector" })
+                {
+                    Assert.NotNull(TryGetChild(GetMapping(services, serviceName), "ports"));
+                }
+
+                var webapi = GetMapping(services, "webapi");
+                var webapiEnvironment = GetSequence(webapi, "environment")
+                    .Children.Select(node => ((YamlScalarNode)node).Value)
+                    .ToList();
+                Assert.Contains(
+                    webapiEnvironment,
+                    value =>
+                        value is not null
+                        && value.StartsWith(
+                            "OTEL_EXPORTER_OTLP_ENDPOINT=",
+                            StringComparison.Ordinal
+                        )
+                );
+
+                var webapiDependsOn = GetMapping(webapi, "depends_on");
+                var dbDependsOn = GetMapping(webapiDependsOn, dbServiceName);
+                Assert.Equal("service_healthy", GetScalar(dbDependsOn, "condition"));
+
+                var otelDependsOn = GetMapping(webapiDependsOn, "otel-collector");
+                Assert.Equal("service_started", GetScalar(otelDependsOn, "condition"));
+            },
+            orchestrator: "docker-compose",
+            databaseProvider: databaseProvider
+        );
+    }
+
+    [Fact]
+    public async Task Scaffold_CustomAuthWithDapper_ExitsOneBeforeGeneration()
+    {
+        var dornRoot = Path.GetDirectoryName(ResolveDornRootGlobalJsonPath())!;
+        var outputDirectory = Path.Combine(Path.GetTempPath(), $"dorn-d2-{Guid.NewGuid():N}");
+        try
+        {
+            var result = await RunProcessAsync(
+                Path.Combine(dornRoot, "Dorn.slnx"),
+                "run",
+                "--project",
+                Path.Combine(dornRoot, "src", "Dorn.Cli", "Dorn.Cli.csproj"),
+                "-c",
+                "Release",
+                "--no-restore",
+                "--",
+                "new",
+                "webapi",
+                "DornD2RejectedApp",
+                "--auth",
+                "custom",
+                "--orm",
+                "dapper",
+                "--output",
+                outputDirectory,
+                "--no-restore"
+            );
+
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains(
+                "requires Orm='efcore'",
+                result.StdOut + result.StdErr,
+                StringComparison.Ordinal
+            );
+            Assert.False(Directory.Exists(outputDirectory));
         }
         finally
         {
@@ -1535,16 +2439,24 @@ public class WebApiTemplateGenerationTests
     private static string ReadCiWorkflowRawText(string outputDirectory) =>
         File.ReadAllText(GetCiWorkflowPath(outputDirectory));
 
-    private static YamlMappingNode LoadCiWorkflowRoot(string outputDirectory)
+    private static YamlMappingNode LoadCiWorkflowRoot(string outputDirectory) =>
+        LoadYamlMappingRoot(GetCiWorkflowPath(outputDirectory));
+
+    private static YamlMappingNode LoadYamlMappingRoot(string path)
     {
-        var path = GetCiWorkflowPath(outputDirectory);
-        Assert.True(File.Exists(path), $"Expected CI workflow at '{path}'.");
+        Assert.True(File.Exists(path), $"Expected YAML file at '{path}'.");
 
         var yaml = new YamlStream();
         using var reader = new StringReader(File.ReadAllText(path));
         yaml.Load(reader);
         return (YamlMappingNode)yaml.Documents[0].RootNode;
     }
+
+    /// <summary>Reads the <c>exporters</c> sequence of a collector pipeline (traces/logs/metrics).</summary>
+    private static List<string?> GetExporterNames(YamlMappingNode pipelines, string pipelineName) =>
+        GetSequence(GetMapping(pipelines, pipelineName), "exporters")
+            .Children.Select(node => ((YamlScalarNode)node).Value)
+            .ToList();
 
     private static YamlNode? TryGetChild(YamlMappingNode node, string key) =>
         node.Children.TryGetValue(new YamlScalarNode(key), out var value) ? value : null;
