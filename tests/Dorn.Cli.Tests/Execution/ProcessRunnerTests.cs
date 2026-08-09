@@ -109,4 +109,45 @@ public class ProcessRunnerTests : IDisposable
 
         Assert.Equal(0, exitCode);
     }
+
+    // ProcessRunner.RunCapturedAsync (bounded-output capture, real process, no mock)
+
+    [Fact]
+    public async Task RunCapturedAsync_DotnetVersion_ReturnsZeroExitCodeAndParseableStdout()
+    {
+        var runner = new ProcessRunner();
+        var spec = new ProcessSpec("dotnet", ["--version"]);
+
+        var result = await runner.RunCapturedAsync(spec, CancellationToken.None);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.False(string.IsNullOrWhiteSpace(result.StandardOutput));
+        Assert.True(Version.TryParse(result.StandardOutput.Trim().Split('-')[0], out _));
+    }
+
+    [Fact]
+    public async Task RunCapturedAsync_NonexistentCommand_ReturnsExitCode127AndEmptyStreams()
+    {
+        var runner = new ProcessRunner();
+        var spec = new ProcessSpec("nonexistent-command-xyz", []);
+
+        var result = await runner.RunCapturedAsync(spec, CancellationToken.None);
+
+        Assert.Equal(127, result.ExitCode);
+        Assert.Equal(string.Empty, result.StandardOutput);
+        Assert.Equal(string.Empty, result.StandardError);
+    }
+
+    [Fact]
+    public async Task RunCapturedAsync_PreCancelledToken_ThrowsOperationCanceledException()
+    {
+        var runner = new ProcessRunner();
+        var cts = new CancellationTokenSource();
+        cts.Cancel(); // cancel immediately
+        var spec = new ProcessSpec("dotnet", ["--version"]);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            runner.RunCapturedAsync(spec, cts.Token)
+        );
+    }
 }
