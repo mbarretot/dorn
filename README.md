@@ -66,6 +66,7 @@ dorn new grpc MyService                                  # fixed scope, zero fla
 - **Four test tiers generated with the project**: Application, Integration, Architecture, Functional
 - **Zero-config by default**: SQLite needs no external database; Aspire needs no Docker to get started
 - **CI from the first push**: every generated project ships a working GitHub Actions workflow and a pinned `global.json`
+- **Observability on every orchestrator, not just Aspire**: `docker-compose` gets a real Grafana + Loki + Prometheus + Tempo stack out of the box
 
 ## Architecture
 

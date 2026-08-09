@@ -15,6 +15,7 @@
 - [Domain events with `INotification`](#domain-events-with-inotification)
 - [Persistence: EF Core, database provider selection](#persistence-ef-core-database-provider-selection)
 - [Authentication: none, self-issued JWT, or Microsoft Entra ID](#authentication-none-self-issued-jwt-or-microsoft-entra-id)
+- [Observability: OpenTelemetry on every orchestrator](#observability-opentelemetry-on-every-orchestrator)
 
 The `webapi` template (short name `dorn-webapi`, identity `Dorn.Templates.WebApi`)
 generates an ASP.NET Core Minimal API project in Clean Architecture, using a
@@ -567,5 +568,35 @@ Dapper path excludes entirely.
 
 Full rationale, including why the demo user seeds at startup instead of via EF
 `HasData`, in `docs/adr/0016-opt-in-jwt-auth-scaffolding.md`.
+
+[⬆ Back to top](#contents)
+
+## Observability: OpenTelemetry on every orchestrator
+
+`WebApi/Extensions/ObservabilityExtensions.cs` wires structured logging, metrics, and
+tracing unconditionally, regardless of `--orchestrator`. The OTLP exporter only activates
+when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, so this is inert (fail-open) until something
+listens.
+
+| `--orchestrator` value | Telemetry destination | Setup required |
+|---|---|---|
+| `aspire` (default) | Aspire dashboard, auto-injected by `AppHost.cs` | None |
+| `docker-compose` | Self-hosted Grafana + Loki + Prometheus + Tempo, at `localhost:${GRAFANA_PORT:-3000}` | None, part of `docker compose up` |
+| `none` | Nothing by default | Set `OTEL_EXPORTER_OTLP_ENDPOINT` yourself |
+
+The Compose path is a real, vendor-neutral stack, not a thin proxy back to Aspire's
+dashboard: `webapi` exports to `otel-collector`, which fans out to Tempo (traces, native
+OTLP), Loki (logs, native `/otlp` endpoint), and Prometheus (metrics, remote-write).
+Grafana is pre-provisioned with all three as datasources, including trace-to-log
+correlation, so there's nothing to click through on first load. Only `grafana` and
+`otel-collector` publish ports to the host; the three backends stay internal to the
+compose network. Every service uses `tmpfs`, not named volumes: telemetry data is
+ephemeral, matching a local evaluation stack rather than a persistent one.
+
+Regular `ILogger` console output is unaffected by any of this; it's unconditional in
+ASP.NET Core independent of `--orchestrator` or `OTEL_EXPORTER_OTLP_ENDPOINT`.
+
+Full rationale, including why Compose gets a real Grafana stack instead of the cheaper
+Aspire Dashboard option, in `docs/adr/0017-orchestrator-agnostic-observability.md`.
 
 [⬆ Back to top](#contents)
