@@ -128,10 +128,6 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Verifies the default <c>Auth=none</c> scaffold emits no auth files, no <c>Jwt</c> config block,
-    /// and no auth middleware wiring — protects the byte-identical constraint against the pre-change generator.
-    /// </summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithNoAuth_EmitsNoAuthArtifacts()
     {
@@ -286,12 +282,7 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Verifies the <c>Auth=azure-ad</c> + <c>Orm=efcore</c> scaffold emits the auth files, the
-    /// <c>Jwt</c> block in appsettings, the JwtBearer PackageReference, the middleware wiring,
-    /// builds, and that the generated Functional tests (D3 PostConfigure CI override) actually
-    /// pass — end to end, not just compile-checked.
-    /// </summary>
+    /// <summary>Also runs the generated Functional tests (D3), not just a compile check.</summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithAzureAd_EmitsAuthArtifactsAndBuilds()
     {
@@ -373,10 +364,7 @@ public class WebApiTemplateGenerationTests
                     + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
             );
 
-            // Compile-checking alone does not prove the D3 PostConfigure CI override actually
-            // beats AddAzureAdAuth's own wiring at runtime — run the generated Functional tests
-            // (AzureAdMeEndpointsTests) to prove Auth=azure-ad works end to end without any live
-            // Entra ID dependency.
+            // Proves D3's PostConfigure override actually wins at runtime, not just at compile time.
             var functionalProject = Path.Combine(
                 outputDirectory,
                 "tests",
@@ -409,12 +397,6 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Verifies the <c>Auth=custom</c> scaffold emits the Domain AppUser + Identity packages,
-    /// the Application auth command/handler/validator, the Infrastructure JwtTokenService,
-    /// the AuthenticationExtensions.AddCustomJwtAuth with full AddJwtBearer + TokenValidationParameters
-    /// wiring, and that the generated solution builds with --auth custom --orm efcore.
-    /// </summary>
     [Fact]
     public async Task GenerateAndBuild_DornWebApiTemplateWithCustomAuth_EmitsAuthArtifactsAndBuilds()
     {
@@ -1062,11 +1044,6 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Verifies the orchestrator-agnostic OTel extraction: <c>Orchestrator=none</c> emits
-    /// <c>ObservabilityExtensions.cs</c>, wires it unconditionally from <c>Program.cs</c>, references
-    /// all 5 OTel packages from <c>WebApi.csproj</c>, and never emits <c>ServiceDefaults/</c>.
-    /// </summary>
     [Fact]
     public async Task GivenNoneOrchestrator_ProducesObservabilityExtension()
     {
@@ -1145,11 +1122,6 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Verifies the default <c>Orchestrator=aspire</c> scaffold registers OTel exactly once: the
-    /// moved methods are gone from <c>ServiceDefaults/Extensions.cs</c>, its csproj carries no OTel
-    /// package reference, and the Aspire-only health-check wiring is untouched.
-    /// </summary>
     [Fact]
     public async Task GivenAspireOrchestrator_NoDoubleOtelRegistration()
     {
@@ -1252,12 +1224,7 @@ public class WebApiTemplateGenerationTests
         }
     }
 
-    /// <summary>
-    /// Verifies the 3 generated observability config files are valid YAML and the collector
-    /// pipeline routes traces to Tempo's native OTLP receiver, logs to Loki's native OTLP
-    /// endpoint (via <c>otlphttp</c>, not the deprecated <c>loki</c> exporter), and metrics via
-    /// Prometheus remote-write.
-    /// </summary>
+    /// <summary>Logs route via otlphttp, not the collector's deprecated dedicated loki exporter.</summary>
     [Fact]
     public async Task GivenDockerComposeOrchestrator_EmitsValidObservabilityConfigFiles()
     {
@@ -1296,11 +1263,7 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Verifies the generated <c>docker-compose.yml</c> declares all 5 observability services,
-    /// only publishes host ports for <c>grafana</c> and <c>otel-collector</c>, points
-    /// <c>webapi</c> at the collector's OTLP endpoint, and pins every image (no <c>:latest</c>).
-    /// </summary>
+    /// <summary>Also asserts the port-publishing asymmetry and the no-:latest tag guard.</summary>
     [Fact]
     public async Task GivenDockerComposeOrchestrator_ComposeFileDeclaresObservabilityServices()
     {
@@ -1358,13 +1321,7 @@ public class WebApiTemplateGenerationTests
         );
     }
 
-    /// <summary>
-    /// Verifies the SqlServer and Postgres compose variants each declare all 5 observability
-    /// services with the same port-publishing asymmetry and no <c>:latest</c> tags, the webapi
-    /// OTLP endpoint env var, and a map-form <c>depends_on</c> that includes BOTH the DB service
-    /// (<c>service_healthy</c>) AND <c>otel-collector</c> (<c>service_started</c>): a
-    /// cross-dependency shape the base sqlite compose file never had to cover.
-    /// </summary>
+    /// <summary>Covers the map-form depends_on the base sqlite compose file never needed.</summary>
     [Theory]
     [InlineData("sqlserver", "sqlserver")]
     [InlineData("postgres", "postgres")]

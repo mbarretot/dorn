@@ -13,16 +13,9 @@ using Microsoft.Extensions.Options;
 namespace CleanArchWebApi.Functional.Tests.Auth;
 
 /// <summary>
-/// AddMicrosoftIdentityWebApi wires its own dynamic IssuerValidator/AudienceValidator delegates
-/// (real AAD multi-cloud/multi-tenant matching) directly into JwtBearerOptions, which take
-/// precedence over any static Valid*/PostConfigure override and cannot be safely faked without
-/// depending on Microsoft.Identity.Web's internal implementation details. Instead of fighting that
-/// pipeline, this factory replaces the default authentication scheme with a minimal test-only
-/// handler (<see cref="AzureAdTestAuthHandler"/>) that independently verifies the same lightweight
-/// signed-token format used by these tests, entirely decoupled from Microsoft.Identity.Web (T4: no
-/// live Entra ID network dependency in CI). Testing Microsoft.Identity.Web's own validation
-/// correctness is the library's responsibility, not this scaffold's; these tests verify OUR
-/// integration point instead — that <c>/api/me</c> requires authentication and exposes claims.
+/// Microsoft.Identity.Web's dynamic IssuerValidator/AudienceValidator override any static
+/// PostConfigure attempt, so this replaces the auth scheme entirely with
+/// <see cref="AzureAdTestAuthHandler"/> instead of trying to fake them.
 /// </summary>
 public sealed class AzureAdWebApplicationFactory : WebApplicationFactory<Program>
 {
@@ -85,10 +78,6 @@ public sealed class AzureAdWebApplicationFactory : WebApplicationFactory<Program
     }
 }
 
-/// <summary>
-/// Verifies the same HS256-signed, three-part token format <see cref="AzureAdMeEndpointsTests"/>
-/// issues — signature, issuer, audience, expiry — entirely independent of Microsoft.Identity.Web.
-/// </summary>
 internal sealed class AzureAdTestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     public AzureAdTestAuthHandler(
