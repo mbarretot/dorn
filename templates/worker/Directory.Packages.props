@@ -34,6 +34,10 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
     <!-- Concrete container, not just abstractions — MediatorPublishTests needs a real IServiceProvider. -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+    <!-- Functional.Tests boots a real IHost via Host.CreateApplicationBuilder (D7). -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <!-- Concrete package — AddInMemoryCollection overrides the connection string per test run. -->
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.9" />
 
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
