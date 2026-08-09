@@ -49,6 +49,11 @@ app.Configure(config =>
                 .WithDescription(
                     "Generate a Clean Architecture gRPC service (sqlite + EF Core + Aspire)."
                 );
+            branch
+                .AddCommand<NewWorkerCommand>("worker")
+                .WithDescription(
+                    "Generate a Clean Architecture worker service (sqlite + EF Core + Aspire)."
+                );
         }
     );
     config
@@ -80,6 +85,10 @@ static void ShowWelcome()
     table.AddRow(
         "[green]new grpc[/] <name>",
         "Generate a Clean Architecture gRPC service (sqlite + EF Core + Aspire)."
+    );
+    table.AddRow(
+        "[green]new worker[/] <name>",
+        "Generate a Clean Architecture worker service (sqlite + EF Core + Aspire)."
     );
     table.AddRow("[green]test[/]", "Run the generated project's test tiers.");
     table.AddRow(
