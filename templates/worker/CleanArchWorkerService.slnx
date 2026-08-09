@@ -1,0 +1,12 @@
+<Solution>
+    <Project Path="src/CleanArchWorkerService.AppHost/CleanArchWorkerService.AppHost.csproj" />
+    <Project Path="src/CleanArchWorkerService.Application/CleanArchWorkerService.Application.csproj" />
+    <Project Path="src/CleanArchWorkerService.Domain/CleanArchWorkerService.Domain.csproj" />
+    <Project Path="src/CleanArchWorkerService.Infrastructure/CleanArchWorkerService.Infrastructure.csproj" />
+    <Project Path="src/CleanArchWorkerService.ServiceDefaults/CleanArchWorkerService.ServiceDefaults.csproj" />
+    <Project Path="src/CleanArchWorkerService.Worker/CleanArchWorkerService.Worker.csproj" />
+    <Project Path="tests/CleanArchWorkerService.Application.Tests/CleanArchWorkerService.Application.Tests.csproj" />
+    <Project Path="tests/CleanArchWorkerService.Architecture.Tests/CleanArchWorkerService.Architecture.Tests.csproj" />
+    <Project Path="tests/CleanArchWorkerService.Functional.Tests/CleanArchWorkerService.Functional.Tests.csproj" />
+    <Project Path="tests/CleanArchWorkerService.Integration.Tests/CleanArchWorkerService.Integration.Tests.csproj" />
+</Solution>

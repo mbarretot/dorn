@@ -1,0 +1,13 @@
+<Project>
+  <!-- Self-contained so generated projects build outside Dorn; MSBuild imports only the nearest props file. -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <!-- MVP scope is fixed at sqlite + EF Core + Aspire (see design D2): no #if directives,
+       no Use* MSBuild symbols, and no DefineConstants block — unlike templates/webapi. -->
+</Project>

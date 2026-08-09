@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Dorn Contributors",
+  "classifications": ["Worker Service", "Clean Architecture"],
+  "identity": "Dorn.Templates.Worker",
+  "name": "Dorn Clean Architecture Worker Service",
+  "description": "Production-ready Clean Architecture background worker with CQRS, a PeriodicTimer loop, and Aspire orchestration.",
+  "shortName": "dorn-worker",
+  "preferNameDirectory": true,
+  "sourceName": "CleanArchWorkerService",
+  "symbols": {
+    "IncludeTests": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "true",
+      "description": "Include the xUnit test projects: Application (unit), Integration (EF Core SQLite), Architecture (layering rules), and Functional (hosted-service loop)."
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(!IncludeTests)",
+          "exclude": ["tests/**"]
+        }
+      ]
+    }
+  ],
+  "postActions": [
+    {
+      "description": "Restore NuGet packages required by this project.",
+      "manualInstructions": [
+        {
+          "text": "Run 'dotnet restore'"
+        }
+      ],
+      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
+      "continueOnError": true
+    }
+  ],
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  }
+}
