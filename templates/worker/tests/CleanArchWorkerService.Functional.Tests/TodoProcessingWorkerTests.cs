@@ -28,8 +28,7 @@ public sealed class TodoProcessingWorkerTests : IClassFixture<WorkerHostFixture>
 
         await worker.ProcessOnceAsync(CancellationToken.None);
 
-        // A fresh scope, not the one used to seed — this is what actually proves the per-tick
-        // scope committed instead of merely change-tracking (the D3 captive-dependency regression gate).
+        // Fresh scope, not the seeding one — proves the per-tick scope committed (D3 regression gate).
         await using var assertScope = _fixture.Host.Services.CreateAsyncScope();
         var assertContext = assertScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var reloaded = await assertContext.Items.FindAsync(todoItem.Id);
@@ -56,9 +55,8 @@ public sealed class TodoProcessingWorkerTests : IClassFixture<WorkerHostFixture>
 
         await _fixture.Host.StartAsync();
 
-        // A single Advance() right after StartAsync races the worker's ExecuteAsync task, which may not
-        // have registered its PeriodicTimer with the fake clock yet. Re-advancing inside the bounded poll
-        // is what makes this deterministic.
+        // A single Advance() right after StartAsync races the timer's registration; re-advancing
+        // inside the bounded poll below is what makes this deterministic.
         await WaitFor.UntilAsync(
             async () =>
             {
