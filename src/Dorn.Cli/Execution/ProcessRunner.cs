@@ -83,11 +83,8 @@ public sealed class ProcessRunner : IProcessRunner
         return process.ExitCode;
     }
 
-    // Independent from RunAsync by design (D1): RunAsync deliberately never awaits its
-    // stdout/stderr read tasks, because run/test/compose spawn grandchildren that inherit
-    // the redirected handles and can outlive the direct child, so awaiting there could hang.
-    // RunCapturedAsync is documented as bounded-output only (--version-class commands), so
-    // awaiting ReadToEndAsync here is safe and lets us return the captured text.
+    // Independent from RunAsync: that method never awaits its output streams because
+    // grandchildren from run/test/compose can outlive the direct child and hang the await.
     public async Task<ProcessResult> RunCapturedAsync(ProcessSpec spec, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
