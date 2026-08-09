@@ -166,8 +166,8 @@ generation test, since the two axes are otherwise orthogonal).
   - `--database postgres`: same pattern with a `postgres` service (image `postgres:17`,
     `pg_isready` healthcheck, named volume) and a matching connection string.
   - Both mirror what Aspire's `WithReference(...)` injects at runtime on the Aspire path.
-- `otel-collector` in `docker-compose.yml` is a **commented-out placeholder only**: no
-  OpenTelemetry is wired into WebApi on the compose path.
+- `docker-compose.yml` also ships a self-hosted Grafana/Loki/Prometheus/Tempo
+  observability stack; see [Observability](#observability-opentelemetry-on-every-orchestrator).
 
 `none` is the minimal path: no Aspire, no Compose scaffolding. Unlike `docker-compose`,
 none of `docker-compose.yml`, `docker-compose.SqlServer.yml`, or
