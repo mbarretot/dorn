@@ -82,4 +82,68 @@ public sealed class ProcessRunner : IProcessRunner
 
         return process.ExitCode;
     }
+
+    // Independent from RunAsync by design (D1): RunAsync deliberately never awaits its
+    // stdout/stderr read tasks, because run/test/compose spawn grandchildren that inherit
+    // the redirected handles and can outlive the direct child, so awaiting there could hang.
+    // RunCapturedAsync is documented as bounded-output only (--version-class commands), so
+    // awaiting ReadToEndAsync here is safe and lets us return the captured text.
+    public async Task<ProcessResult> RunCapturedAsync(ProcessSpec spec, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var workingDir = spec.WorkingDirectory ?? Directory.GetCurrentDirectory();
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = spec.FileName,
+            WorkingDirectory = workingDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            // Don't use Shell=true — we want real process isolation.
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        foreach (var arg in spec.Arguments)
+            psi.ArgumentList.Add(arg);
+
+        using var process = new Process { StartInfo = psi };
+
+        try
+        {
+            process.Start();
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 2)
+        {
+            // "File not found" — command does not exist. Return a non-zero exit code
+            // instead of crashing.
+            return new ProcessResult(127, string.Empty, string.Empty); // standard "command not found" shell code
+        }
+
+        var outputTask = process.StandardOutput.ReadToEndAsync(ct);
+        var errorTask = process.StandardError.ReadToEndAsync(ct);
+
+        try
+        {
+            await process.WaitForExitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+                // Best-effort; process may have already exited.
+            }
+            throw;
+        }
+
+        var stdout = await outputTask;
+        var stderr = await errorTask;
+
+        return new ProcessResult(process.ExitCode, stdout, stderr);
+    }
 }
