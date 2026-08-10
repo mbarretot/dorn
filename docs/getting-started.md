@@ -104,7 +104,8 @@ cd MyApp
 dorn test              # all 4 tiers (Application/Integration/Architecture/Functional)
 dorn test --tier unit  # one tier only
 dorn run               # auto-detects AppHost → Aspire, Compose file → Compose, else plain `dotnet run`
-dorn coverage          # tests + coverage collection + fixed 80% threshold gate
+dorn coverage          # tests + merged multi-tier coverage + fixed 80% threshold gate
+dorn coverage --all    # same, but the per-class table shows every class, not just sub-80% ones
 ```
 
 Two invocation surfaces, identical behavior:
