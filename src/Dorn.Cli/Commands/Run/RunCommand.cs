@@ -109,7 +109,10 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
     {
         if (string.IsNullOrEmpty(ctx.WebApiProject))
         {
-            _theme.Message(Severity.Error, "Plain orchestrator requires a WebApi project under src/.");
+            _theme.Message(
+                Severity.Error,
+                "Plain orchestrator requires a WebApi project under src/."
+            );
             return 1;
         }
 

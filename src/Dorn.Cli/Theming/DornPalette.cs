@@ -27,7 +27,11 @@ public static class DornPalette
             Severity.Error => Error,
             Severity.Warning => Warning,
             Severity.Info => Info,
-            _ => throw new ArgumentOutOfRangeException(nameof(severity), severity, "Unknown severity."),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(severity),
+                severity,
+                "Unknown severity."
+            ),
         };
 
     public static string MarkupFor(Severity severity) =>
@@ -37,6 +41,10 @@ public static class DornPalette
             Severity.Error => ErrorMarkup,
             Severity.Warning => WarningMarkup,
             Severity.Info => InfoMarkup,
-            _ => throw new ArgumentOutOfRangeException(nameof(severity), severity, "Unknown severity."),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(severity),
+                severity,
+                "Unknown severity."
+            ),
         };
 }

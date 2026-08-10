@@ -187,7 +187,11 @@ public class TestCommandTests : IDisposable
     {
         var consoleMock = Substitute.For<IAnsiConsole>();
         var capabilities = new Capabilities { Interactive = false, Unicode = true };
-        var profile = new Profile(Substitute.For<IAnsiConsoleOutput>(), capabilities, Encoding.UTF8);
+        var profile = new Profile(
+            Substitute.For<IAnsiConsoleOutput>(),
+            capabilities,
+            Encoding.UTF8
+        );
         consoleMock.Profile.Returns(profile);
         return consoleMock;
     }
