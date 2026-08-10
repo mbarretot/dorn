@@ -2,121 +2,14 @@ name: CI
 
 on:
   push:
+    branches: ["**"]
+    tags-ignore: ["v*"] # v* tags run publish.yml, which calls the same matrix
   pull_request:
 
 jobs:
   build-and-test:
-    name: build-and-test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
+    uses: ./.github/workflows/build-test.yml
+    permissions:
+      contents: read
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          # There are two Directory.Packages.props files in this repo (root, and
-          # templates/webapi which is deliberately self-contained — see the root
-          # Directory.Packages.props and templates/webapi/Directory.Packages.props).
-          # The glob below covers both so the cache key changes whenever either changes.
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/Directory.Packages.props') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: Pack Dorn's own NuGet packages (local feed for templates/webapi)
-        shell: pwsh
-        run: pwsh eng/scripts/pack-packages.ps1
-
-      - name: Build and test gRPC template
-        run: |
-          dotnet restore templates/grpc/CleanArchGrpcService.slnx
-          dotnet build templates/grpc/CleanArchGrpcService.slnx --no-restore -c Release
-          dotnet test templates/grpc/CleanArchGrpcService.slnx --no-build -c Release
-
-      - name: Restore
-        run: dotnet restore Dorn.slnx
-
-      - name: Build
-        run: dotnet build Dorn.slnx --no-restore -c Release
-
-      - name: Test
-        env:
-          DORN_TEMPLATES_PATH: ${{ github.workspace }}/templates
-          DORN_LOCAL_NUGET_FEED: ${{ github.workspace }}/artifacts
-        run: >
-          dotnet test Dorn.slnx --no-build -c Release
-          --collect:"XPlat Code Coverage"
-
-      # Aggregate the per-project cobertura.xml files produced by `dotnet test
-      # --collect:"XPlat Code Coverage"` into a single coverage report using
-      # ReportGenerator. Runs only on the Ubuntu agent because the artifact upload
-      # step below only consumes reports from one source.
-      - name: Aggregate coverage report (ReportGenerator)
-        if: matrix.os == 'ubuntu-latest'
-        shell: pwsh
-        run: >
-          dotnet tool install --tool-path ./.tools/ dotnet-reportgenerator-globaltool;
-          ./.tools/reportgenerator
-          -reports:"**/coverage.cobertura.xml"
-          -targetdir:"./coverage-report"
-          -reporttypes:"Html;Cobertura;Badges"
-          -assemblyfilters:"-Dorn.Cli.Tests;-Dorn.Core.Tests;-TemplateGenerationTests"
-
-      - name: Upload coverage report as artifact
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: ./coverage-report
-          retention-days: 30
-
-      # Packaging smoke test: only needs to run once, not once per OS in the matrix.
-      # Packs at the version pinned in the template's checked-in dotnet-tools.json (the
-      # single source of truth — that's the version generated projects will request via
-      # `dotnet tool restore`), so this stays in sync automatically whenever that pin is
-      # bumped for a release, instead of drifting from the NuGet SDK's silent 1.0.0 default.
-      - name: Pack Dorn.Cli (smoke test)
-        if: matrix.os == 'ubuntu-latest'
-        shell: pwsh
-        run: |
-          $version = (Get-Content templates/webapi/.config/dotnet-tools.json | ConvertFrom-Json).tools.'dorn.cli'.version
-          dotnet pack src/Dorn.Cli/Dorn.Cli.csproj -c Release -o ./artifacts -p:PackageVersion=$version
-
-      - name: Smoke-test packed Dorn.Cli
-        if: matrix.os == 'ubuntu-latest'
-        shell: pwsh
-        run: ./eng/scripts/smoke-test-cli.ps1 -ArtifactsDirectory ${{ github.workspace }}/artifacts
-
-      # Dual-distribution smoke test: pack templates/webapi as a standalone NuGet
-      # template package and prove it's installable/usable via vanilla `dotnet new`,
-      # independent of the `dorn` CLI. See docs/adr/0008-dual-distribution-dotnet-new-template-pack.md.
-      - name: Pack and smoke-test Dorn.Templates.WebApi (dotnet new)
-        if: matrix.os == 'ubuntu-latest'
-        shell: pwsh
-        run: |
-          ./eng/scripts/pack-templates.ps1
-          dotnet new install ./artifacts/Dorn.Templates.WebApi.*.nupkg
-          dotnet new list | Select-String "dorn-webapi"
-          dotnet new dorn-webapi -n CiSmokeTestApp -o /tmp/ci-smoke-test-app
-          # The generated project lives outside the repo, so it can't see this repo's
-          # nuget.config "dorn-local" source for Dorn.Messaging.Contracts/Dorn.Messaging/
-          # Dorn.SharedKernel (not published to NuGet.org yet - see ADR 0010). Point restore
-          # at the local feed explicitly, same as templates/tests does.
-          dotnet restore /tmp/ci-smoke-test-app -p:RestoreAdditionalProjectSources=${{ github.workspace }}/artifacts
-          dotnet build /tmp/ci-smoke-test-app -c Release --no-restore
-          dotnet new uninstall Dorn.Templates.WebApi
-
-  # TODO(eng): add a release/publish job gated on tag pushes (e.g. `v*`) that runs
-  # `dotnet pack src/Dorn.Cli` and `dotnet nuget push` to publish the `dorn` global
-  # tool to NuGet.org. Deferred for v1 — see eng/README.md.
+# Releases publish via .github/workflows/publish.yml on `v*` tags (gated on this same build-test workflow) — see ADR 0020.

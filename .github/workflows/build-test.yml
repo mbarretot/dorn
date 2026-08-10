@@ -1,0 +1,106 @@
+name: build-test
+
+on:
+  workflow_call:
+
+jobs:
+  build-and-test:
+    name: build-and-test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          # Covers both Directory.Packages.props files (root + templates/webapi) so the cache key changes whenever either does.
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Pack Dorn's own NuGet packages (local feed for templates/webapi)
+        shell: pwsh
+        run: pwsh eng/scripts/pack-packages.ps1
+
+      - name: Build and test gRPC template
+        run: |
+          dotnet restore templates/grpc/CleanArchGrpcService.slnx
+          dotnet build templates/grpc/CleanArchGrpcService.slnx --no-restore -c Release
+          dotnet test templates/grpc/CleanArchGrpcService.slnx --no-build -c Release
+
+      - name: Restore
+        run: dotnet restore Dorn.slnx
+
+      - name: Build
+        run: dotnet build Dorn.slnx --no-restore -c Release
+
+      - name: Test
+        env:
+          DORN_TEMPLATES_PATH: ${{ github.workspace }}/templates
+          DORN_LOCAL_NUGET_FEED: ${{ github.workspace }}/artifacts
+        run: >
+          dotnet test Dorn.slnx --no-build -c Release
+          --collect:"XPlat Code Coverage"
+
+      # Aggregates per-project cobertura reports via ReportGenerator; ubuntu-only since the upload step below reads a single source.
+      - name: Aggregate coverage report (ReportGenerator)
+        if: matrix.os == 'ubuntu-latest'
+        shell: pwsh
+        run: >
+          dotnet tool install --tool-path ./.tools/ dotnet-reportgenerator-globaltool;
+          ./.tools/reportgenerator
+          -reports:"**/coverage.cobertura.xml"
+          -targetdir:"./coverage-report"
+          -reporttypes:"Html;Cobertura;Badges"
+          -assemblyfilters:"-Dorn.Cli.Tests;-Dorn.Core.Tests;-TemplateGenerationTests"
+
+      - name: Upload coverage report as artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ./coverage-report
+          retention-days: 30
+
+      # Packaging smoke test: runs once (not per OS); version pinned from dotnet-tools.json to stay in sync with generated projects.
+      - name: Pack Dorn.Cli (smoke test)
+        if: matrix.os == 'ubuntu-latest'
+        shell: pwsh
+        run: |
+          $version = (Get-Content templates/webapi/.config/dotnet-tools.json | ConvertFrom-Json).tools.'dorn.cli'.version
+          dotnet pack src/Dorn.Cli/Dorn.Cli.csproj -c Release -o ./artifacts -p:PackageVersion=$version
+
+      - name: Smoke-test packed Dorn.Cli
+        if: matrix.os == 'ubuntu-latest'
+        shell: pwsh
+        run: ./eng/scripts/smoke-test-cli.ps1 -ArtifactsDirectory ${{ github.workspace }}/artifacts
+
+      # Dual-distribution smoke test: standalone dotnet new template pack, independent of the dorn CLI — see ADR 0008.
+      - name: Pack and smoke-test Dorn.Templates.WebApi (dotnet new)
+        if: matrix.os == 'ubuntu-latest'
+        shell: pwsh
+        run: |
+          ./eng/scripts/pack-templates.ps1
+          dotnet new install ./artifacts/Dorn.Templates.WebApi.*.nupkg
+          dotnet new list | Select-String "dorn-webapi"
+          dotnet new dorn-webapi -n CiSmokeTestApp -o /tmp/ci-smoke-test-app
+          # Generated project is outside the repo (no local nuget.config feed) — point restore at the local artifacts feed explicitly (see ADR 0010).
+          dotnet restore /tmp/ci-smoke-test-app -p:RestoreAdditionalProjectSources=${{ github.workspace }}/artifacts
+          dotnet build /tmp/ci-smoke-test-app -c Release --no-restore
+          dotnet new uninstall Dorn.Templates.WebApi

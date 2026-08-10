@@ -1,18 +1,18 @@
 using Dorn.Cli.Execution;
 using Dorn.Cli.Projects;
-using Spectre.Console;
+using Dorn.Cli.Theming;
 
 namespace Dorn.Cli.Testing;
 
 public sealed class DotnetTestRunner : IDotnetTestRunner
 {
     private readonly IProcessRunner _processRunner;
-    private readonly IAnsiConsole _console;
+    private readonly IDornTheme _theme;
 
-    public DotnetTestRunner(IProcessRunner processRunner, IAnsiConsole console)
+    public DotnetTestRunner(IProcessRunner processRunner, IDornTheme theme)
     {
         _processRunner = processRunner;
-        _console = console;
+        _theme = theme;
     }
 
     /// <param name="context">The resolved project context.</param>
@@ -26,20 +26,11 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
         CancellationToken ct
     )
     {
-        var specs = new List<CapturedProcessSpec>();
-
-        // No tiers requested — early exit without warning or invocation.
-        if (tiers.Count == 0)
-        {
-            return new TestRunResult(specs, AllSucceeded: true);
-        }
-
-        var allSucceeded = true;
-
+        // Resolve tier plans and emit the Docker warning up front — writes inside a live
+        // region interleave badly with the progress renderer.
+        var plans = new List<(TestTier Tier, string Path)>();
         foreach (var tier in tiers)
         {
-            // Skip tiers that don't actually exist on disk (resolver found them, but the
-            // directory may have been deleted between resolve and run).
             var tierPath = ResolveTierPath(context, tier);
             if (string.IsNullOrEmpty(tierPath))
                 continue;
@@ -49,22 +40,80 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
                 WarnDockerRequired($"integration tests with {DescribeProvider(database)}");
             }
 
-            var spec = new ProcessSpec(
-                "dotnet",
-                ["test", tierPath, "--collect:\"XPlat Code Coverage\"", "--no-build"],
-                context.Root
-            );
+            plans.Add((tier, tierPath));
+        }
 
-            specs.Add(
-                new CapturedProcessSpec(spec.FileName, spec.Arguments, spec.WorkingDirectory)
-            );
+        if (plans.Count == 0)
+        {
+            return new TestRunResult([], AllSucceeded: true);
+        }
 
-            var exitCode = await _processRunner.RunAsync(spec, ct);
-            if (exitCode != 0)
-                allSucceeded = false;
+        var specs = new List<CapturedProcessSpec>();
+        var allSucceeded = true;
+
+        if (_theme.LiveRegionsEnabled)
+        {
+            await _theme
+                .CreateProgress()
+                .StartAsync(async ctx =>
+                {
+                    foreach (var plan in plans)
+                    {
+                        var task = ctx.AddTask(
+                            $"Running {plan.Tier} tests",
+                            autoStart: false,
+                            maxValue: 1
+                        );
+                        task.StartTask();
+                        if (!await RunTierAsync(context, plan.Path, specs, ct))
+                            allSucceeded = false;
+                        task.Increment(1);
+                    }
+                });
+        }
+        else
+        {
+            foreach (var plan in plans)
+            {
+                if (!await RunTierAsync(context, plan.Path, specs, ct))
+                    allSucceeded = false;
+            }
         }
 
         return new TestRunResult(specs, allSucceeded);
+    }
+
+    private async Task<bool> RunTierAsync(
+        ProjectContext context,
+        string tierPath,
+        List<CapturedProcessSpec> specs,
+        CancellationToken ct
+    )
+    {
+        // FindCoberturaReport only searches under context.Root, not the tier project's own dir.
+        var resultsDirectory = Path.Combine(
+            context.Root,
+            "TestResults",
+            Path.GetFileName(tierPath)
+        );
+
+        var spec = new ProcessSpec(
+            "dotnet",
+            [
+                "test",
+                tierPath,
+                "--collect:XPlat Code Coverage",
+                "--results-directory",
+                resultsDirectory,
+                "--no-build",
+            ],
+            context.Root
+        );
+
+        specs.Add(new CapturedProcessSpec(spec.FileName, spec.Arguments, spec.WorkingDirectory));
+
+        var exitCode = await _processRunner.RunAsync(spec, ct);
+        return exitCode == 0;
     }
 
     private static string? ResolveTierPath(ProjectContext context, TestTier tier)
@@ -96,8 +145,9 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
 
     private void WarnDockerRequired(string operation)
     {
-        _console.MarkupLine(
-            $"[yellow]Warning[/]: [bold]{operation}[/] requires Docker. Ensure the Docker daemon is running before continuing."
+        _theme.Message(
+            Severity.Warning,
+            $"[bold]{operation}[/] requires Docker. Ensure the Docker daemon is running before continuing."
         );
     }
 

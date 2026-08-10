@@ -31,9 +31,17 @@ dorn new webapi MyApp --orchestrator none         # no orchestration scaffolding
 dorn new webapi MyApp --auth custom               # self-issued JWT, seeded demo user, no external setup
 dorn new webapi MyApp --auth azure-ad             # validate Microsoft Entra ID tokens, no client secret
 dorn new webapi MyApp                             # omit --database/--orchestrator/--auth in an interactive terminal to be prompted
+dorn new webapi                                   # name omitted too: prompted for it interactively, with live validation
 # or, from a repo checkout during development:
 dotnet run --project src/Dorn.Cli -- new webapi MyApp
 ```
+
+`<name>` itself is optional: in an interactive terminal, omitting it prompts for a
+project name and validates each keystroke's worth of input in place (invalid names, e.g.
+starting with a digit, are rejected and re-prompted before moving on). In a
+non-interactive session (CI, scripts, piped output), omitting `<name>` fails immediately
+with a dorn-owned error ("Project name is required...") instead of Spectre's generic
+missing-argument parser error.
 
 This creates `./MyApp/` (`-o|--output` to override; `--force` to overwrite a non-empty
 directory), sourced from `Dorn.Templates.WebApi` and renamed from the template's
@@ -213,8 +221,16 @@ and the right `dotnet test` filter/orchestrator for your generation-time choices
 dorn test              # runs all 4 tiers (Application / Integration / Architecture / Functional)
 dorn test --tier unit  # one tier only; also: integration, architecture, functional
 dorn run               # picks AppHost → Aspire, else docker-compose.yml → Compose, else plain `dotnet run`
-dorn coverage          # runs tests with coverage, applies the fixed 80% threshold gate
+dorn coverage          # merges per-tier coverage reports, applies the fixed 80% threshold gate
+dorn coverage --all    # same, plus a per-class table of every class instead of only sub-80% ones
 ```
+
+`dorn coverage` merges the freshest Cobertura report from each of the 4 test tiers
+(taking max hits per line, keyed by file and declaring type) instead of reading a single
+report, and renders a per-class `Assembly | Class | Coverage % | Covered/Total | Uncovered`
+table for classes below 80% (capped at 15 rows; `--all` removes both the filter and the
+cap). See `docs/adr/0019-coverage-aggregation-merge-policy.md` for the merge policy and
+exclusion rules (generated files, EF Core migrations, `obj/`).
 
 All three accept `--project <path>` (default: CWD), working identically from inside the
 generated project or a parent directory.

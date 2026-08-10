@@ -14,7 +14,7 @@
 [![Dorn.Templates.WebApi](https://img.shields.io/nuget/v/Dorn.Templates.WebApi?style=flat-square&label=Dorn.Templates.WebApi)](https://www.nuget.org/packages/Dorn.Templates.WebApi)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](./docs/contributing.md)
 
-[Quick start](#quick-start) • [Templates](#templates) • [Why Dorn](#why-dorn) • [Architecture](#architecture) • [CLI reference](#cli-reference) • [Documentation](#documentation)
+[Features](#features) • [Templates](#templates) • [Quick start](#quick-start) • [Prerequisites](#prerequisites) • [Architecture](#architecture) • [CLI reference](#cli-reference) • [Documentation](#documentation)
 
 </div>
 
@@ -23,7 +23,42 @@
 > [!TIP]
 > If this project helps you, leave a star.
 
-Dorn is a .NET scaffolding CLI generating production-ready services with **Clean Architecture**, **CQRS**, and configurable persistence, wired end-to-end from commit one. Two templates ship today: a full-featured **`webapi`** (REST, choice of ORM/database) and a scoped, minimal **`grpc`** service.
+Dorn is a .NET scaffolding CLI generating production-ready services with **Clean Architecture**, **CQRS**, and configurable persistence, wired end-to-end from commit one. Three templates ship today: a full-featured **`webapi`** (REST, choice of ORM/database), a scoped, minimal **`grpc`** service, and a scoped **`worker`** background service.
+
+## Features
+
+`dorn new webapi MyApp` resolves, in one command, what you'd otherwise re-solve from scratch every time:
+
+- 🎯 **Zero-config by default** — SQLite needs no external database; Aspire needs no Docker to get started
+- 🏛️ **The dependency rule is enforced, not just documented** — ArchUnitNET tests fail the build if a layer imports something it shouldn't
+- 🧪 **Four test tiers generated with the project** — Application, Integration, Architecture, Functional
+- 📦 **No commercial licenses anywhere** — a from-scratch, MIT-licensed CQRS mediator (no MediatR), xUnit + NSubstitute for tests (no FluentAssertions, no Moq)
+- 🔄 **CI from the first push** — every generated project ships a working GitHub Actions workflow and a pinned `global.json`
+- 📊 **Observability on every orchestrator, not just Aspire** — `docker-compose` gets a real Grafana + Loki + Prometheus + Tempo stack out of the box
+- 🩺 **Preflight checks** — `dorn doctor` verifies your environment before you scaffold anything
+
+<p align="center">
+  <img src="./docs/images/architecture-illustrative.png" alt="A layered chevron mark: one command on the surface, a fully resolved architecture underneath" width="360">
+</p>
+
+## Templates
+
+|               | `webapi`                                               | `grpc`                                             | `worker`                                               |
+| ------------- | ------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------------------- |
+| Generates     | REST API (ASP.NET Core Minimal APIs)                   | gRPC service (Protobuf)                            | Background service (`PeriodicTimer` + `BackgroundService`) |
+| Persistence   | EF Core or Dapper, your choice                         | EF Core (fixed)                                    | EF Core (fixed)                                        |
+| Database      | SQLite, SQL Server, or PostgreSQL                      | SQLite (fixed)                                     | SQLite (fixed)                                         |
+| Orchestration | Aspire, Docker Compose, or none                        | Aspire (fixed)                                     | Aspire (fixed)                                          |
+| Configuration | Flags or an interactive wizard                         | None (one fixed, opinionated MVP)                  | None (one fixed, opinionated MVP)                       |
+| Reference     | [docs/templates/webapi.md](./docs/templates/webapi.md) | [docs/templates/grpc.md](./docs/templates/grpc.md) | [docs/templates/worker.md](./docs/templates/worker.md) |
+
+```bash
+dorn new webapi MyApp --database postgres --orm dapper   # configurable
+dorn new grpc MyService                                  # fixed scope, zero flags
+dorn new worker MyWorker                                 # fixed scope, zero flags
+```
+
+`grpc` and `worker` are deliberately fixed MVPs, not a smaller `webapi` ([`grpc` scope rationale](./docs/templates/grpc.md#scope-a-fixed-mvp-not-a-smaller-webapi), [`worker` scope rationale](./docs/templates/worker.md#scope-a-fixed-mvp-not-a-smaller-webapi)).
 
 ## Quick start
 
@@ -35,38 +70,14 @@ cd MyApp && dotnet build
 
 Prefer not to install a global tool? `webapi` also ships as a standard `dotnet new` template ([alternative installation](./docs/templates/webapi.md#alternative-vanilla-dotnet-new-without-the-dorn-cli)).
 
-## Templates
+## Prerequisites
 
-|               | `webapi`                                               | `grpc`                                             |
-| ------------- | ------------------------------------------------------ | -------------------------------------------------- |
-| Generates     | REST API (ASP.NET Core Minimal APIs)                   | gRPC service (Protobuf)                            |
-| Persistence   | EF Core or Dapper, your choice                         | EF Core (fixed)                                    |
-| Database      | SQLite, SQL Server, or PostgreSQL                      | SQLite (fixed)                                     |
-| Orchestration | Aspire, Docker Compose, or none                        | Aspire (fixed)                                     |
-| Configuration | Flags or an interactive wizard                         | None (one fixed, opinionated MVP)                  |
-| Reference     | [docs/templates/webapi.md](./docs/templates/webapi.md) | [docs/templates/grpc.md](./docs/templates/grpc.md) |
+- [.NET SDK 10.0](https://dotnet.microsoft.com/download) or higher (see [`global.json`](./global.json) for the exact pinned version)
+- Optional: [Docker](https://www.docker.com/), for Compose-orchestrated projects or non-SQLite integration tests
+- Optional: an IDE — Visual Studio 2022, VS Code, or JetBrains Rider
 
-```bash
-dorn new webapi MyApp --database postgres --orm dapper   # configurable
-dorn new grpc MyService                                  # fixed scope, zero flags
-```
-
-`grpc` is a deliberately fixed MVP, not a smaller `webapi` ([scope rationale](./docs/templates/grpc.md#scope-a-fixed-mvp-not-a-smaller-webapi)).
-
-## Why Dorn
-
-<p align="center">
-  <img src="./docs/images/architecture-illustrative.png" alt="A layered chevron mark: one command on the surface, a fully resolved architecture underneath" width="360">
-</p>
-
-`dorn new webapi MyApp` resolves, in one command, what you'd otherwise re-solve from scratch every time:
-
-- **No commercial licenses anywhere**: a from-scratch, MIT-licensed CQRS mediator (no MediatR), xUnit + NSubstitute for tests (no FluentAssertions, no Moq)
-- **The dependency rule is enforced, not just documented**: ArchUnitNET tests fail the build if a layer imports something it shouldn't
-- **Four test tiers generated with the project**: Application, Integration, Architecture, Functional
-- **Zero-config by default**: SQLite needs no external database; Aspire needs no Docker to get started
-- **CI from the first push**: every generated project ships a working GitHub Actions workflow and a pinned `global.json`
-- **Observability on every orchestrator, not just Aspire**: `docker-compose` gets a real Grafana + Loki + Prometheus + Tempo stack out of the box
+> [!TIP]
+> Run `dorn doctor` after installing to confirm your environment is ready.
 
 ## Architecture
 
@@ -97,10 +108,11 @@ Dependencies point strictly inward:
 Every generated project ships verbs to operate on itself, from its root or any parent (`--project <path>`):
 
 | Command         | Does                                                                                   |
-| --------------- | -------------------------------------------------------------------------------------- |
+| --------------- | --------------------------------------------------------------------------------------- |
 | `dorn test`     | Runs all 4 tiers (`--tier` to filter to one)                                           |
 | `dorn run`      | Auto-detects AppHost → Aspire, `docker-compose.yml` → Compose, else plain `dotnet run` |
 | `dorn coverage` | Runs tests with coverage, gated at a fixed 80%                                         |
+| `dorn doctor`   | Checks environment readiness (templates root, dotnet SDK, Docker when Compose)         |
 
 `dorn <verb>` and `dotnet dorn <verb>` (local tool, via `.config/dotnet-tools.json`) are equivalent.
 
@@ -110,6 +122,7 @@ Flags (`--orm`, `--database`, `--orchestrator`, `--auth`) are documented in the 
 
 - [x] `webapi`: Clean Architecture, CQRS, EF Core/Dapper, 4 test tiers
 - [x] `grpc`: Clean Architecture, CQRS, fixed EF Core/SQLite/Aspire MVP
+- [x] `worker`: Clean Architecture, CQRS, `PeriodicTimer`-driven background service, fixed EF Core/SQLite/Aspire MVP
 - [ ] `ui`: placeholder at [`templates/ui/README.md`](./templates/ui/README.md)
 
 Decisions behind these are recorded in [`docs/adr`](./docs/adr).
@@ -119,6 +132,7 @@ Decisions behind these are recorded in [`docs/adr`](./docs/adr).
 - [Getting started](./docs/getting-started.md): local development, from source
 - [`webapi` template reference](./docs/templates/webapi.md)
 - [`grpc` template reference](./docs/templates/grpc.md)
+- [`worker` template reference](./docs/templates/worker.md)
 - [Architecture](./docs/architecture.md): how Dorn itself is built
 - [Architecture decisions (ADRs)](./docs/adr)
 - [Contributing](./docs/contributing.md)

@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Dorn.Cli.Execution;
 using Dorn.Cli.Projects;
+using Dorn.Cli.Theming;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -15,19 +16,19 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
     private readonly IProjectContextResolver _resolver;
     private readonly IProcessRunner _processRunner;
     private readonly ISignalRegistration _signalRegistration;
-    private readonly IAnsiConsole _console;
+    private readonly IDornTheme _theme;
 
     public RunCommand(
         IProjectContextResolver resolver,
         IProcessRunner processRunner,
         ISignalRegistration signalRegistration,
-        IAnsiConsole console
+        IDornTheme theme
     )
     {
         _resolver = resolver;
         _processRunner = processRunner;
         _signalRegistration = signalRegistration;
-        _console = console;
+        _theme = theme;
     }
 
     // Spectre.Console.Cli 0.55.0 changed ExecuteAsync from public to protected (and added
@@ -64,13 +65,14 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
         var appHost = ResolveAppHost(ctx);
         if (string.IsNullOrEmpty(appHost))
         {
-            _console.MarkupLine(
-                "[red]Aspire orchestrator detected, but no AppHost project was found.[/]"
+            _theme.Message(
+                Severity.Error,
+                "Aspire orchestrator detected, but no AppHost project was found."
             );
             return 1;
         }
 
-        _console.MarkupLine($"[green]Starting[/] via Aspire AppHost: {Markup.Escape(appHost)}");
+        _theme.Message(Severity.Success, $"Starting via Aspire AppHost: {Markup.Escape(appHost)}");
 
         var spec = new ProcessSpec("dotnet", ["run", "--project", appHost], ctx.Root);
         var exitCode = await _processRunner.RunAsync(spec, cancellationToken);
@@ -79,7 +81,7 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
 
     private async Task<int> RunCompose(ProjectContext ctx, CancellationToken cancellationToken)
     {
-        _console.MarkupLine("[green]Starting[/] via Docker Compose");
+        _theme.Message(Severity.Success, "Starting via Docker Compose");
 
         // SIGINT/SIGTERM teardown — only the Compose path gets this treatment.
         // Aspire and plain dotnet run self-handle shutdown via their own hosts.
@@ -107,11 +109,14 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
     {
         if (string.IsNullOrEmpty(ctx.WebApiProject))
         {
-            _console.MarkupLine("[red]Plain orchestrator requires a WebApi project under src/.[/]");
+            _theme.Message(
+                Severity.Error,
+                "Plain orchestrator requires a WebApi project under src/."
+            );
             return 1;
         }
 
-        _console.MarkupLine($"[green]Starting[/] plain: {Markup.Escape(ctx.WebApiProject)}");
+        _theme.Message(Severity.Success, $"Starting plain: {Markup.Escape(ctx.WebApiProject)}");
 
         var spec = new ProcessSpec("dotnet", ["run", "--project", ctx.WebApiProject], ctx.Root);
         var exitCode = await _processRunner.RunAsync(spec, cancellationToken);
@@ -120,7 +125,7 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
 
     private void OnCancel(ProjectContext ctx, string signalName)
     {
-        _console.MarkupLine($"[yellow]{signalName} received.[/] Tearing down compose stack...");
+        _theme.Message(Severity.Warning, $"{signalName} received. Tearing down compose stack...");
         // Best-effort synchronous shutdown — RunAsync is blocking at this point.
         // Signal handlers run on a thread-pool thread and cannot propagate the
         // async cancellationToken; CancellationToken.None is correct here.
@@ -131,7 +136,7 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
         }
         catch (Exception ex)
         {
-            _console.MarkupLine($"[red]Teardown failed:[/] {Markup.Escape(ex.Message)}");
+            _theme.Message(Severity.Error, $"Teardown failed: {Markup.Escape(ex.Message)}");
         }
     }
 
@@ -144,7 +149,7 @@ public sealed class RunCommand : AsyncCommand<RunSettings>
         }
         catch (Exception ex)
         {
-            _console.MarkupLine($"[red]Teardown failed:[/] {Markup.Escape(ex.Message)}");
+            _theme.Message(Severity.Error, $"Teardown failed: {Markup.Escape(ex.Message)}");
         }
     }
 
