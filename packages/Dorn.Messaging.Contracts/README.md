@@ -1,84 +1,41 @@
 # Dorn.Messaging.Contracts
 
-> Zero-dependency mediator interfaces for CQRS and domain events. Safe to reference from any layer, including Domain.
+Zero-dependency CQRS and notification contracts. Safe to reference from Domain and Application layers.
 
-## Interfaces
+## ⚡ Install
 
-| Interface | Purpose |
-|---|---|
-| `IRequest<TResponse>` | Marker for a request (command or query) that returns `TResponse` |
-| `IRequest` | Shorthand for `IRequest<Unit>` (fire-and-forget commands) |
-| `ISender` | Sends a request to its single handler |
-| `INotification` | Marker for domain/integration events |
-| `INotificationHandler<T>` | Handles a notification (zero to many per notification type) |
-| `IPipelineBehavior<TRequest, TResponse>` | Cross-cutting behavior wrapped around request handling |
-| `IPublisher` | Publishes notifications to all registered handlers |
-
-## Usage
-
-```csharp
-// Commands and queries are records
-public sealed record CreateTodoItemCommand(string Title) : IRequest<Guid>;
-public sealed record GetTodoItemsQuery() : IRequest<IReadOnlyList<TodoItemDto>>;
-
-// Notifications are records
-public sealed record TodoItemCreatedEvent(Guid Id, string Title) : INotification;
-
-// Handlers implement the corresponding interface
-public sealed class CreateTodoItemCommandHandler
-    : IRequestHandler<CreateTodoItemCommand, Guid>
-{
-    private readonly IApplicationDbContext _db;
-
-    public CreateTodoItemCommandHandler(IApplicationDbContext db) => _db = db;
-
-    public async Task<Guid> Handle(CreateTodoItemCommand request, CancellationToken ct)
-    {
-        var item = new TodoItem { Title = request.Title };
-        _db.Items.Add(item);
-        await _db.SaveChangesAsync(ct);
-        return item.Id;
-    }
-}
-```
-
-## Unit
-
-`Unit` is the C# equivalent of `void`. Use `IRequest` (shorthand for `IRequest<Unit>`) for commands that don't return a value.
-
-```csharp
-public sealed record MarkTodoCompleteCommand(Guid Id) : IRequest;
-```
-
-## Pipeline Behaviors
-
-Wrap cross-cutting concerns around request handling:
-
-```csharp
-public sealed class ValidationBehavior<TRequest, TResponse>
-    : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : IRequest<TResponse>
-{
-    private readonly IValidator<TRequest> _validator;
-
-    public async Task<TResponse> Handle(
-        TRequest request,
-        RequestHandlerDelegate<TResponse> next,
-        CancellationToken ct)
-    {
-        var result = await _validator.ValidateAsync(request, ct);
-        if (!result.IsValid)
-            throw new ValidationException(result.Errors);
-
-        return await next();
-    }
-}
-```
-
-## Installation
-
-```
+```bash
 dotnet add package Dorn.Messaging.Contracts
 ```
 
-Part of the Dorn template ecosystem, but usable standalone in any .NET project.
+## 🧩 API at a glance
+
+| Contract | Purpose |
+| --- | --- |
+| `IRequest<TResponse>` | Command or query returning a value |
+| `IRequest` | Command returning `Unit` |
+| `IRequestHandler<,>` | Handles one request type |
+| `ISender` | Sends a request to its handler |
+| `INotification` | Domain or integration event |
+| `INotificationHandler<>` | Handles one notification type |
+| `IPublisher` | Publishes to every registered handler |
+| `IPipelineBehavior<,>` | Wraps request handling with cross-cutting behavior |
+
+## 🚀 Quick example
+
+```csharp
+public sealed record CreateTodoCommand(string Title) : IRequest<Guid>;
+
+public sealed class CreateTodoHandler : IRequestHandler<CreateTodoCommand, Guid>
+{
+    public Task<Guid> Handle(CreateTodoCommand request, CancellationToken ct)
+    {
+        var id = Guid.NewGuid();
+        return Task.FromResult(id);
+    }
+}
+
+public sealed record TodoCreated(Guid Id) : INotification;
+```
+
+Use [`Dorn.Messaging`](../Dorn.Messaging/README.md) for dispatch, handler discovery, and pipeline execution.
