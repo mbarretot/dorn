@@ -66,7 +66,10 @@ public sealed class CoverageCommand : AsyncCommand<CoverageSettings>
 
         if (!testResult.AllSucceeded)
         {
-            _theme.Message(Severity.Error, "One or more tier runs failed; coverage report not generated.");
+            _theme.Message(
+                Severity.Error,
+                "One or more tier runs failed; coverage report not generated."
+            );
             return 1;
         }
 

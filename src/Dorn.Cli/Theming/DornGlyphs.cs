@@ -18,6 +18,10 @@ public static class DornGlyphs
             Severity.Error => unicode ? ErrorUnicode : ErrorAscii,
             Severity.Warning => unicode ? WarningUnicode : WarningAscii,
             Severity.Info => unicode ? InfoUnicode : InfoAscii,
-            _ => throw new ArgumentOutOfRangeException(nameof(severity), severity, "Unknown severity."),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(severity),
+                severity,
+                "Unknown severity."
+            ),
         };
 }
