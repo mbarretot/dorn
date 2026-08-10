@@ -221,8 +221,16 @@ and the right `dotnet test` filter/orchestrator for your generation-time choices
 dorn test              # runs all 4 tiers (Application / Integration / Architecture / Functional)
 dorn test --tier unit  # one tier only; also: integration, architecture, functional
 dorn run               # picks AppHost → Aspire, else docker-compose.yml → Compose, else plain `dotnet run`
-dorn coverage          # runs tests with coverage, applies the fixed 80% threshold gate
+dorn coverage          # merges per-tier coverage reports, applies the fixed 80% threshold gate
+dorn coverage --all    # same, plus a per-class table of every class instead of only sub-80% ones
 ```
+
+`dorn coverage` merges the freshest Cobertura report from each of the 4 test tiers
+(taking max hits per line, keyed by file and declaring type) instead of reading a single
+report, and renders a per-class `Assembly | Class | Coverage % | Covered/Total | Uncovered`
+table for classes below 80% (capped at 15 rows; `--all` removes both the filter and the
+cap). See `docs/adr/0019-coverage-aggregation-merge-policy.md` for the merge policy and
+exclusion rules (generated files, EF Core migrations, `obj/`).
 
 All three accept `--project <path>` (default: CWD), working identically from inside the
 generated project or a parent directory.
