@@ -72,8 +72,8 @@ DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" 
 `./artifacts` feed (`templates/tests` via `DORN_LOCAL_NUGET_FEED`; see
 `docs/adr/0010-extract-messaging-and-shared-kernel-as-nuget-packages.md`).
 
-Enforced in `.github/workflows/ci.yml` on every push/PR (`ubuntu-latest`/`windows-latest`
-matrix).
+Enforced by the reusable `.github/workflows/build-test.yml` matrix (`ubuntu-latest`/`windows-latest`),
+called from `.github/workflows/ci.yml` on every push/PR.
 
 ## Pull request title and description
 

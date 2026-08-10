@@ -14,8 +14,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    uses: ./.github/workflows/build-test.yml
+    permissions:
+      contents: read
+
   publish:
     name: Pack and Publish
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
