@@ -1,8 +1,10 @@
 using System.Runtime.InteropServices;
+using System.Text;
 using Dorn.Cli.Commands.Run;
 using Dorn.Cli.Execution;
 using Dorn.Cli.Infrastructure;
 using Dorn.Cli.Projects;
+using Dorn.Cli.Theming;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Spectre.Console;
@@ -199,10 +201,11 @@ public class RunCommandTests : IDisposable
         var processRunner = Substitute.For<IProcessRunner>();
         processRunner.RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>()).Returns(0);
 
-        var consoleMock = Substitute.For<IAnsiConsole>();
+        var consoleMock = CreateConsoleMock();
+        var theme = new DornTheme(consoleMock);
         var resolver = new ProjectContextResolver();
         var signalReg = new SignalRegistration();
-        var command = new RunCommand(resolver, processRunner, signalReg, consoleMock);
+        var command = new RunCommand(resolver, processRunner, signalReg, theme);
 
         return (processRunner, consoleMock, command);
     }
@@ -217,15 +220,26 @@ public class RunCommandTests : IDisposable
         var processRunner = Substitute.For<IProcessRunner>();
         processRunner.RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>()).Returns(0);
 
-        var consoleMock = Substitute.For<IAnsiConsole>();
+        var consoleMock = CreateConsoleMock();
+        var theme = new DornTheme(consoleMock);
         var resolver = new ProjectContextResolver();
         var signalReg = Substitute.For<ISignalRegistration>();
         signalReg
             .Register(Arg.Any<PosixSignal>(), Arg.Any<Action<PosixSignalContext>>())
             .Returns(Substitute.For<IDisposable>());
-        var command = new RunCommand(resolver, processRunner, signalReg, consoleMock);
+        var command = new RunCommand(resolver, processRunner, signalReg, theme);
 
         return (processRunner, consoleMock, command, signalReg);
+    }
+
+    // Explicit — no test may rely on the mock's default Interactive/Unicode values.
+    private static IAnsiConsole CreateConsoleMock()
+    {
+        var consoleMock = Substitute.For<IAnsiConsole>();
+        var capabilities = new Capabilities { Interactive = false, Unicode = true };
+        var profile = new Profile(Substitute.For<IAnsiConsoleOutput>(), capabilities, Encoding.UTF8);
+        consoleMock.Profile.Returns(profile);
+        return consoleMock;
     }
 }
 

@@ -1,5 +1,6 @@
 using Dorn.Abstractions.Generation;
 using Dorn.Cli.Execution;
+using Dorn.Cli.Theming;
 using Dorn.Core.Validation;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -9,7 +10,8 @@ namespace Dorn.Cli.Commands.New;
 public sealed class NewWorkerCommand(
     IGenerationEngine generationEngine,
     IProcessRunner processRunner,
-    IAnsiConsole console
+    IAnsiConsole console,
+    IDornTheme theme
 ) : AsyncCommand<NewWorkerSettings>
 {
     private const string TemplateShortName = "dorn-worker";
@@ -17,6 +19,7 @@ public sealed class NewWorkerCommand(
     private readonly IGenerationEngine _generationEngine = generationEngine;
     private readonly IProcessRunner _processRunner = processRunner;
     private readonly IAnsiConsole _console = console;
+    private readonly IDornTheme _theme = theme;
 
     // Spectre.Console.Cli 0.55.0 changed ExecuteAsync from public to protected (and added
     // CancellationToken); logic lives in the public RunAsync below, and tests call it
@@ -86,7 +89,7 @@ public sealed class NewWorkerCommand(
     {
         if (noRestore)
         {
-            _console.MarkupLine("[grey]--no-restore set: skipping `dotnet tool restore`.[/]");
+            _theme.Message(Severity.Info, "--no-restore set: skipping `dotnet tool restore`.");
             return;
         }
 
@@ -97,19 +100,24 @@ public sealed class NewWorkerCommand(
             return;
         }
 
-        _console.MarkupLine("[grey]Restoring local tools (dotnet tool restore)...[/]");
+        var spec = new ProcessSpec("dotnet", ["tool", "restore"], outputDirectory);
 
         try
         {
-            var exitCode = await _processRunner.RunAsync(
-                new ProcessSpec("dotnet", ["tool", "restore"], outputDirectory),
-                cancellationToken
-            );
+            var exitCode = _theme.LiveRegionsEnabled
+                ? await _theme
+                    .CreateStatus()
+                    .StartAsync(
+                        "Restoring local tools (dotnet tool restore)...",
+                        _ => _processRunner.RunAsync(spec, cancellationToken)
+                    )
+                : await RunRestoreWithMessageAsync(spec, cancellationToken);
 
             if (exitCode != 0)
             {
-                _console.MarkupLine(
-                    "[yellow]Warning:[/] `dotnet tool restore` failed (exit "
+                _theme.Message(
+                    Severity.Warning,
+                    "`dotnet tool restore` failed (exit "
                         + exitCode
                         + "). The generated project is on disk, but local tools may not be available. Run `dotnet tool restore` manually inside the project to fix."
                 );
@@ -117,27 +125,33 @@ public sealed class NewWorkerCommand(
         }
         catch (Exception ex)
         {
-            _console.MarkupLine(
-                "[yellow]Warning:[/] `dotnet tool restore` threw: " + Markup.Escape(ex.Message)
+            _theme.Message(
+                Severity.Warning,
+                "`dotnet tool restore` threw: " + Markup.Escape(ex.Message)
             );
         }
+    }
+
+    private async Task<int> RunRestoreWithMessageAsync(
+        ProcessSpec spec,
+        CancellationToken cancellationToken
+    )
+    {
+        _theme.Message(Severity.Info, "Restoring local tools (dotnet tool restore)...");
+        return await _processRunner.RunAsync(spec, cancellationToken);
     }
 
     private void WriteErrorPanel(string header, string? message, bool escapeMessage = true)
     {
         var content = message ?? "An unknown error occurred.";
-        _console.Write(
-            new Panel(escapeMessage ? Markup.Escape(content) : content)
-                .Header(Markup.Escape(header))
-                .BorderColor(Color.Red)
-        );
+        _theme.OutcomePanel(Severity.Error, header, content, escapeMessage);
     }
 
     private void RenderSuccess(string projectName, GenerationResult result)
     {
         if (result.CreatedFiles.Count > 0)
         {
-            var table = new Table().Border(TableBorder.Rounded).Title("Created files");
+            var table = _theme.CreateTable("Created files");
             table.AddColumn("Path");
             foreach (var file in result.CreatedFiles)
             {
@@ -147,9 +161,8 @@ public sealed class NewWorkerCommand(
             _console.Write(table);
         }
 
-        var nextSteps = Markup.Escape(
-            $"cd {projectName}{Environment.NewLine}dotnet build{Environment.NewLine}dotnet dorn test"
-        );
-        _console.Write(new Panel(nextSteps).Header("Next steps").BorderColor(Color.Green));
+        var nextSteps =
+            $"cd {projectName}{Environment.NewLine}dotnet build{Environment.NewLine}dotnet dorn test";
+        _theme.OutcomePanel(Severity.Success, "Next steps", nextSteps);
     }
 }

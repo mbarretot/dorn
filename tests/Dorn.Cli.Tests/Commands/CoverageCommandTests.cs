@@ -1,7 +1,9 @@
+using System.Text;
 using Dorn.Cli.Commands.Coverage;
 using Dorn.Cli.Coverage;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Testing;
+using Dorn.Cli.Theming;
 using NSubstitute;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -139,10 +141,11 @@ public class CoverageCommandTests : IDisposable
             )
             .Returns(new TestRunResult([], AllSucceeded: true));
 
-        var consoleMock = Substitute.For<IAnsiConsole>();
+        var consoleMock = CreateConsoleMock();
+        var theme = new DornTheme(consoleMock);
         var resolver = new ProjectContextResolver();
         var reporter = new CoverageReporter();
-        var command = new CoverageCommand(resolver, testRunner, reporter, consoleMock);
+        var command = new CoverageCommand(resolver, testRunner, reporter, theme);
 
         return (testRunner, consoleMock, command);
     }
@@ -163,12 +166,23 @@ public class CoverageCommandTests : IDisposable
             )
             .Returns(new TestRunResult([], AllSucceeded: false));
 
-        var consoleMock = Substitute.For<IAnsiConsole>();
+        var consoleMock = CreateConsoleMock();
+        var theme = new DornTheme(consoleMock);
         var resolver = new ProjectContextResolver();
         var reporter = new CoverageReporter();
-        var command = new CoverageCommand(resolver, testRunner, reporter, consoleMock);
+        var command = new CoverageCommand(resolver, testRunner, reporter, theme);
 
         return (testRunner, consoleMock, command);
+    }
+
+    // Explicit — no test may rely on the mock's default Interactive/Unicode values.
+    private static IAnsiConsole CreateConsoleMock()
+    {
+        var consoleMock = Substitute.For<IAnsiConsole>();
+        var capabilities = new Capabilities { Interactive = false, Unicode = true };
+        var profile = new Profile(Substitute.For<IAnsiConsoleOutput>(), capabilities, Encoding.UTF8);
+        consoleMock.Profile.Returns(profile);
+        return consoleMock;
     }
 
     private void CreateTestsDir(string name)

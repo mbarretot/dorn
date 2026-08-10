@@ -2,6 +2,7 @@ using System.Text;
 using Dorn.Abstractions.Generation;
 using Dorn.Cli.Commands.New;
 using Dorn.Cli.Execution;
+using Dorn.Cli.Theming;
 using NSubstitute;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -578,6 +579,62 @@ public class NewWebApiCommandTests
     }
 
     [Fact]
+    public async Task NewWebApi_WithSuccessfulGenerationAndInteractiveConsole_StillRunsDotnetToolRestoreOnce()
+    {
+        var (engine, processRunner, command, console) = CreateCommandWithRealTestConsole();
+        console.Profile.Capabilities.Interactive = true;
+        var tempDir = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-restore-interactive-{Guid.NewGuid():N}"
+        );
+        Directory.CreateDirectory(tempDir);
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var request = callInfo.ArgAt<GenerationRequest>(0);
+                var manifestDir = Path.Combine(request.OutputDirectory, ".config");
+                Directory.CreateDirectory(manifestDir);
+                File.WriteAllText(Path.Combine(manifestDir, "dotnet-tools.json"), "{}");
+                return new GenerationResult(true, request.OutputDirectory, ["Program.cs"], []);
+            });
+
+        try
+        {
+            // All choices pinned via flags — the wizard's own SelectionPrompts aren't part of this slice.
+            var exitCode = await command.RunAsync(
+                new NewWebApiSettings
+                {
+                    Name = "MyApp",
+                    Output = tempDir,
+                    Orm = "efcore",
+                    Database = "sqlite",
+                    Orchestrator = "aspire",
+                    Auth = "none",
+                },
+                CancellationToken.None
+            );
+
+            Assert.Equal(0, exitCode);
+            await processRunner
+                .Received(1)
+                .RunAsync(
+                    Arg.Is<ProcessSpec>(s =>
+                        s.FileName == "dotnet"
+                        && s.Arguments.Contains("tool")
+                        && s.Arguments.Contains("restore")
+                    ),
+                    Arg.Any<CancellationToken>()
+                );
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task NewWebApi_WithoutManifestInOutput_SkipsDotnetToolRestore()
     {
         var (engine, processRunner, command) = CreateCommand();
@@ -619,7 +676,8 @@ public class NewWebApiCommandTests
         var engine = Substitute.For<IGenerationEngine>();
         var processRunner = Substitute.For<IProcessRunner>();
         var consoleMock = CreateNonInteractiveConsoleMock();
-        var command = new NewWebApiCommand(engine, processRunner, consoleMock);
+        var theme = new DornTheme(consoleMock);
+        var command = new NewWebApiCommand(engine, processRunner, consoleMock, theme);
         return (engine, processRunner, command);
     }
 
@@ -633,17 +691,18 @@ public class NewWebApiCommandTests
         var engine = Substitute.For<IGenerationEngine>();
         var processRunner = Substitute.For<IProcessRunner>();
         var consoleMock = CreateNonInteractiveConsoleMock();
-        var command = new NewWebApiCommand(engine, processRunner, consoleMock);
+        var theme = new DornTheme(consoleMock);
+        var command = new NewWebApiCommand(engine, processRunner, consoleMock, theme);
         return (engine, processRunner, command, consoleMock);
     }
 
-    ///<summary>IAnsiConsole mock with Interactive=false by default. Interactive tests override with a real TestConsole at the test boundary.</summary>
+    ///<summary>IAnsiConsole mock with Interactive=false, Unicode=true explicitly set (no test may rely on defaults). Interactive tests override with a real TestConsole at the test boundary.</summary>
     private static IAnsiConsole CreateNonInteractiveConsoleMock()
     {
         var consoleMock = Substitute.For<IAnsiConsole>();
-        // Capabilities is sealed; instantiate directly and set Interactive via property.
-        var capabilities = new Capabilities { Interactive = false };
-        // Profile is sealed; ctor takes (IAnsiConsoleOutput, Capabilities, Encoding). Only Capabilities.Interactive is read.
+        // Capabilities is sealed; instantiate directly and set properties explicitly.
+        var capabilities = new Capabilities { Interactive = false, Unicode = true };
+        // Profile is sealed; ctor takes (IAnsiConsoleOutput, Capabilities, Encoding).
         var profile = new Profile(
             Substitute.For<IAnsiConsoleOutput>(),
             capabilities,
@@ -663,7 +722,9 @@ public class NewWebApiCommandTests
         var engine = Substitute.For<IGenerationEngine>();
         var processRunner = Substitute.For<IProcessRunner>();
         var console = new TestConsole().Width(int.MaxValue);
-        var command = new NewWebApiCommand(engine, processRunner, console);
+        console.Profile.Capabilities.Unicode = true;
+        var theme = new DornTheme(console);
+        var command = new NewWebApiCommand(engine, processRunner, console, theme);
         return (engine, processRunner, command, console);
     }
 }

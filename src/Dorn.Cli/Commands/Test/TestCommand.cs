@@ -1,6 +1,6 @@
 using Dorn.Cli.Projects;
 using Dorn.Cli.Testing;
-using Spectre.Console;
+using Dorn.Cli.Theming;
 using Spectre.Console.Cli;
 
 namespace Dorn.Cli.Commands.Test;
@@ -12,17 +12,13 @@ public sealed class TestCommand : AsyncCommand<TestSettings>
 {
     private readonly IProjectContextResolver _resolver;
     private readonly IDotnetTestRunner _runner;
-    private readonly IAnsiConsole _console;
+    private readonly IDornTheme _theme;
 
-    public TestCommand(
-        IProjectContextResolver resolver,
-        IDotnetTestRunner runner,
-        IAnsiConsole console
-    )
+    public TestCommand(IProjectContextResolver resolver, IDotnetTestRunner runner, IDornTheme theme)
     {
         _resolver = resolver;
         _runner = runner;
-        _console = console;
+        _theme = theme;
     }
 
     // Spectre.Console.Cli 0.55.0 changed ExecuteAsync from public to protected (and added
@@ -47,8 +43,9 @@ public sealed class TestCommand : AsyncCommand<TestSettings>
         // silently exiting 0.
         if (projectContext.Tiers.Count == 0)
         {
-            _console.MarkupLine(
-                "[yellow]No test tiers found.[/] This project was generated with [bold]IncludeTests=false[/]; nothing to test."
+            _theme.Message(
+                Severity.Warning,
+                "No test tiers found. This project was generated with [bold]IncludeTests=false[/]; nothing to test."
             );
             return 0;
         }
@@ -64,7 +61,7 @@ public sealed class TestCommand : AsyncCommand<TestSettings>
 
         if (!result.AllSucceeded)
         {
-            _console.MarkupLine("[red]One or more tier runs failed.[/]");
+            _theme.Message(Severity.Error, "One or more tier runs failed.");
             return 1;
         }
 
