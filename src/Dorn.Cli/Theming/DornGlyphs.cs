@@ -1,10 +1,5 @@
 namespace Dorn.Cli.Theming;
 
-/// <summary>
-/// Severity icon vocabulary, unicode + ASCII fallback pairs. Resolution always takes the
-/// unicode flag as an explicit parameter (never reads console state itself) so callers decide
-/// per-call whether to degrade, per the design's "resolved per call, not cached" rule.
-/// </summary>
 public static class DornGlyphs
 {
     public const string SuccessUnicode = "✔";

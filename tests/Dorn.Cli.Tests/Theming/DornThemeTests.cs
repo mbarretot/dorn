@@ -5,12 +5,7 @@ using Xunit;
 
 namespace Dorn.Cli.Tests.Theming;
 
-///<summary>
-/// Tests for <see cref="DornTheme"/>: severity glyph/color selection and ASCII fallback when
-/// <c>Profile.Capabilities.Unicode</c> is false. Uses a real <see cref="TestConsole"/> with
-/// capabilities set explicitly per test — no test may rely on <see cref="TestConsole"/>'s
-/// default capability values (design's test-migration rule).
-///</summary>
+// Capabilities are set explicitly per test — no test relies on TestConsole's defaults.
 public class DornThemeTests
 {
     [Theory]
@@ -56,9 +51,7 @@ public class DornThemeTests
     [InlineData(Severity.Info)]
     public void Message_GlyphResolvedPerCall_NotCachedAtConstruction(Severity severity)
     {
-        // Theme constructed while Unicode=true, flipped to false *after* construction. If the
-        // glyph were cached in the ctor this would still render the unicode glyph — design
-        // mandates per-call resolution against IAnsiConsole.Profile.Capabilities.Unicode.
+        // Flips Unicode after construction — would still render unicode if cached in ctor.
         var console = new TestConsole().Width(int.MaxValue);
         console.Profile.Capabilities.Unicode = true;
         var theme = new DornTheme(console);

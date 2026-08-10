@@ -175,10 +175,7 @@ public class CoverageCommandTests : IDisposable
         return (testRunner, consoleMock, command);
     }
 
-    ///<summary>
-    /// Explicit — no test may rely on the mock's default Interactive/Unicode values, since
-    /// CoverageCommand now resolves severity output through <see cref="DornTheme"/>.
-    ///</summary>
+    // Explicit — no test may rely on the mock's default Interactive/Unicode values.
     private static IAnsiConsole CreateConsoleMock()
     {
         var consoleMock = Substitute.For<IAnsiConsole>();

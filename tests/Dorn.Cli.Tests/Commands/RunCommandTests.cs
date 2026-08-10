@@ -232,10 +232,7 @@ public class RunCommandTests : IDisposable
         return (processRunner, consoleMock, command, signalReg);
     }
 
-    ///<summary>
-    /// Explicit — no test may rely on the mock's default Interactive/Unicode values, since
-    /// RunCommand now resolves severity output through <see cref="DornTheme"/>.
-    ///</summary>
+    // Explicit — no test may rely on the mock's default Interactive/Unicode values.
     private static IAnsiConsole CreateConsoleMock()
     {
         var consoleMock = Substitute.For<IAnsiConsole>();

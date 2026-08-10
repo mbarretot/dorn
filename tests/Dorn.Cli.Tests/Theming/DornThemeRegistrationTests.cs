@@ -5,11 +5,8 @@ using Xunit;
 
 namespace Dorn.Cli.Tests.Theming;
 
-///<summary>
-/// Mirrors the exact DI registration <c>Program.cs</c> performs
-/// (<c>services.AddSingleton(AnsiConsole.Console); services.AddSingleton&lt;IDornTheme, DornTheme&gt;();</c>)
-/// so a break in that wiring surfaces as a unit-test failure instead of only at CLI startup.
-///</summary>
+// Mirrors Program.cs's exact registration lines so a wiring break fails here, not only
+// at CLI startup.
 public class DornThemeRegistrationTests
 {
     [Fact]

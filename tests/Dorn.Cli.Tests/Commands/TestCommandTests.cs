@@ -182,10 +182,7 @@ public class TestCommandTests : IDisposable
         return (testRunner, consoleMock, command);
     }
 
-    ///<summary>
-    /// Explicit — no test may rely on the mock's default Interactive/Unicode values, since
-    /// TestCommand now resolves severity output through <see cref="DornTheme"/>.
-    ///</summary>
+    // Explicit — no test may rely on the mock's default Interactive/Unicode values.
     private static IAnsiConsole CreateConsoleMock()
     {
         var consoleMock = Substitute.For<IAnsiConsole>();

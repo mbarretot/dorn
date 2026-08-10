@@ -2,13 +2,8 @@ using Spectre.Console;
 
 namespace Dorn.Cli.Theming;
 
-/// <summary>
-/// Single implementation of <see cref="IDornTheme"/>. Capability-driven output (unicode
-/// glyphs, live regions) is resolved per call against <see cref="IAnsiConsole.Profile"/>
-/// rather than cached in the constructor, so one instance stays correct even if the
-/// underlying console's capabilities are mutated after construction (e.g.
-/// <see cref="Spectre.Console.Testing.TestConsole"/> in tests).
-/// </summary>
+// Capability-driven output is resolved per call, not cached in the ctor, so mutating
+// TestConsole's capabilities after construction still takes effect.
 public sealed class DornTheme : IDornTheme
 {
     private readonly IAnsiConsole _console;

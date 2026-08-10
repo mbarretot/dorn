@@ -2,11 +2,8 @@ using Spectre.Console;
 
 namespace Dorn.Cli.Theming;
 
-/// <summary>
-/// Central color palette for the dorn CLI. Markup name constants are the lowercase form of
-/// the corresponding <see cref="Color"/> static member (Spectre markup names are
-/// case-insensitive), so <c>[green]</c> and <see cref="Color.Green"/> always agree.
-/// </summary>
+// Markup name constants are the lowercase form of the matching Color member — Spectre
+// markup names are case-insensitive, so the two representations always agree.
 public static class DornPalette
 {
     public const string BrandMarkup = "steelblue1";
