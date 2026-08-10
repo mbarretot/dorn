@@ -2,6 +2,7 @@ using System.Text;
 using Dorn.Abstractions.Generation;
 using Dorn.Cli.Commands.New;
 using Dorn.Cli.Execution;
+using Dorn.Cli.Theming;
 using NSubstitute;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -229,7 +230,8 @@ public class NewGrpcCommandTests
         var engine = Substitute.For<IGenerationEngine>();
         var processRunner = Substitute.For<IProcessRunner>();
         var consoleMock = CreateNonInteractiveConsoleMock();
-        var command = new NewGrpcCommand(engine, processRunner, consoleMock);
+        var theme = new DornTheme(consoleMock);
+        var command = new NewGrpcCommand(engine, processRunner, consoleMock, theme);
         return (engine, processRunner, command);
     }
 
@@ -243,15 +245,16 @@ public class NewGrpcCommandTests
         var engine = Substitute.For<IGenerationEngine>();
         var processRunner = Substitute.For<IProcessRunner>();
         var consoleMock = CreateNonInteractiveConsoleMock();
-        var command = new NewGrpcCommand(engine, processRunner, consoleMock);
+        var theme = new DornTheme(consoleMock);
+        var command = new NewGrpcCommand(engine, processRunner, consoleMock, theme);
         return (engine, processRunner, command, consoleMock);
     }
 
-    /// <summary>TestConsole-style interactive flows aren't exercised — the gRPC MVP has no SelectionPrompt paths.</summary>
+    /// <summary>TestConsole-style interactive flows aren't exercised — the gRPC MVP has no SelectionPrompt paths. Interactive=false, Unicode=true set explicitly (no test may rely on defaults).</summary>
     private static IAnsiConsole CreateNonInteractiveConsoleMock()
     {
         var consoleMock = Substitute.For<IAnsiConsole>();
-        var capabilities = new Capabilities { Interactive = false };
+        var capabilities = new Capabilities { Interactive = false, Unicode = true };
         var profile = new Profile(
             Substitute.For<IAnsiConsoleOutput>(),
             capabilities,

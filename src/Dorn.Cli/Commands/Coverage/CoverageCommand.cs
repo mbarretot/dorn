@@ -1,7 +1,7 @@
 using Dorn.Cli.Coverage;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Testing;
-using Spectre.Console;
+using Dorn.Cli.Theming;
 using Spectre.Console.Cli;
 
 namespace Dorn.Cli.Commands.Coverage;
@@ -15,19 +15,19 @@ public sealed class CoverageCommand : AsyncCommand<CoverageSettings>
     private readonly IProjectContextResolver _resolver;
     private readonly IDotnetTestRunner _testRunner;
     private readonly CoverageReporter _reporter;
-    private readonly IAnsiConsole _console;
+    private readonly IDornTheme _theme;
 
     public CoverageCommand(
         IProjectContextResolver resolver,
         IDotnetTestRunner testRunner,
         CoverageReporter reporter,
-        IAnsiConsole console
+        IDornTheme theme
     )
     {
         _resolver = resolver;
         _testRunner = testRunner;
         _reporter = reporter;
-        _console = console;
+        _theme = theme;
     }
 
     // Spectre.Console.Cli 0.55.0 changed ExecuteAsync from public to protected (and added
@@ -50,8 +50,9 @@ public sealed class CoverageCommand : AsyncCommand<CoverageSettings>
 
         if (projectContext.Tiers.Count == 0)
         {
-            _console.MarkupLine(
-                "[yellow]No test tiers found.[/] This project was generated with [bold]IncludeTests=false[/]; nothing to measure."
+            _theme.Message(
+                Severity.Warning,
+                "No test tiers found. This project was generated with [bold]IncludeTests=false[/]; nothing to measure."
             );
             return 1;
         }
@@ -65,9 +66,7 @@ public sealed class CoverageCommand : AsyncCommand<CoverageSettings>
 
         if (!testResult.AllSucceeded)
         {
-            _console.MarkupLine(
-                "[red]One or more tier runs failed; coverage report not generated.[/]"
-            );
+            _theme.Message(Severity.Error, "One or more tier runs failed; coverage report not generated.");
             return 1;
         }
 
@@ -75,8 +74,9 @@ public sealed class CoverageCommand : AsyncCommand<CoverageSettings>
         var coberturaPath = FindCoberturaReport(projectContext.Root);
         if (string.IsNullOrEmpty(coberturaPath))
         {
-            _console.MarkupLine(
-                "[red]No coverage report found.[/] Expected at TestResults/**/coverage.cobertura.xml."
+            _theme.Message(
+                Severity.Error,
+                "No coverage report found. Expected at TestResults/**/coverage.cobertura.xml."
             );
             return 1;
         }
@@ -84,20 +84,21 @@ public sealed class CoverageCommand : AsyncCommand<CoverageSettings>
         var parsed = _reporter.ParseCobertura(coberturaPath);
         var decision = _reporter.EvaluateThreshold(parsed.LineRate);
 
-        _console.MarkupLine(
-            $"[bold]Line coverage:[/] [cyan]{decision.Percentage:F2}%[/] "
-                + $"(threshold: {CoverageReporter.Threshold * 100:F0}%)"
+        _theme.Message(
+            Severity.Info,
+            $"Line coverage: {decision.Percentage:F2}% (threshold: {CoverageReporter.Threshold * 100:F0}%)"
         );
 
         if (!decision.Passed)
         {
-            _console.MarkupLine(
-                $"[red]Below threshold[/] by {(CoverageReporter.Threshold * 100 - decision.Percentage):F2} percentage points."
+            _theme.Message(
+                Severity.Error,
+                $"Below threshold by {(CoverageReporter.Threshold * 100 - decision.Percentage):F2} percentage points."
             );
             return 1;
         }
 
-        _console.MarkupLine("[green]Threshold met.[/]");
+        _theme.Message(Severity.Success, "Threshold met.");
         return 0;
     }
 

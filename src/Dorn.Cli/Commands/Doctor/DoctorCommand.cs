@@ -1,6 +1,7 @@
 using Dorn.Cli.Execution;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Templating;
+using Dorn.Cli.Theming;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -19,18 +20,21 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
     private readonly IProcessRunner _processRunner;
     private readonly IProjectContextResolver _resolver;
     private readonly IAnsiConsole _console;
+    private readonly IDornTheme _theme;
 
     public DoctorCommand(
         ITemplatesRootLocator templatesRootLocator,
         IProcessRunner processRunner,
         IProjectContextResolver resolver,
-        IAnsiConsole console
+        IAnsiConsole console,
+        IDornTheme theme
     )
     {
         _templatesRootLocator = templatesRootLocator;
         _processRunner = processRunner;
         _resolver = resolver;
         _console = console;
+        _theme = theme;
     }
 
     // Spectre.Console.Cli 0.55.0 moved ExecuteAsync to protected; RunAsync below is the public
@@ -179,25 +183,25 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
 
     private void Render(IReadOnlyList<CheckResult> results)
     {
-        var table = new Table().Border(TableBorder.Rounded).Title("Environment checks");
+        var table = _theme.CreateTable("Environment checks");
         table.AddColumn("Check");
         table.AddColumn("Status");
         table.AddColumn("Detail");
 
         foreach (var r in results)
         {
-            table.AddRow(Markup.Escape(r.Name), StatusMarkup(r.Status), Markup.Escape(r.Detail));
+            table.AddRow(Markup.Escape(r.Name), StatusLabel(r.Status), Markup.Escape(r.Detail));
         }
 
         _console.Write(table);
     }
 
-    private static string StatusMarkup(CheckStatus status) =>
+    private string StatusLabel(CheckStatus status) =>
         status switch
         {
-            CheckStatus.Pass => "[green]PASS[/]",
-            CheckStatus.Fail => "[red]FAIL[/]",
-            CheckStatus.Warn => "[yellow]WARN[/]",
+            CheckStatus.Pass => _theme.Label(Severity.Success, "PASS"),
+            CheckStatus.Fail => _theme.Label(Severity.Error, "FAIL"),
+            CheckStatus.Warn => _theme.Label(Severity.Warning, "WARN"),
             _ => status.ToString(),
         };
 
