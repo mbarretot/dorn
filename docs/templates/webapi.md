@@ -31,9 +31,17 @@ dorn new webapi MyApp --orchestrator none         # no orchestration scaffolding
 dorn new webapi MyApp --auth custom               # self-issued JWT, seeded demo user, no external setup
 dorn new webapi MyApp --auth azure-ad             # validate Microsoft Entra ID tokens, no client secret
 dorn new webapi MyApp                             # omit --database/--orchestrator/--auth in an interactive terminal to be prompted
+dorn new webapi                                   # name omitted too: prompted for it interactively, with live validation
 # or, from a repo checkout during development:
 dotnet run --project src/Dorn.Cli -- new webapi MyApp
 ```
+
+`<name>` itself is optional: in an interactive terminal, omitting it prompts for a
+project name and validates each keystroke's worth of input in place (invalid names, e.g.
+starting with a digit, are rejected and re-prompted before moving on). In a
+non-interactive session (CI, scripts, piped output), omitting `<name>` fails immediately
+with a dorn-owned error ("Project name is required...") instead of Spectre's generic
+missing-argument parser error.
 
 This creates `./MyApp/` (`-o|--output` to override; `--force` to overwrite a non-empty
 directory), sourced from `Dorn.Templates.WebApi` and renamed from the template's

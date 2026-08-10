@@ -5,9 +5,11 @@ namespace Dorn.Cli.Commands.New;
 
 public sealed class NewWebApiSettings : CommandSettings
 {
-    [CommandArgument(0, "<name>")]
-    [Description("Name of the project to generate.")]
-    public required string Name { get; init; }
+    [CommandArgument(0, "[name]")]
+    [Description(
+        "Name of the project to generate. Prompted interactively if omitted and the session is interactive."
+    )]
+    public string? Name { get; init; }
 
     [CommandOption("-o|--output")]
     [Description("Output directory for the generated project. Defaults to ./<name>.")]

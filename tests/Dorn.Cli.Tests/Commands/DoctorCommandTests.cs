@@ -213,6 +213,58 @@ public class DoctorCommandTests : IDisposable
         Assert.Contains("Docker", console.Output);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Doctor_HealthyEnvironment_ExitCodeAndProbeCallCountsAreIdentical(
+        bool interactive
+    )
+    {
+        var (templatesRootLocator, processRunner, _, console, command) = CreateCommand(interactive);
+        templatesRootLocator.Resolve().Returns("/opt/dorn/templates");
+        StubDotnetVersion(processRunner, 0, PassingSdkVersion);
+        CreateComposeFile();
+        StubDockerVersion(processRunner, 0, "Docker version 27.0.0\n");
+
+        var exitCode = await command.RunAsync(
+            new DoctorSettings { Project = _tempRoot },
+            CancellationToken.None
+        );
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("PASS", console.Output);
+        await processRunner
+            .Received(1)
+            .RunCapturedAsync(
+                Arg.Is<ProcessSpec>(s => s.FileName == "dotnet"),
+                Arg.Any<CancellationToken>()
+            );
+        await processRunner
+            .Received(1)
+            .RunCapturedAsync(
+                Arg.Is<ProcessSpec>(s => s.FileName == "docker"),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Doctor_FailingMandatoryCheck_ExitCodeStaysOneRegardlessOfInteractivity(
+        bool interactive
+    )
+    {
+        var (_, processRunner, _, _, command) = CreateCommand(interactive);
+        StubDotnetVersion(processRunner, 0, "9.0.100\n");
+
+        var exitCode = await command.RunAsync(
+            new DoctorSettings { Project = _tempRoot },
+            CancellationToken.None
+        );
+
+        Assert.Equal(1, exitCode);
+    }
+
     // Bad -p handling (D4)
 
     [Fact]
@@ -404,7 +456,7 @@ public class DoctorCommandTests : IDisposable
         IProjectContextResolver Resolver,
         TestConsole Console,
         DoctorCommand Command
-    ) CreateCommand()
+    ) CreateCommand(bool interactive = false)
     {
         var templatesRootLocator = Substitute.For<ITemplatesRootLocator>();
         templatesRootLocator.Resolve().Returns("/opt/dorn/templates");
@@ -416,7 +468,7 @@ public class DoctorCommandTests : IDisposable
         var console = new TestConsole().Width(int.MaxValue);
         // Explicit — no test may rely on TestConsole's default Unicode/Interactive values.
         console.Profile.Capabilities.Unicode = true;
-        console.Profile.Capabilities.Interactive = false;
+        console.Profile.Capabilities.Interactive = interactive;
         var theme = new DornTheme(console);
 
         var command = new DoctorCommand(

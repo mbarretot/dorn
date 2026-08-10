@@ -36,10 +36,36 @@ public sealed class NewWebApiCommand(
     /// </summary>
     public async Task<int> RunAsync(NewWebApiSettings settings, CancellationToken cancellationToken)
     {
-        var validation = ProjectNameValidator.Validate(settings.Name);
-        if (!validation.IsValid)
+        string name;
+        if (!string.IsNullOrWhiteSpace(settings.Name))
         {
-            WriteErrorPanel("Invalid project name", validation.ErrorMessage);
+            var validation = ProjectNameValidator.Validate(settings.Name);
+            if (!validation.IsValid)
+            {
+                WriteErrorPanel("Invalid project name", validation.ErrorMessage);
+                return 1;
+            }
+
+            name = settings.Name;
+        }
+        else if (_console.Profile.Capabilities.Interactive)
+        {
+            name = _console.Prompt(
+                new TextPrompt<string>("Project name:").Validate(candidate =>
+                {
+                    var result = ProjectNameValidator.Validate(candidate);
+                    return result.IsValid
+                        ? ValidationResult.Success()
+                        : ValidationResult.Error(result.ErrorMessage);
+                })
+            );
+        }
+        else
+        {
+            WriteErrorPanel(
+                "Missing project name",
+                "Project name is required. Pass it as an argument (dorn new webapi <name>) or run in an interactive terminal to be prompted."
+            );
             return 1;
         }
 
@@ -71,7 +97,7 @@ public sealed class NewWebApiCommand(
             return 1;
         }
 
-        var outputDirectory = Path.GetFullPath(settings.Output ?? Path.Combine(".", settings.Name));
+        var outputDirectory = Path.GetFullPath(settings.Output ?? Path.Combine(".", name));
 
         var orm =
             settings.Orm?.ToLowerInvariant()
@@ -124,8 +150,10 @@ public sealed class NewWebApiCommand(
                 _console.Profile.Capabilities.Interactive
                     ? _console.Prompt(
                         new SelectionPrompt<string>()
-                            .Title("Select an [green]authentication scheme[/]:")
-                            .AddChoices("none", "custom", "azure-ad")
+                            .Title(
+                                $"Select an [green]authentication scheme[/] (compatible with {orm}):"
+                            )
+                            .AddChoices(AuthChoiceProvider.ForOrm(orm))
                             .UseConverter(o =>
                                 o switch
                                 {
@@ -140,10 +168,7 @@ public sealed class NewWebApiCommand(
 
         if (orchestrator == "aspire" && databaseProvider != "sqlite")
         {
-            var aspireNameValidation = AspireResourceNameValidator.Validate(
-                settings.Name,
-                databaseProvider
-            );
+            var aspireNameValidation = AspireResourceNameValidator.Validate(name, databaseProvider);
             if (!aspireNameValidation.IsValid)
             {
                 WriteErrorPanel("Invalid project name", aspireNameValidation.ErrorMessage);
@@ -160,7 +185,7 @@ public sealed class NewWebApiCommand(
 
         var request = new GenerationRequest(
             TemplateShortName: TemplateShortName,
-            ProjectName: settings.Name,
+            ProjectName: name,
             OutputDirectory: outputDirectory,
             Parameters: new Dictionary<string, string>
             {
@@ -187,17 +212,13 @@ public sealed class NewWebApiCommand(
                     )
                     : "Template generation failed for an unknown reason.";
 
-            WriteErrorPanel(
-                $"Failed to generate '{settings.Name}'",
-                diagnosticsText,
-                escapeMessage: false
-            );
+            WriteErrorPanel($"Failed to generate '{name}'", diagnosticsText, escapeMessage: false);
             return 1;
         }
 
         await TryRestoreLocalToolsAsync(outputDirectory, settings.NoRestore, cancellationToken);
 
-        RenderSuccess(settings.Name, result);
+        RenderSuccess(name, result);
         return 0;
     }
 
@@ -220,14 +241,18 @@ public sealed class NewWebApiCommand(
             return;
         }
 
-        _theme.Message(Severity.Info, "Restoring local tools (dotnet tool restore)...");
+        var spec = new ProcessSpec("dotnet", ["tool", "restore"], outputDirectory);
 
         try
         {
-            var exitCode = await _processRunner.RunAsync(
-                new ProcessSpec("dotnet", ["tool", "restore"], outputDirectory),
-                cancellationToken
-            );
+            var exitCode = _theme.LiveRegionsEnabled
+                ? await _theme
+                    .CreateStatus()
+                    .StartAsync(
+                        "Restoring local tools (dotnet tool restore)...",
+                        _ => _processRunner.RunAsync(spec, cancellationToken)
+                    )
+                : await RunRestoreWithMessageAsync(spec, cancellationToken);
 
             if (exitCode != 0)
             {
@@ -246,6 +271,15 @@ public sealed class NewWebApiCommand(
                 "`dotnet tool restore` threw: " + Markup.Escape(ex.Message)
             );
         }
+    }
+
+    private async Task<int> RunRestoreWithMessageAsync(
+        ProcessSpec spec,
+        CancellationToken cancellationToken
+    )
+    {
+        _theme.Message(Severity.Info, "Restoring local tools (dotnet tool restore)...");
+        return await _processRunner.RunAsync(spec, cancellationToken);
     }
 
     private void WriteErrorPanel(string header, string? message, bool escapeMessage = true)
