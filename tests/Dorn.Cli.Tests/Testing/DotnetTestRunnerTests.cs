@@ -200,6 +200,46 @@ public class DotnetTestRunnerTests : IDisposable
         Assert.Contains("XPlat Code Coverage", args);
     }
 
+    [Fact]
+    public async Task RunAsync_CollectCoverageFlag_HasNoEmbeddedQuoteCharacters()
+    {
+        // ArgumentList has no shell — a literal '"' here reaches MSBuild and fails with MSB4177.
+        CreateTestsDir("MyProject.Application.Tests");
+        var runner = CreateRunner();
+        var ctx = CreateContextWithAllTiers("MyProject");
+
+        var result = await runner.RunAsync(
+            ctx,
+            DatabaseProvider.Sqlite,
+            [TestTier.Application],
+            CancellationToken.None
+        );
+
+        Assert.Equal("--collect:XPlat Code Coverage", result.Specs[0].Arguments[2]);
+    }
+
+    [Fact]
+    public async Task RunAsync_PassesResultsDirectoryUnderProjectRoot()
+    {
+        // FindCoberturaReport only searches under context.Root, not the tier project's own dir.
+        CreateTestsDir("MyProject.Application.Tests");
+        var runner = CreateRunner();
+        var ctx = CreateContextWithAllTiers("MyProject");
+
+        var result = await runner.RunAsync(
+            ctx,
+            DatabaseProvider.Sqlite,
+            [TestTier.Application],
+            CancellationToken.None
+        );
+
+        var args = result.Specs[0].Arguments;
+        var resultsDirIndex = Array.IndexOf(args.ToArray(), "--results-directory");
+        Assert.True(resultsDirIndex >= 0, "Expected --results-directory in the arguments.");
+        var resultsDir = args[resultsDirIndex + 1];
+        Assert.StartsWith(Path.Combine(ctx.Root, "TestResults"), resultsDir);
+    }
+
     // Failure propagation
 
     [Fact]

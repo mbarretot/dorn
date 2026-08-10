@@ -86,9 +86,23 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
         CancellationToken ct
     )
     {
+        // FindCoberturaReport only searches under context.Root, not the tier project's own dir.
+        var resultsDirectory = Path.Combine(
+            context.Root,
+            "TestResults",
+            Path.GetFileName(tierPath)
+        );
+
         var spec = new ProcessSpec(
             "dotnet",
-            ["test", tierPath, "--collect:\"XPlat Code Coverage\"", "--no-build"],
+            [
+                "test",
+                tierPath,
+                "--collect:XPlat Code Coverage",
+                "--results-directory",
+                resultsDirectory,
+                "--no-build",
+            ],
             context.Root
         );
 
