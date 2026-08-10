@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title description">
+  <title id="title">Dorn Messaging Contracts package icon</title>
+  <desc id="description">Layered contract cards connected by typed input and output brackets in the Dorn brand palette.</desc>
+  <rect x="4" y="4" width="248" height="248" rx="40" fill="#F8F5EF" stroke="#292826" stroke-width="8"/>
+  <g transform="translate(30 24) scale(0.057554)" aria-hidden="true">
+    <path d="M255 76 379 0 754 219 754 530 618 618 618 300Z" fill="#292826"/>
+    <path d="M128 260 242 188 535 362 535 613 411 695 411 440Z" fill="#292826"/>
+    <path d="M0 453 114 382 321 504 321 657Z" fill="#E8613E"/>
+  </g>
+  <rect x="88" y="78" width="98" height="104" rx="15" fill="#FFFFFF" stroke="#292826" stroke-width="7"/>
+  <rect x="70" y="96" width="98" height="104" rx="15" fill="#FDEAE3" stroke="#292826" stroke-width="7"/>
+  <path d="M55 113 38 128l17 15" fill="none" stroke="#E8613E" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m181 113 17 15-17 15" fill="none" stroke="#292826" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="96" cy="127" r="8" fill="#E8613E"/>
+  <path d="M114 127h34M88 151h60M88 173h42" fill="none" stroke="#292826" stroke-width="7" stroke-linecap="round"/>
+  <path d="M108 90h58" fill="none" stroke="#E8613E" stroke-width="7" stroke-linecap="round"/>
+</svg>

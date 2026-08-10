@@ -6,28 +6,24 @@ Accepted
 
 ## Context
 
-Dorn is a community scaffolding CLI with a long lifespan; every project it generates
-inherits its target framework choice. .NET alternates STS releases (18 months of
-support) with LTS releases (3 years); LTS avoids forcing contributors to re-scaffold or
-upgrade every 18 months. .NET 10 reached general availability as an LTS release in
-November 2025, with support through November 2028.
+Generated projects inherit Dorn's framework choice. An LTS baseline avoids forcing users to upgrade after an 18-month STS window.
 
 ## Decision
 
-Dorn targets .NET 10 across `src/`, `tests/`, and the `webapi` template.
+Dorn and its generated templates target **.NET 10**.
 
-- The SDK version is pinned in `global.json` (`10.0.301` at the time of writing) with
-  `rollForward: latestFeature`, tolerating later patch/feature releases without an edit
-  per SDK update.
+- `global.json` pins SDK `10.0.301` with `rollForward: latestFeature`.
+- `Microsoft.TemplateEngine.*` stays aligned with the SDK version.
+- Dorn does not multi-target an older framework.
 
 ## Consequences
 
-- Dorn and every generated project get three years of support (through November 2028)
-  without a forced framework upgrade.
-- Contributors and CI runners must have the .NET 10 SDK installed; older SDKs (6/8/9)
-  are not sufficient.
-- `Microsoft.TemplateEngine.*` packages (used by `Dorn.Core`, see ADR 0002) are pinned to
-  the exact SDK version (`10.0.301`) in the root `Directory.Packages.props`, since they
-  track the installed SDK tightly and likely need bumping in lockstep with it.
-- Dorn does not currently target multiple TFMs (e.g. also `net8.0`); that would be a
-  separate, larger decision affecting the CLI and every template.
+- The CLI and generated services share one supported platform.
+- Contributors and CI need a compatible .NET 10 SDK.
+- SDK and Template Engine upgrades must be coordinated.
+- Adding another TFM would require a separate cross-repository decision.
+
+## Related
+
+- [ADR 0002: Embedded Template Engine](./0002-embed-template-engine-edge.md)
+- [`global.json`](../../global.json)

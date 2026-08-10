@@ -1,6 +1,17 @@
+<!-- prettier-ignore -->
+<div align="center">
+
+<img src="../../docs/images/packages/dorn-shared-kernel-icon.svg" alt="Dorn Shared Kernel package icon with a stable domain foundation" height="92" />
+
 # Dorn.SharedKernel
 
-Minimal DDD primitives shared by Dorn templates.
+**Minimal DDD primitives shared by Dorn templates.**
+
+</div>
+
+<p align="center">
+  <img src="../../docs/images/packages/dorn-shared-kernel-flow.gif" alt="Animated domain foundation showing Entity, AggregateRoot, domain events, and Result outcomes" width="820" />
+</p>
 
 ## ⚡ Install
 

@@ -6,81 +6,37 @@ Accepted
 
 ## Context
 
-`webapi` was, until now, Dorn's only template: a Clean Architecture ASP.NET Core Minimal
-API project with a choice of database provider (`--database sqlite|sqlserver|postgres`,
-ADR 0011, ADR 0014), ORM (`--orm efcore|dapper`), and orchestrator
-(`--orchestrator aspire|docker-compose|none`). Contributors asked for a gRPC option;
-gRPC was not originally scheduled next (the roadmap listed `ui`), but it exercises a
-presentation layer HTTP endpoints don't (binary proto contracts,
-`Grpc.Core.Interceptors.Interceptor` instead of exception-handler middleware, HTTP/2-only
-transport), a better proof that Dorn's CQRS/mediator/`IApplicationDbContext` layers are
-genuinely presentation-agnostic than a second HTTP-based template would have been.
-
-Mirroring `webapi`'s full flag surface here would have meant three choice axes
-multiplied across gRPC-specific concerns (proto codegen, HTTP/2 transport,
-interceptor-based validation) themselves unproven in this codebase, materially larger
-than any single `webapi` axis added in one change before.
+A gRPC template proves that Dorn's Application layer works behind a binary protocol. Copying every Web API option at once would combine unproven transport concerns with three configuration axes.
 
 ## Decision
 
-Ship `templates/grpc/` (short name `dorn-grpc`, identity `Dorn.Templates.Grpc`) as a
-**fixed-scope MVP**: SQLite + EF Core + Aspire only, no `--database`, `--orm`, or
-`--orchestrator` flag. `NewGrpcCommand`/`NewGrpcSettings`
-(`src/Dorn.Cli/Commands/New/`) accept only `<name>`, `-o|--output`, `--force`, and
-`--no-restore`.
+Ship `dorn-grpc` with one fixed profile:
 
-1. **Every conditional axis collapsed, not ported.** `webapi`'s `#if
-   (UseSqlServer)`/`UsePostgres`/`UseSqlite` branching, `Directory.Build.props` `Use*`
-   symbols, provider-subfolder migrations, and `Compose.slnx` variant have no equivalent
-   here: there is exactly one code path. `template.json` exposes a single symbol,
-   `IncludeTests`, and no `sources[0].modifiers` beyond excluding `tests/**`.
-2. **The proto wire package stays free of the `sourceName` token.** `Protos/todo.proto`
-   declares `package todo.v1;`; the Template Engine's `sourceName` replacement
-   (`CleanArchGrpcService` → the user's project name) applies only to `option
-   csharp_namespace = "CleanArchGrpcService.Grpc.Protos"`, keeping replacement
-   deterministic regardless of the name's casing.
-3. **Validation surfaces through a gRPC interceptor, not HTTP middleware.** A single
-   `Grpc.Core.Interceptors.Interceptor` (`ValidationInterceptor`) catches
-   `FluentValidation.ValidationException` (already thrown by the shared
-   `ValidationBehavior<,>` pipeline behavior) and translates it into
-   `RpcException(StatusCode.InvalidArgument, detail)`, since gRPC has no equivalent to
-   `webapi`'s `AddExceptionHandler<ValidationExceptionHandler>()`.
-4. **Aspire overrides `Kestrel:Endpoints` at runtime, so the protocol is set via
-   `EndpointDefaults` instead.** Kestrel is pinned to `Http1AndHttp2` through
-   `Kestrel:EndpointDefaults:Protocols`, not `Http2` alone (the plain `dotnet new grpc`
-   default), because that would break the Aspire dashboard's health probe
-   (`MapDefaultEndpoints` is reached over plain HTTP/1.1). `Http1AndHttp2` over TLS lets
-   ALPN serve gRPC over HTTP/2 and health over HTTP/1.1 from the same port. The AppHost
-   registration (`builder.AddProject<Projects.<Name>_Grpc>("grpc")`) uses the plain
-   pattern `webapi` uses; there is no `AspireResourceNameValidator` gate, since the
-   Aspire resource name is the hardcoded literal `"grpc"`.
-5. **Delivered as nine sequential PRs on a feature-branch chain**, mirroring ADR 0014's
-   stacked-PR pattern (each slice independently mergeable, under the 400-line budget):
-   template foundation + Domain, Application, Infrastructure + EF Core SQLite, gRPC
-   scaffold + `CreateTodoItem` RPC, `GetTodoItems` RPC + Architecture tests, Aspire
-   AppHost + ServiceDefaults, CLI command + repository tests, and this documentation
-   slice.
-6. **Two RPCs implement the same CQRS handlers `webapi` already has.**
-   `CreateTodoItem`/`GetTodoItems` dispatch through `ISender` to the identical
-   `CreateTodoItemCommand`/`GetTodoItemsQuery` handlers. Domain/Application layers are
-   copied structurally unchanged, so the MVP's real surface area is the presentation
-   adapter and its tests.
+| Concern | Choice |
+| --- | --- |
+| Persistence | EF Core + SQLite |
+| Orchestration | Aspire |
+| RPCs | `CreateTodoItem`, `GetTodoItems` |
+| Validation | gRPC interceptor maps failures to `InvalidArgument` |
+| Protocols | TLS with `Http1AndHttp2` |
+
+The command accepts name, output, force, and no-restore only. The proto package remains `todo.v1`; source-name replacement changes the C# namespace, not the wire identifier.
+
+HTTP/1.1 remains enabled for Aspire health probes while gRPC negotiates HTTP/2 through ALPN.
 
 ## Consequences
 
-- `dorn new grpc MyService` behaves like `dorn new webapi MyApp` with every optional axis
-  already decided: no interactive prompt, no flag to skip, builds and runs immediately
-  via `dotnet run --project src/MyService.AppHost`.
-- Adding SQL Server/PostgreSQL, Dapper, or `docker-compose`/`none` orchestration later
-  means re-introducing the branching this ADR deliberately removed: a bounded,
-  well-precedented follow-up (ADR 0011, ADR 0014), not a design change.
-- No generated `.github/workflows/ci.yml` ships with `grpc` yet: `webapi`'s CI (ADR 0013)
-  is built around a matrix `grpc` doesn't have.
-- `templates/grpc` is **not** packed and published as a standalone `dotnet new` NuGet
-  template package the way `templates/webapi` is (ADR 0008);
-  `eng/scripts/pack-templates.ps1` only packs `webapi` today.
-- The RPC surface is intentionally thin: only `CreateTodoItem` and `GetTodoItems`,
-  proving the proto-to-mediator dispatch pattern without building out
-  `UpdateTodoItem`/`DeleteTodoItem`/streaming RPCs.
-- ADR 0011 and ADR 0014 are unaffected: both are `webapi`-only decisions not superseded
-  by this ADR.
+- `dorn new grpc MyService` has no configuration prompt and runs through AppHost.
+- The same CQRS handlers work behind a different presentation adapter.
+- Database, ORM, and orchestrator choices are deferred.
+- CI scaffolding, standalone template packaging, CRUD expansion, and streaming are deferred.
+
+## Alternatives
+
+- **Full Web API option parity:** rejected to keep the first gRPC slice bounded.
+- **HTTP/2 only:** rejected because Aspire health probes also need HTTP/1.1.
+
+## Related
+
+- [gRPC template](../templates/grpc.md)
+- [ADR 0012: Four-tier tests](./0012-four-tier-test-strategy.md)
