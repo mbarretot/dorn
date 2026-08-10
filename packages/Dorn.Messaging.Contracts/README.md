@@ -1,6 +1,17 @@
+<!-- prettier-ignore -->
+<div align="center">
+
+<img src="../../docs/images/packages/dorn-messaging-contracts-icon.svg" alt="Dorn Messaging Contracts package icon with typed contract cards" height="92" />
+
 # Dorn.Messaging.Contracts
 
-Zero-dependency CQRS and notification contracts. Safe to reference from Domain and Application layers.
+**Zero-dependency CQRS and notification contracts for Domain and Application layers.**
+
+</div>
+
+<p align="center">
+  <img src="../../docs/images/packages/dorn-messaging-contracts-flow.gif" alt="Animated map of typed requests, handlers, responses, pipeline behaviors, and notification contracts without a runtime" width="820" />
+</p>
 
 ## ⚡ Install
 

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title description">
+  <title id="title">Dorn Messaging package icon</title>
+  <desc id="description">A central mediator routes messages through an official Dorn add-on frame.</desc>
+  <rect x="4" y="4" width="248" height="248" rx="40" fill="#F8F5EF" stroke="#292826" stroke-width="8"/>
+  <g transform="translate(30 24) scale(0.057554)" aria-hidden="true">
+    <path d="M255 76 379 0 754 219 754 530 618 618 618 300Z" fill="#292826"/>
+    <path d="M128 260 242 188 535 362 535 613 411 695 411 440Z" fill="#292826"/>
+    <path d="M0 453 114 382 321 504 321 657Z" fill="#E8613E"/>
+  </g>
+  <rect x="49" y="76" width="158" height="128" rx="28" fill="#FFFFFF" stroke="#292826" stroke-width="7"/>
+  <rect x="66" y="93" width="124" height="94" rx="20" fill="none" stroke="#E7E0D9" stroke-width="7" stroke-dasharray="10 10"/>
+  <path d="M80 140h30M146 118h27M146 162h27" fill="none" stroke="#292826" stroke-width="8" stroke-linecap="round"/>
+  <path d="m103 130 12 10-12 10M164 108l12 10-12 10M164 152l12 10-12 10" fill="none" stroke="#292826" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m128 112 25 14v28l-25 14-25-14v-28z" fill="#E8613E" stroke="#292826" stroke-width="7" stroke-linejoin="round"/>
+  <circle cx="128" cy="140" r="8" fill="#F8F5EF"/>
+  <circle cx="66" cy="140" r="11" fill="#FDEAE3" stroke="#292826" stroke-width="6"/>
+  <circle cx="190" cy="118" r="11" fill="#FDEAE3" stroke="#292826" stroke-width="6"/>
+  <circle cx="190" cy="162" r="11" fill="#FDEAE3" stroke="#292826" stroke-width="6"/>
+</svg>

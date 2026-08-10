@@ -1,170 +1,104 @@
 # Getting Started
 
-This guide covers building Dorn locally, running the CLI in development, and running the
-test suite, for contributors. End users just install the published CLI
-(`dotnet tool install --global Dorn.Cli`, then `dorn new webapi MyApp`); all five
-`Dorn.*` packages are published at version `1.0.0`.
+Install Dorn, generate a service, then build and test it. Contributors can use the same flow directly from the repository.
 
-## Contents
+<p align="center">
+  <img src="./images/dorn-flow.gif" alt="Animated Dorn workflow from CLI installation to a running service" width="820" />
+</p>
 
-- [Prerequisites](#prerequisites)
-- [Environment variables](#environment-variables)
-- [Build the repo locally](#build-the-repo-locally)
-- [Run the CLI locally during development](#run-the-cli-locally-during-development)
-- [Generated-project convenience verbs](#generated-project-convenience-verbs-dorn-test--dorn-run--dorn-coverage)
-- [Alternative: install `templates/webapi` via vanilla `dotnet new`](#alternative-install-templateswebapi-via-vanilla-dotnet-new)
-- [Run the tests](#run-the-tests)
-- [Next steps](#next-steps)
+## ⚡ Create your first service
 
-## Prerequisites
+```bash
+dotnet tool install --global Dorn.Cli
+dorn doctor
+dorn new webapi MyApp
+cd MyApp
+dotnet build
+dotnet dorn test
+```
 
-- **.NET 10 SDK**, the version pinned in [`global.json`](../global.json) (currently
-  `10.0.301`, `rollForward: latestFeature`: a later `10.0.x` feature-band SDK also works,
-  nothing below `10.0.301`). Install from
-  https://dotnet.microsoft.com/download/dotnet/10.0 if `dotnet --list-sdks` doesn't show
-  a matching version.
-- **pwsh (PowerShell)**, to run `eng/scripts/pack-packages.ps1` and
-  `eng/scripts/pack-templates.ps1`. Install from
-  https://learn.microsoft.com/powershell/scripting/install/installing-powershell if
-  `pwsh --version` shows nothing.
+Run `dorn new webapi` without arguments in an interactive terminal for guided choices.
 
-## Environment variables
+## 🧩 Choose a starting point
 
-Two environment variables come up repeatedly, referenced from the command blocks below
-rather than re-explained each time:
-
-| Variable | Required for | Why |
+| Template | Command | Runtime profile |
 | --- | --- | --- |
-| `DORN_TEMPLATES_PATH` | Running the CLI from a checkout (`dotnet run --project src/Dorn.Cli`); `dotnet test Dorn.slnx` (`templates/tests`) | `TemplateLocator` needs the repo's `templates/` folder; the walk-up fallback is unreliable here (`dotnet run`'s output sits well below the repo root; `templates/tests` generates into `Path.GetTempPath()`, outside the repo). Without it, Dorn throws `DirectoryNotFoundException`. |
-| `DORN_LOCAL_NUGET_FEED` | `dotnet test Dorn.slnx` (`templates/tests`) | `templates/tests` generates outside the repo, so it can't see the root `nuget.config`'s `dorn-local` source; the nested `dotnet restore` needs explicit `-p:RestoreAdditionalProjectSources` pointing at locally packed `Dorn.Messaging.Contracts`/`Dorn.Messaging`/`Dorn.SharedKernel`. Run `pwsh eng/scripts/pack-packages.ps1` first so `./artifacts` has content. |
+| Web API | `dorn new webapi MyApp` | Configurable database, ORM, orchestration, and auth |
+| gRPC | `dorn new grpc MyService` | SQLite + EF Core + Aspire |
+| Worker | `dorn new worker MyWorker` | SQLite + EF Core + Aspire + timer |
 
-## Build the repo locally
+See the [Web API](./templates/webapi.md), [gRPC](./templates/grpc.md), and [worker](./templates/worker.md) guides.
+
+## 🧑‍💻 Build Dorn locally
+
+### Prerequisites
+
+| Tool | Requirement |
+| --- | --- |
+| .NET SDK | `10.0.301` or a later .NET 10 feature band allowed by [`global.json`](../global.json) |
+| PowerShell | `pwsh` for packaging scripts |
+| Docker | Only for container-backed providers or Compose workflows |
 
 ```bash
 git clone https://github.com/mbarretot/dorn.git
 cd dorn
 pwsh eng/scripts/pack-packages.ps1
 dotnet restore Dorn.slnx
-dotnet build Dorn.slnx
-```
-
-`pack-packages.ps1` is a contributor step: `templates/webapi` consumes
-`Dorn.Messaging.Contracts`, `Dorn.Messaging`, and `Dorn.SharedKernel` via
-`PackageReference` (ADR 0010); it packs local copies into `./artifacts`, exposed by the
-root `nuget.config` as the optional `dorn-local` source for unpublished package changes.
-End users restore the published `1.0.0` packages from NuGet instead.
-
-This builds all of `src/` (`Dorn.Abstractions`, `Dorn.Core`, `Dorn.Cli`), all of
-`packages/` and `tests/`, and `templates/webapi`: a normal project reference inside
-`Dorn.slnx`, so building the solution also confirms the template compiles standalone
-(non-inherited `Directory.Build.props`/`Directory.Packages.props`; see
-`docs/architecture.md`).
-
-For a Release build matching what CI runs:
-
-```bash
 dotnet build Dorn.slnx -c Release
 ```
 
-## Run the CLI locally during development
+Local packages must be packed first because the raw templates restore unpublished changes from `./artifacts`.
 
-The CLI is published as `Dorn.Cli`, but when changing it during development you run it
-via `dotnet run` against the `Dorn.Cli` project:
+## ▶️ Run the CLI from source
 
 ```bash
+export DORN_TEMPLATES_PATH="$(pwd)/templates"
 dotnet run --project src/Dorn.Cli -- new webapi MyApp
 ```
 
-This generates a new `MyApp/` directory (Clean Architecture layers, EF Core + SQLite,
-custom mediator; see `docs/templates/webapi.md`). `Dorn.Cli`'s embedded generation engine
-needs the repo's `templates/` folder; `TemplateLocator` resolves this in order:
+Generated output defaults to `./<name>`. Use `-o|--output` to choose a path, `--force` to overwrite a non-empty directory, or `--no-restore` to skip local tool restoration.
 
-1. The `DORN_TEMPLATES_PATH` environment variable, if set (see [Environment
-   variables](#environment-variables)): what you want when running from a checkout:
-
-   ```bash
-   export DORN_TEMPLATES_PATH="$(pwd)/templates"
-   dotnet run --project src/Dorn.Cli -- new webapi MyApp
-   ```
-
-2. Otherwise, a walk up from the running assembly's base directory for a `templates/`
-   folder containing at least one template. In source-checkout workflows, set
-   `DORN_TEMPLATES_PATH` explicitly.
-
-Generated output defaults to `./<name>` relative to your current directory; override with
-`-o|--output`, and pass `--force` to overwrite a non-empty output directory.
-
-## Generated-project convenience verbs (`dorn test` / `dorn run` / `dorn coverage`)
-
-After generating a webapi project, three top-level verbs operate on it from the project
-root (or any parent via `--project <path>`):
+## 🧪 Run the repository checks
 
 ```bash
-cd MyApp
-dorn test              # all 4 tiers (Application/Integration/Architecture/Functional)
-dorn test --tier unit  # one tier only
-dorn run               # auto-detects AppHost → Aspire, Compose file → Compose, else plain `dotnet run`
-dorn coverage          # tests + merged multi-tier coverage + fixed 80% threshold gate
-dorn coverage --all    # same, but the per-class table shows every class, not just sub-80% ones
+pwsh eng/scripts/pack-packages.ps1
+dotnet build Dorn.slnx -c Release
+DORN_TEMPLATES_PATH="$(pwd)/templates" \
+  DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" \
+  dotnet test Dorn.slnx
 ```
 
-Two invocation surfaces, identical behavior:
+| Variable | Used for |
+| --- | --- |
+| `DORN_TEMPLATES_PATH` | Locating source templates from the CLI and generation tests |
+| `DORN_LOCAL_NUGET_FEED` | Restoring locally packed Dorn packages from temporary generated projects |
 
-- **`dorn <verb>`**: global tool, `dorn` on PATH.
-- **`dotnet dorn <verb>`**: local tool via the generated project's
-  `.config/dotnet-tools.json` (pinned `Dorn.Cli`, restored automatically by
-  `dorn new webapi`; `--no-restore` to opt out, or run `dotnet tool restore` manually
-  after a vanilla `dotnet new dorn-webapi`).
+`templates/tests` generates outside the repository and builds the result. That is the self-containment proof, not just a unit test.
 
-See `docs/templates/webapi.md` for full documentation of each verb.
+## ⌨️ Work inside a generated project
 
-## Alternative: install `templates/webapi` via vanilla `dotnet new`
+| Command | Result |
+| --- | --- |
+| `dotnet dorn test` | Run all available test tiers |
+| `dotnet dorn test --tier unit` | Run one tier |
+| `dotnet dorn run` | Select Aspire, Compose, or plain .NET from project files |
+| `dotnet dorn coverage` | Merge tier coverage and enforce the 80% gate |
+| `dotnet dorn coverage --all` | Show every class in the coverage table |
 
-Everything above runs the `dorn` CLI from source. `templates/webapi` is also packaged as
-a standalone NuGet template package, installable with plain `dotnet new`, requiring no
-`dorn` tool or checkout of this repo.
+## 📦 Use vanilla `dotnet new`
+
+Only the Web API template is distributed as a standalone template package:
 
 ```bash
 dotnet new install Dorn.Templates.WebApi
 dotnet new dorn-webapi -n MyApp
-dotnet new uninstall Dorn.Templates.WebApi   # when you're done
+dotnet new uninstall Dorn.Templates.WebApi
 ```
 
-Contributors testing unpublished template changes can optionally pack and install a local
-`.nupkg` instead:
+The `dotnet new` cache and Dorn's isolated Template Engine cache do not interfere.
 
-```bash
-pwsh eng/scripts/pack-templates.ps1
-dotnet new install ./artifacts/Dorn.Templates.WebApi.*.nupkg
-```
+## 📚 Next steps
 
-This uses the global `~/.templateengine` cache, separate from the `dorn` CLI's isolated
-`~/.dorn/template-engine` host; the two don't interfere. See `docs/templates/webapi.md`
-and `docs/adr/0008-dual-distribution-dotnet-new-template-pack.md` for details.
-
-## Run the tests
-
-```bash
-DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" dotnet test Dorn.slnx
-```
-
-Both variables are needed for `templates/tests`; see [Environment
-variables](#environment-variables) above.
-
-- `templates/tests` generates a real `CleanArchWebApi` project into a temp directory
-  outside the repo (`Path.GetTempPath()`) and runs `dotnet build` against it as a
-  subprocess: proof the template is self-contained and buildable by an end user.
-- `DORN_LOCAL_NUGET_FEED` is contributor/test-only; end users restore published packages
-  from NuGet.
-
-`tests/Dorn.Core.Tests` also runs the real Template Engine, against a minimal fixture
-under `tests/Dorn.Core.Tests/Fixtures/minimal-fixture-template/` rather than the full
-`webapi` template, so it doesn't need `DORN_TEMPLATES_PATH` (harmless either way).
-
-## Next steps
-
-- `docs/architecture.md`: how the three `src/` projects fit together (embedded Template
-  Engine, custom mediator, shared packages).
-- `docs/contributing.md`: conventions and the pre-PR verification loop.
-- `docs/templates/webapi.md`: what the `webapi` template generates.
-- `docs/adr/`: the full architecture decision records.
+- Understand the [architecture](./architecture.md).
+- Follow the [contributor workflow](./contributing.md).
+- Review the [architecture decisions](./adr/).
