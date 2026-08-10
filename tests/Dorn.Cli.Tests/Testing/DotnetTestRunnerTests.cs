@@ -1,6 +1,7 @@
 using Dorn.Cli.Execution;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Testing;
+using Dorn.Cli.Theming;
 using NSubstitute;
 using Spectre.Console.Testing;
 using Xunit;
@@ -227,7 +228,7 @@ public class DotnetTestRunnerTests : IDisposable
         processRunner
             .RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>())
             .Returns<Task<int>>(_ => throw new OperationCanceledException());
-        var runner = new DotnetTestRunner(processRunner, new TestConsole());
+        var runner = new DotnetTestRunner(processRunner, new DornTheme(CreateConsole()));
         var ctx = CreateContextWithAllTiers("MyProject");
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
@@ -240,15 +241,97 @@ public class DotnetTestRunnerTests : IDisposable
         );
     }
 
+    [Fact]
+    public async Task RunAsync_InteractiveVsNonInteractive_InvokesProcessRunnerIdenticallyPerTier()
+    {
+        CreateTestsDir("MyProject.Application.Tests");
+        CreateTestsDir("MyProject.Integration.Tests");
+        CreateTestsDir("MyProject.Architecture.Tests");
+        CreateTestsDir("MyProject.Functional.Tests");
+        var tiers = new[]
+        {
+            TestTier.Application,
+            TestTier.Integration,
+            TestTier.Architecture,
+            TestTier.Functional,
+        };
+        var ctx = CreateContextWithAllTiers("MyProject");
+
+        var nonInteractiveProcessRunner = Substitute.For<IProcessRunner>();
+        nonInteractiveProcessRunner
+            .RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>())
+            .Returns(0);
+        var nonInteractiveRunner = new DotnetTestRunner(
+            nonInteractiveProcessRunner,
+            new DornTheme(CreateConsole(interactive: false))
+        );
+
+        var interactiveProcessRunner = Substitute.For<IProcessRunner>();
+        interactiveProcessRunner
+            .RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>())
+            .Returns(0);
+        var interactiveRunner = new DotnetTestRunner(
+            interactiveProcessRunner,
+            new DornTheme(CreateConsole(interactive: true))
+        );
+
+        var nonInteractiveResult = await nonInteractiveRunner.RunAsync(
+            ctx,
+            DatabaseProvider.Sqlite,
+            tiers,
+            CancellationToken.None
+        );
+        var interactiveResult = await interactiveRunner.RunAsync(
+            ctx,
+            DatabaseProvider.Sqlite,
+            tiers,
+            CancellationToken.None
+        );
+
+        await nonInteractiveProcessRunner
+            .Received(4)
+            .RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>());
+        await interactiveProcessRunner
+            .Received(4)
+            .RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>());
+        Assert.Equal(nonInteractiveResult.AllSucceeded, interactiveResult.AllSucceeded);
+        AssertSameSpecs(nonInteractiveResult.Specs, interactiveResult.Specs);
+    }
+
     // Helpers
 
-    private DotnetTestRunner CreateRunner(int processExitCode = 0)
+    private DotnetTestRunner CreateRunner(int processExitCode = 0, bool interactive = false)
     {
         var processRunner = Substitute.For<IProcessRunner>();
         processRunner
             .RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>())
             .Returns(processExitCode);
-        return new DotnetTestRunner(processRunner, new TestConsole());
+        return new DotnetTestRunner(processRunner, new DornTheme(CreateConsole(interactive)));
+    }
+
+    private static TestConsole CreateConsole(bool interactive = false)
+    {
+        var console = new TestConsole().Width(int.MaxValue);
+        console.Profile.Capabilities.Unicode = true;
+        console.Profile.Capabilities.Interactive = interactive;
+        return console;
+    }
+
+    private static void AssertSameSpecs(
+        IReadOnlyList<CapturedProcessSpec> expected,
+        IReadOnlyList<CapturedProcessSpec> actual
+    )
+    {
+        Assert.Equal(expected.Count, actual.Count);
+        for (var i = 0; i < expected.Count; i++)
+        {
+            Assert.Equal(expected[i].FileName, actual[i].FileName);
+            Assert.Equal(expected[i].WorkingDirectory, actual[i].WorkingDirectory);
+            Assert.Equal(
+                string.Join(" ", expected[i].Arguments),
+                string.Join(" ", actual[i].Arguments)
+            );
+        }
     }
 
     private void CreateTestsDir(string name)

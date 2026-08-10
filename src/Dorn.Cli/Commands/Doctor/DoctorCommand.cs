@@ -53,18 +53,40 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
     {
         var root = settings.Project ?? Directory.GetCurrentDirectory();
 
-        var results = new List<CheckResult> { CheckTemplatesRoot() };
-        results.Add(await CheckDotnetSdkAsync(cancellationToken));
-
-        var orchestrator = TryResolveOrchestrator(root);
-        if (orchestrator == Orchestrator.Compose)
-        {
-            results.Add(await CheckDockerAsync(cancellationToken));
-        }
+        var results = _theme.LiveRegionsEnabled
+            ? await _theme
+                .CreateStatus()
+                .StartAsync(
+                    "Checking environment...",
+                    ctx => CollectChecksAsync(root, ctx, cancellationToken)
+                )
+            : await CollectChecksAsync(root, statusContext: null, cancellationToken);
 
         Render(results);
 
         return results.Any(r => r.Status == CheckStatus.Fail) ? 1 : 0;
+    }
+
+    private async Task<List<CheckResult>> CollectChecksAsync(
+        string root,
+        StatusContext? statusContext,
+        CancellationToken ct
+    )
+    {
+        statusContext?.Status("Checking templates root...");
+        var results = new List<CheckResult> { CheckTemplatesRoot() };
+
+        statusContext?.Status("Checking .NET SDK...");
+        results.Add(await CheckDotnetSdkAsync(ct));
+
+        var orchestrator = TryResolveOrchestrator(root);
+        if (orchestrator == Orchestrator.Compose)
+        {
+            statusContext?.Status("Checking Docker...");
+            results.Add(await CheckDockerAsync(ct));
+        }
+
+        return results;
     }
 
     private CheckResult CheckTemplatesRoot()

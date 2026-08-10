@@ -579,6 +579,62 @@ public class NewWebApiCommandTests
     }
 
     [Fact]
+    public async Task NewWebApi_WithSuccessfulGenerationAndInteractiveConsole_StillRunsDotnetToolRestoreOnce()
+    {
+        var (engine, processRunner, command, console) = CreateCommandWithRealTestConsole();
+        console.Profile.Capabilities.Interactive = true;
+        var tempDir = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-restore-interactive-{Guid.NewGuid():N}"
+        );
+        Directory.CreateDirectory(tempDir);
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var request = callInfo.ArgAt<GenerationRequest>(0);
+                var manifestDir = Path.Combine(request.OutputDirectory, ".config");
+                Directory.CreateDirectory(manifestDir);
+                File.WriteAllText(Path.Combine(manifestDir, "dotnet-tools.json"), "{}");
+                return new GenerationResult(true, request.OutputDirectory, ["Program.cs"], []);
+            });
+
+        try
+        {
+            // All choices pinned via flags — the wizard's own SelectionPrompts aren't part of this slice.
+            var exitCode = await command.RunAsync(
+                new NewWebApiSettings
+                {
+                    Name = "MyApp",
+                    Output = tempDir,
+                    Orm = "efcore",
+                    Database = "sqlite",
+                    Orchestrator = "aspire",
+                    Auth = "none",
+                },
+                CancellationToken.None
+            );
+
+            Assert.Equal(0, exitCode);
+            await processRunner
+                .Received(1)
+                .RunAsync(
+                    Arg.Is<ProcessSpec>(s =>
+                        s.FileName == "dotnet"
+                        && s.Arguments.Contains("tool")
+                        && s.Arguments.Contains("restore")
+                    ),
+                    Arg.Any<CancellationToken>()
+                );
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task NewWebApi_WithoutManifestInOutput_SkipsDotnetToolRestore()
     {
         var (engine, processRunner, command) = CreateCommand();
