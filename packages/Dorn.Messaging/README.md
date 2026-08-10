@@ -1,88 +1,42 @@
 # Dorn.Messaging
 
-> MIT-licensed in-process mediator. No commercial licensing, no surprises.
+An MIT-licensed in-process mediator for [`Dorn.Messaging.Contracts`](../Dorn.Messaging.Contracts/README.md).
 
-Implementation of `Dorn.Messaging.Contracts`: dispatches commands and queries to their handlers, and notifications to all registered handlers.
+## ⚡ Install and register
 
-## Registration
-
-```csharp
-builder.Services.AddMediator(typeof(CreateTodoItemCommand).Assembly);
+```bash
+dotnet add package Dorn.Messaging
 ```
 
-`AddMediator` registers:
-- `ISender` and `IPublisher` as scoped services
-- All `IRequestHandler<,>` implementations
-- All `INotificationHandler<>` implementations
-- All `IPipelineBehavior<,>` implementations
-
-Auto-discovers everything in the provided assembly via reflection.
-
-## Send a command or query
-
 ```csharp
-public sealed record CreateTodoItemCommand(string Title) : IRequest<Guid>;
-
-// In your endpoint
-var id = await sender.Send(new CreateTodoItemCommand("My task"), ct);
+builder.Services.AddMediator(typeof(CreateTodoCommand).Assembly);
 ```
 
-## Publish domain events
+`AddMediator` discovers request handlers, notification handlers, and pipeline behaviors in that assembly. `ISender` and `IPublisher` are scoped.
+
+## 🚀 Send and publish
 
 ```csharp
-// In your aggregate
-public class TodoItem : AggregateRoot
-{
-    public static TodoItem Create(string title)
-    {
-        var item = new TodoItem { Title = title };
-        item.AddDomainEvent(new TodoItemCreatedEvent(item.Id));
-        return item;
-    }
-}
-
-// In your DbContext: dispatches after SaveChanges
-public override async Task<int> SaveChangesAsync(CancellationToken ct)
-{
-    var events = ChangeTracker
-        .Entries<AggregateRoot>()
-        .Select(e => e.Entity)
-        .Where(e => e.DomainEvents.Count > 0)
-        .ToList();
-
-    var result = await base.SaveChangesAsync(ct);
-
-    foreach (var entity in events)
-    {
-        foreach (var domainEvent in entity.DomainEvents.ToArray())
-        {
-            await _publisher.Publish(domainEvent, ct);
-            entity.ClearDomainEvents();
-        }
-    }
-
-    return result;
-}
+var id = await sender.Send(new CreateTodoCommand("Ship README"), ct);
+await publisher.Publish(new TodoCreated(id), ct);
 ```
 
-## Pipeline behaviors
+| Operation | Dispatch |
+| --- | --- |
+| Request | One matching handler |
+| Notification | Every matching handler, sequentially |
 
-Behaviors execute in reverse registration order: the last registered behavior is the outermost wrapper.
+## 🔁 Pipeline behaviors
+
+Register cross-cutting concerns after the mediator:
 
 ```csharp
-// Registered first → runs first (innermost)
-services.AddMediator(typeof(CreateTodoItemCommand).Assembly);
+services.AddMediator(typeof(CreateTodoCommand).Assembly);
 services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 ```
 
+Behaviors execute in registration order. The first registered behavior is the outermost wrapper.
+
 > [!NOTE]
-> The `ValidationBehavior` above requires `FluentValidation`. If your project doesn't use FluentValidation, remove or replace it.
-
-## Installation
-
-```
-dotnet add package Dorn.Messaging
-```
-
-Depends on `Dorn.Messaging.Contracts` and `Microsoft.Extensions.DependencyInjection.Abstractions`.
+> Validation is not built in. Add your preferred validation library inside a behavior.
