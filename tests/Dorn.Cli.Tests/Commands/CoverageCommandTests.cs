@@ -1,18 +1,17 @@
-using System.Text;
+using System.Xml.Linq;
 using Dorn.Cli.Commands.Coverage;
 using Dorn.Cli.Coverage;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Testing;
 using Dorn.Cli.Theming;
 using NSubstitute;
-using Spectre.Console;
 using Spectre.Console.Cli;
-using Spectre.Console.Rendering;
+using Spectre.Console.Testing;
 using Xunit;
 
 namespace Dorn.Cli.Tests.Commands;
 
-///<summary>Tests for <see cref="CoverageCommand"/>: tier dispatch → test run → Cobertura parsing → threshold gate. Drives ExecuteAsync directly (CommandAppTester removed in Spectre.Console.Cli 0.55.0).</summary>
+///<summary>Tests for <see cref="CoverageCommand"/>: tier dispatch → freshest-per-tier discovery → merge → threshold gate → table. Drives RunAsync directly (CommandAppTester removed in Spectre.Console.Cli 0.55.0).</summary>
 public class CoverageCommandTests : IDisposable
 {
     private readonly string _tempRoot;
@@ -32,7 +31,7 @@ public class CoverageCommandTests : IDisposable
     [Fact]
     public async Task CoverageCommand_WithoutTiers_ReturnsExitOneWithClearMessage()
     {
-        var (_, consoleMock, command) = CreateCommand();
+        var (_, console, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         var settings = new CoverageSettings { Project = _tempRoot };
@@ -40,154 +39,316 @@ public class CoverageCommandTests : IDisposable
         var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
-        consoleMock.Received().Write(Arg.Any<IRenderable>());
+        Assert.Contains("IncludeTests=false", console.Output);
     }
 
     [Fact]
     public async Task CoverageCommand_WhenAllTiersPassAndAboveThreshold_ReturnsZero()
     {
-        var (_, consoleMock, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
-        CreateCoberturaReport(lineRate: 0.85);
+        var (_, console, command) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 100, coveredLines: 85)
+                )
+        );
         var settings = new CoverageSettings { Project = _tempRoot };
 
         var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
-        consoleMock.Received().Write(Arg.Any<IRenderable>());
+        Assert.Contains("85.00%", console.Output);
     }
 
     [Fact]
     public async Task CoverageCommand_WhenBelowThreshold_ReturnsExitOne()
     {
-        var (_, consoleMock, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
-        CreateCoberturaReport(lineRate: 0.50);
+        var (_, console, command) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 100, coveredLines: 50)
+                )
+        );
         var settings = new CoverageSettings { Project = _tempRoot };
 
         var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
-        consoleMock.Received().Write(Arg.Any<IRenderable>());
+        Assert.Contains("50.00%", console.Output);
     }
 
     [Fact]
     public async Task CoverageCommand_WhenAtThreshold_ReturnsZero()
     {
-        var (_, consoleMock, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
-        CreateCoberturaReport(lineRate: 0.80);
+        var (_, console, command) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 100, coveredLines: 80)
+                )
+        );
         var settings = new CoverageSettings { Project = _tempRoot };
 
         var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
-        consoleMock.Received().Write(Arg.Any<IRenderable>());
+        Assert.Contains("80.00%", console.Output);
     }
 
     [Fact]
     public async Task CoverageCommand_WhenTestsFail_ReturnsExitOneWithoutThreshold()
     {
-        var (_, consoleMock, command) = CreateCommandWithFailingRunner();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
+        var (_, console, command) = CreateCommand(allSucceeded: false);
         var settings = new CoverageSettings { Project = _tempRoot };
 
         var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
-        consoleMock.Received().Write(Arg.Any<IRenderable>());
+        Assert.Contains("coverage report not generated", console.Output);
     }
 
     [Fact]
     public async Task CoverageCommand_WhenNoCoverageReport_ReturnsExitOne()
     {
-        var (_, consoleMock, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
-        // No Cobertura report created.
+        var (_, console, command) = CreateCommand();
         var settings = new CoverageSettings { Project = _tempRoot };
 
         var exitCode = await command.RunAsync(settings, CancellationToken.None);
 
         Assert.Equal(1, exitCode);
-        consoleMock.Received().Write(Arg.Any<IRenderable>());
+        Assert.Contains("No coverage report found", console.Output);
     }
 
-    private static CommandContext SyntheticContext(string name) =>
-        new CommandContext(Array.Empty<string>(), new EmptyRemainingArgs(), name, null);
-
-    private (
-        IDotnetTestRunner Runner,
-        IAnsiConsole Console,
-        CoverageCommand Command
-    ) CreateCommand()
+    [Fact]
+    public async Task CoverageCommand_ArchitectureTierZeroButApplicationNinety_MergesAndPassesThreshold()
     {
-        var testRunner = Substitute.For<IDotnetTestRunner>();
-        testRunner
-            .RunAsync(
-                Arg.Any<ProjectContext>(),
-                Arg.Any<DatabaseProvider>(),
-                Arg.Any<IReadOnlyList<TestTier>>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns(new TestRunResult([], AllSucceeded: true));
-
-        var consoleMock = CreateConsoleMock();
-        var theme = new DornTheme(consoleMock);
-        var resolver = new ProjectContextResolver();
-        var reporter = new CoverageReporter();
-        var command = new CoverageCommand(resolver, testRunner, reporter, theme);
-
-        return (testRunner, consoleMock, command);
-    }
-
-    private (
-        IDotnetTestRunner Runner,
-        IAnsiConsole Console,
-        CoverageCommand Command
-    ) CreateCommandWithFailingRunner()
-    {
-        var testRunner = Substitute.For<IDotnetTestRunner>();
-        testRunner
-            .RunAsync(
-                Arg.Any<ProjectContext>(),
-                Arg.Any<DatabaseProvider>(),
-                Arg.Any<IReadOnlyList<TestTier>>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns(new TestRunResult([], AllSucceeded: false));
-
-        var consoleMock = CreateConsoleMock();
-        var theme = new DornTheme(consoleMock);
-        var resolver = new ProjectContextResolver();
-        var reporter = new CoverageReporter();
-        var command = new CoverageCommand(resolver, testRunner, reporter, theme);
-
-        return (testRunner, consoleMock, command);
-    }
-
-    // Explicit — no test may rely on the mock's default Interactive/Unicode values.
-    private static IAnsiConsole CreateConsoleMock()
-    {
-        var consoleMock = Substitute.For<IAnsiConsole>();
-        var capabilities = new Capabilities { Interactive = false, Unicode = true };
-        var profile = new Profile(
-            Substitute.For<IAnsiConsoleOutput>(),
-            capabilities,
-            Encoding.UTF8
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+        CreateTestsDir("MyProject.Architecture.Tests");
+        var (_, console, command) = CreateCommand(
+            specs:
+            [
+                TierSpec("MyProject.Application.Tests"),
+                TierSpec("MyProject.Architecture.Tests"),
+            ],
+            writeReports: () =>
+            {
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass(
+                        "MyApp",
+                        "MyApp.Services.Widget",
+                        "Services/Widget.cs",
+                        totalLines: 10,
+                        coveredLines: 9
+                    )
+                );
+                CreateTierReport(
+                    "MyProject.Architecture.Tests",
+                    SimpleClass(
+                        "MyApp",
+                        "MyApp.Services.Widget",
+                        "Services/Widget.cs",
+                        totalLines: 10,
+                        coveredLines: 0
+                    )
+                );
+            }
         );
-        consoleMock.Profile.Returns(profile);
-        return consoleMock;
+        var settings = new CoverageSettings { Project = _tempRoot };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("90.00%", console.Output);
     }
+
+    [Fact]
+    public async Task CoverageCommand_OnlyStaleReportsFromPreviousRun_ReturnsExitOneAndIgnoresThem()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+        CreateTierReport(
+            "MyProject.Application.Tests",
+            SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 10, coveredLines: 9)
+        );
+        BackdateAllReports(TimeSpan.FromMinutes(10));
+        var (_, console, command) = CreateCommand(specs: [TierSpec("MyProject.Application.Tests")]);
+        var settings = new CoverageSettings { Project = _tempRoot };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("No coverage report found", console.Output);
+    }
+
+    [Fact]
+    public async Task CoverageCommand_PartialTierReports_MergesAvailableAndWarnsAboutMissingTier()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+        CreateTestsDir("MyProject.Architecture.Tests");
+        var (_, console, command) = CreateCommand(
+            specs:
+            [
+                TierSpec("MyProject.Application.Tests"),
+                TierSpec("MyProject.Architecture.Tests"),
+            ],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 10, coveredLines: 9)
+                )
+        );
+        var settings = new CoverageSettings { Project = _tempRoot };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("MyProject.Architecture.Tests", console.Output);
+    }
+
+    [Fact]
+    public async Task CoverageCommand_DefaultTable_ShowsOnlyBelowThresholdAscendingCappedAtFifteenRows()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+        var belowThreshold = Enumerable
+            .Range(1, 18)
+            .Select(i =>
+                SimpleClass(
+                    "MyApp",
+                    $"BelowClass{i:D2}",
+                    $"BelowClass{i:D2}.cs",
+                    totalLines: 10,
+                    coveredLines: 0
+                )
+            )
+            .ToArray();
+        var aboveThreshold = SimpleClass(
+            "MyApp",
+            "AboveClass",
+            "AboveClass.cs",
+            totalLines: 10,
+            coveredLines: 10
+        );
+        var (_, console, command) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport("MyProject.Application.Tests", [.. belowThreshold, aboveThreshold])
+        );
+        var settings = new CoverageSettings { Project = _tempRoot };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.DoesNotContain("AboveClass", console.Output);
+        Assert.Contains("+3 more below threshold", console.Output);
+    }
+
+    [Fact]
+    public async Task CoverageCommand_AllFlag_ShowsEveryClassRegardlessOfThreshold()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+        var (_, console, command) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass(
+                        "MyApp",
+                        "LowClass",
+                        "LowClass.cs",
+                        totalLines: 10,
+                        coveredLines: 0
+                    ),
+                    SimpleClass(
+                        "MyApp",
+                        "HighClass",
+                        "HighClass.cs",
+                        totalLines: 10,
+                        coveredLines: 10
+                    )
+                )
+        );
+        var settings = new CoverageSettings { Project = _tempRoot, All = true };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("LowClass", console.Output);
+        Assert.Contains("HighClass", console.Output);
+    }
+
+    private (IDotnetTestRunner Runner, TestConsole Console, CoverageCommand Command) CreateCommand(
+        IReadOnlyList<CapturedProcessSpec>? specs = null,
+        bool allSucceeded = true,
+        Action? writeReports = null
+    )
+    {
+        var testRunner = Substitute.For<IDotnetTestRunner>();
+        testRunner
+            .RunAsync(
+                Arg.Any<ProjectContext>(),
+                Arg.Any<DatabaseProvider>(),
+                Arg.Any<IReadOnlyList<TestTier>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(ci =>
+            {
+                writeReports?.Invoke();
+                return new TestRunResult(specs ?? [], allSucceeded);
+            });
+
+        var console = new TestConsole().Width(int.MaxValue);
+        console.Profile.Capabilities.Unicode = true;
+        console.Profile.Capabilities.Interactive = false;
+        var theme = new DornTheme(console);
+        var resolver = new ProjectContextResolver();
+        var reporter = new CoverageReporter();
+        var command = new CoverageCommand(resolver, testRunner, reporter, console, theme);
+
+        return (testRunner, console, command);
+    }
+
+    private CapturedProcessSpec TierSpec(string tierDirName) =>
+        new(
+            "dotnet",
+            [
+                "test",
+                "path",
+                "--collect:XPlat Code Coverage",
+                "--results-directory",
+                Path.Combine(_tempRoot, "TestResults", tierDirName),
+                "--no-build",
+            ],
+            _tempRoot
+        );
 
     private void CreateTestsDir(string name)
     {
@@ -204,26 +365,82 @@ public class CoverageCommandTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_tempRoot, "src", name));
     }
 
-    private void CreateCoberturaReport(double lineRate)
+    private void CreateTierReport(string tierDirName, params ClassSpec[] classes)
     {
-        var guid = Guid.NewGuid().ToString();
-        var dir = Path.Combine(_tempRoot, "TestResults", guid);
+        var dir = Path.Combine(_tempRoot, "TestResults", tierDirName, Guid.NewGuid().ToString());
         Directory.CreateDirectory(dir);
-        File.WriteAllText(
-            Path.Combine(dir, "coverage.cobertura.xml"),
-            $"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-                + $"<coverage line-rate=\"{lineRate.ToString(System.Globalization.CultureInfo.InvariantCulture)}\" "
-                + $"branch-rate=\"0.5\" version=\"1.9\" timestamp=\"0\" lines-covered=\"0\" lines-valid=\"0\" "
-                + $"branches-covered=\"0\" branches-valid=\"0\"></coverage>"
-        );
+        File.WriteAllText(Path.Combine(dir, "coverage.cobertura.xml"), BuildCobertura(classes));
     }
-}
 
-///<summary>Minimal <see cref="IRemainingArguments"/> stand-in for tests that build <see cref="CommandContext"/> directly (CommandAppTester removed in Spectre.Console.Cli 0.55.0).</summary>
-file sealed class EmptyRemainingArgs : IRemainingArguments
-{
-    public ILookup<string, string?> Parsed { get; } =
-        Array.Empty<string>().ToLookup(x => x, x => (string?)null);
+    private void BackdateAllReports(TimeSpan age)
+    {
+        var testResultsDir = Path.Combine(_tempRoot, "TestResults");
+        foreach (
+            var file in Directory.EnumerateFiles(
+                testResultsDir,
+                "coverage.cobertura.xml",
+                new EnumerationOptions { RecurseSubdirectories = true }
+            )
+        )
+        {
+            File.SetLastWriteTimeUtc(file, DateTime.UtcNow - age);
+        }
+    }
 
-    public IReadOnlyList<string> Raw { get; } = Array.Empty<string>();
+    private static ClassSpec SimpleClass(
+        string assembly,
+        string className,
+        string fileName,
+        int totalLines,
+        int coveredLines
+    ) =>
+        new(
+            assembly,
+            className,
+            fileName,
+            [.. Enumerable.Range(1, totalLines).Select(n => (n, n <= coveredLines ? 1 : 0))]
+        );
+
+    private static string BuildCobertura(ClassSpec[] classes)
+    {
+        var packages = classes
+            .GroupBy(c => c.Assembly)
+            .Select(group => new XElement(
+                "package",
+                new XAttribute("name", group.Key),
+                new XElement(
+                    "classes",
+                    group.Select(c => new XElement(
+                        "class",
+                        new XAttribute("name", c.ClassName),
+                        new XAttribute("filename", c.FileName),
+                        new XElement(
+                            "lines",
+                            c.Lines.Select(l => new XElement(
+                                "line",
+                                new XAttribute("number", l.Number),
+                                new XAttribute("hits", l.Hits)
+                            ))
+                        )
+                    ))
+                )
+            ));
+
+        var doc = new XDocument(
+            new XElement(
+                "coverage",
+                new XAttribute("line-rate", "0"),
+                new XElement("packages", packages)
+            )
+        );
+
+        return doc.ToString();
+    }
+
+    private sealed record ClassSpec(
+        string Assembly,
+        string ClassName,
+        string FileName,
+        (int Number, int Hits)[] Lines
+    );
 }
