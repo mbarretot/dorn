@@ -231,6 +231,27 @@ public class WebApiTemplateGenerationTests
                 "Auth=none must not emit any *_AddAuthUser* migration file"
             );
 
+            var applicationTestsAuthDir = Path.Combine(
+                outputDirectory,
+                "tests",
+                "DornNoAuthApp.Application.Tests",
+                "Auth"
+            );
+            var functionalTestsAuthDir = Path.Combine(
+                outputDirectory,
+                "tests",
+                "DornNoAuthApp.Functional.Tests",
+                "Auth"
+            );
+            Assert.False(
+                Directory.Exists(applicationTestsAuthDir),
+                "Auth=none must not emit tests/*.Application.Tests/Auth/"
+            );
+            Assert.False(
+                Directory.Exists(functionalTestsAuthDir),
+                "Auth=none must not emit tests/*.Functional.Tests/Auth/"
+            );
+
             var appsettingsPath = Path.Combine(webApiDir, "appsettings.json");
             Assert.True(File.Exists(appsettingsPath));
             var appsettings = await File.ReadAllTextAsync(appsettingsPath);

@@ -230,7 +230,21 @@
             "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/20260807050702_AddAuthUser.cs",
             "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/SqlServer/20260807050702_AddAuthUser.Designer.cs",
             "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Postgres/20260807050712_AddAuthUser.cs",
-            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Postgres/20260807050712_AddAuthUser.Designer.cs"
+            "src/CleanArchWebApi.Infrastructure/Persistence/Migrations/Postgres/20260807050712_AddAuthUser.Designer.cs",
+            "tests/CleanArchWebApi.Application.Tests/Auth/JwtTokenServiceTests.cs",
+            "tests/CleanArchWebApi.Application.Tests/Auth/LoginCommandHandlerTests.cs",
+            "tests/CleanArchWebApi.Application.Tests/Auth/LoginCommandValidatorTests.cs",
+            "tests/CleanArchWebApi.Application.Tests/Auth/TestCredentials.cs",
+            "tests/CleanArchWebApi.Functional.Tests/Auth/AuthWebApplicationFactory.cs",
+            "tests/CleanArchWebApi.Functional.Tests/Auth/LoginEndpointTests.cs",
+            "tests/CleanArchWebApi.Functional.Tests/Auth/MeEndpointsTests.cs"
+          ]
+        },
+        {
+          "condition": "(!UseAzureAdAuth)",
+          "exclude": [
+            "tests/CleanArchWebApi.Functional.Tests/Auth/AzureAdWebApplicationFactory.cs",
+            "tests/CleanArchWebApi.Functional.Tests/Auth/AzureAdMeEndpointsTests.cs"
           ]
         }
       ]
