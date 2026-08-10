@@ -59,7 +59,11 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
                 {
                     foreach (var plan in plans)
                     {
-                        var task = ctx.AddTask(plan.Tier.ToString(), autoStart: false, maxValue: 1);
+                        var task = ctx.AddTask(
+                            $"Running {plan.Tier} tests",
+                            autoStart: false,
+                            maxValue: 1
+                        );
                         task.StartTask();
                         if (!await RunTierAsync(context, plan.Path, specs, ct))
                             allSucceeded = false;

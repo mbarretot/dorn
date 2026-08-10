@@ -338,6 +338,27 @@ public class DotnetTestRunnerTests : IDisposable
         AssertSameSpecs(nonInteractiveResult.Specs, interactiveResult.Specs);
     }
 
+    [Fact]
+    public async Task RunAsync_Interactive_ProgressTaskLabelIsUnambiguousAboutExecution()
+    {
+        // 100% here means "tier finished running", not "code coverage" shown right below.
+        CreateTestsDir("MyProject.Application.Tests");
+        var console = CreateConsole(interactive: true);
+        var processRunner = Substitute.For<IProcessRunner>();
+        processRunner.RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>()).Returns(0);
+        var runner = new DotnetTestRunner(processRunner, new DornTheme(console));
+        var ctx = CreateContextWithAllTiers("MyProject");
+
+        await runner.RunAsync(
+            ctx,
+            DatabaseProvider.Sqlite,
+            [TestTier.Application],
+            CancellationToken.None
+        );
+
+        Assert.Contains("Running Application tests", console.Output);
+    }
+
     // Helpers
 
     private DotnetTestRunner CreateRunner(int processExitCode = 0, bool interactive = false)
