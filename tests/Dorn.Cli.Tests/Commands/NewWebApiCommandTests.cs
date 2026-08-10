@@ -2,6 +2,7 @@ using System.Text;
 using Dorn.Abstractions.Generation;
 using Dorn.Cli.Commands.New;
 using Dorn.Cli.Execution;
+using Dorn.Cli.Theming;
 using NSubstitute;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -619,7 +620,8 @@ public class NewWebApiCommandTests
         var engine = Substitute.For<IGenerationEngine>();
         var processRunner = Substitute.For<IProcessRunner>();
         var consoleMock = CreateNonInteractiveConsoleMock();
-        var command = new NewWebApiCommand(engine, processRunner, consoleMock);
+        var theme = new DornTheme(consoleMock);
+        var command = new NewWebApiCommand(engine, processRunner, consoleMock, theme);
         return (engine, processRunner, command);
     }
 
@@ -633,17 +635,18 @@ public class NewWebApiCommandTests
         var engine = Substitute.For<IGenerationEngine>();
         var processRunner = Substitute.For<IProcessRunner>();
         var consoleMock = CreateNonInteractiveConsoleMock();
-        var command = new NewWebApiCommand(engine, processRunner, consoleMock);
+        var theme = new DornTheme(consoleMock);
+        var command = new NewWebApiCommand(engine, processRunner, consoleMock, theme);
         return (engine, processRunner, command, consoleMock);
     }
 
-    ///<summary>IAnsiConsole mock with Interactive=false by default. Interactive tests override with a real TestConsole at the test boundary.</summary>
+    ///<summary>IAnsiConsole mock with Interactive=false, Unicode=true explicitly set (no test may rely on defaults). Interactive tests override with a real TestConsole at the test boundary.</summary>
     private static IAnsiConsole CreateNonInteractiveConsoleMock()
     {
         var consoleMock = Substitute.For<IAnsiConsole>();
-        // Capabilities is sealed; instantiate directly and set Interactive via property.
-        var capabilities = new Capabilities { Interactive = false };
-        // Profile is sealed; ctor takes (IAnsiConsoleOutput, Capabilities, Encoding). Only Capabilities.Interactive is read.
+        // Capabilities is sealed; instantiate directly and set properties explicitly.
+        var capabilities = new Capabilities { Interactive = false, Unicode = true };
+        // Profile is sealed; ctor takes (IAnsiConsoleOutput, Capabilities, Encoding).
         var profile = new Profile(
             Substitute.For<IAnsiConsoleOutput>(),
             capabilities,
@@ -663,7 +666,9 @@ public class NewWebApiCommandTests
         var engine = Substitute.For<IGenerationEngine>();
         var processRunner = Substitute.For<IProcessRunner>();
         var console = new TestConsole().Width(int.MaxValue);
-        var command = new NewWebApiCommand(engine, processRunner, console);
+        console.Profile.Capabilities.Unicode = true;
+        var theme = new DornTheme(console);
+        var command = new NewWebApiCommand(engine, processRunner, console, theme);
         return (engine, processRunner, command, console);
     }
 }

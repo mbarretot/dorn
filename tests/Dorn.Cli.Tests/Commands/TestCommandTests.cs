@@ -1,6 +1,8 @@
+using System.Text;
 using Dorn.Cli.Commands.Test;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Testing;
+using Dorn.Cli.Theming;
 using NSubstitute;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -172,11 +174,25 @@ public class TestCommandTests : IDisposable
             )
             .Returns(new TestRunResult([], AllSucceeded: true));
 
-        var consoleMock = Substitute.For<IAnsiConsole>();
+        var consoleMock = CreateConsoleMock();
+        var theme = new DornTheme(consoleMock);
         var resolver = new ProjectContextResolver();
-        var command = new TestCommand(resolver, testRunner, consoleMock);
+        var command = new TestCommand(resolver, testRunner, theme);
 
         return (testRunner, consoleMock, command);
+    }
+
+    ///<summary>
+    /// Explicit — no test may rely on the mock's default Interactive/Unicode values, since
+    /// TestCommand now resolves severity output through <see cref="DornTheme"/>.
+    ///</summary>
+    private static IAnsiConsole CreateConsoleMock()
+    {
+        var consoleMock = Substitute.For<IAnsiConsole>();
+        var capabilities = new Capabilities { Interactive = false, Unicode = true };
+        var profile = new Profile(Substitute.For<IAnsiConsoleOutput>(), capabilities, Encoding.UTF8);
+        consoleMock.Profile.Returns(profile);
+        return consoleMock;
     }
 
     private void CreateTestsDir(string name)

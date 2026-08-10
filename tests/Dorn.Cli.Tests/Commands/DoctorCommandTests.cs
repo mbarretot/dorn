@@ -2,6 +2,7 @@ using Dorn.Cli.Commands.Doctor;
 using Dorn.Cli.Execution;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Templating;
+using Dorn.Cli.Theming;
 using NSubstitute;
 using Spectre.Console.Testing;
 using Xunit;
@@ -413,8 +414,18 @@ public class DoctorCommandTests : IDisposable
 
         var resolver = new ProjectContextResolver();
         var console = new TestConsole().Width(int.MaxValue);
+        // Explicit — no test may rely on TestConsole's default Unicode/Interactive values.
+        console.Profile.Capabilities.Unicode = true;
+        console.Profile.Capabilities.Interactive = false;
+        var theme = new DornTheme(console);
 
-        var command = new DoctorCommand(templatesRootLocator, processRunner, resolver, console);
+        var command = new DoctorCommand(
+            templatesRootLocator,
+            processRunner,
+            resolver,
+            console,
+            theme
+        );
 
         return (templatesRootLocator, processRunner, resolver, console, command);
     }
@@ -428,8 +439,17 @@ public class DoctorCommandTests : IDisposable
         var templatesRootLocator = Substitute.For<ITemplatesRootLocator>();
         var processRunner = Substitute.For<IProcessRunner>();
         var console = new TestConsole().Width(int.MaxValue);
+        console.Profile.Capabilities.Unicode = true;
+        console.Profile.Capabilities.Interactive = false;
+        var theme = new DornTheme(console);
 
-        var command = new DoctorCommand(templatesRootLocator, processRunner, resolver, console);
+        var command = new DoctorCommand(
+            templatesRootLocator,
+            processRunner,
+            resolver,
+            console,
+            theme
+        );
 
         return (templatesRootLocator, processRunner, command);
     }

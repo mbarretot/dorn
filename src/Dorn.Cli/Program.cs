@@ -9,6 +9,7 @@ using Dorn.Cli.Infrastructure;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Templating;
 using Dorn.Cli.Testing;
+using Dorn.Cli.Theming;
 using Dorn.Core.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
@@ -23,6 +24,7 @@ if (args.Length == 0)
 var services = new ServiceCollection();
 services.AddDornCore();
 services.AddSingleton(AnsiConsole.Console);
+services.AddSingleton<IDornTheme, DornTheme>();
 services.AddSingleton<IProcessRunner, ProcessRunner>();
 services.AddSingleton<ISignalRegistration, SignalRegistration>();
 services.AddSingleton<IProjectContextResolver, ProjectContextResolver>();
@@ -74,34 +76,7 @@ return await app.RunAsync(args);
 
 static void ShowWelcome()
 {
-    AnsiConsole.Write(new FigletText("dorn").Color(Color.SteelBlue1));
-    AnsiConsole.MarkupLine("[grey]Clean Architecture project scaffolding for .NET[/]");
-    AnsiConsole.WriteLine();
-
-    var table = new Table().Border(TableBorder.Rounded).Title("Available commands");
-    table.AddColumn("Command");
-    table.AddColumn("Description");
-    table.AddRow("[green]new webapi[/] <name>", "Generate a Clean Architecture Web API project.");
-    table.AddRow(
-        "[green]new grpc[/] <name>",
-        "Generate a Clean Architecture gRPC service (sqlite + EF Core + Aspire)."
-    );
-    table.AddRow(
-        "[green]new worker[/] <name>",
-        "Generate a Clean Architecture worker service (sqlite + EF Core + Aspire)."
-    );
-    table.AddRow("[green]test[/]", "Run the generated project's test tiers.");
-    table.AddRow(
-        "[green]run[/]",
-        "Run the generated project (auto-detects AppHost/Compose/Plain)."
-    );
-    table.AddRow("[green]coverage[/]", "Run tests with coverage; gate at 80%.");
-    table.AddRow("[green]doctor[/]", "Check the local environment (templates, .NET SDK, Docker).");
-    AnsiConsole.Write(table);
-
-    AnsiConsole.WriteLine();
-    AnsiConsole.MarkupLine(
-        "Run [yellow]dorn <command> --help[/] for options on a specific command."
-    );
-    AnsiConsole.MarkupLine("Run [yellow]dorn --help[/] for the full command reference.");
+    // Runs before the DI container exists, so the theme is constructed directly here
+    // (design: "ShowWelcome() ... can use new DornTheme(AnsiConsole.Console)").
+    new DornTheme(AnsiConsole.Console).Banner();
 }
