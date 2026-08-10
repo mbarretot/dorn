@@ -100,14 +100,18 @@ public sealed class NewWorkerCommand(
             return;
         }
 
-        _theme.Message(Severity.Info, "Restoring local tools (dotnet tool restore)...");
+        var spec = new ProcessSpec("dotnet", ["tool", "restore"], outputDirectory);
 
         try
         {
-            var exitCode = await _processRunner.RunAsync(
-                new ProcessSpec("dotnet", ["tool", "restore"], outputDirectory),
-                cancellationToken
-            );
+            var exitCode = _theme.LiveRegionsEnabled
+                ? await _theme
+                    .CreateStatus()
+                    .StartAsync(
+                        "Restoring local tools (dotnet tool restore)...",
+                        _ => _processRunner.RunAsync(spec, cancellationToken)
+                    )
+                : await RunRestoreWithMessageAsync(spec, cancellationToken);
 
             if (exitCode != 0)
             {
@@ -126,6 +130,15 @@ public sealed class NewWorkerCommand(
                 "`dotnet tool restore` threw: " + Markup.Escape(ex.Message)
             );
         }
+    }
+
+    private async Task<int> RunRestoreWithMessageAsync(
+        ProcessSpec spec,
+        CancellationToken cancellationToken
+    )
+    {
+        _theme.Message(Severity.Info, "Restoring local tools (dotnet tool restore)...");
+        return await _processRunner.RunAsync(spec, cancellationToken);
     }
 
     private void WriteErrorPanel(string header, string? message, bool escapeMessage = true)

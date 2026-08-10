@@ -221,6 +221,53 @@ public class NewGrpcCommandTests
         }
     }
 
+    [Fact]
+    public async Task NewGrpc_WithSuccessfulGenerationAndInteractiveConsole_StillRunsDotnetToolRestoreOnce()
+    {
+        var (engine, processRunner, command, console) = CreateCommandWithRealTestConsole();
+        console.Profile.Capabilities.Interactive = true;
+        var tempDir = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-grpc-restore-interactive-{Guid.NewGuid():N}"
+        );
+        Directory.CreateDirectory(tempDir);
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var request = callInfo.ArgAt<GenerationRequest>(0);
+                var manifestDir = Path.Combine(request.OutputDirectory, ".config");
+                Directory.CreateDirectory(manifestDir);
+                File.WriteAllText(Path.Combine(manifestDir, "dotnet-tools.json"), "{}");
+                return new GenerationResult(true, request.OutputDirectory, ["Program.cs"], []);
+            });
+
+        try
+        {
+            var exitCode = await command.RunAsync(
+                new NewGrpcSettings { Name = "MyService", Output = tempDir },
+                CancellationToken.None
+            );
+
+            Assert.Equal(0, exitCode);
+            await processRunner
+                .Received(1)
+                .RunAsync(
+                    Arg.Is<ProcessSpec>(s =>
+                        s.FileName == "dotnet"
+                        && s.Arguments.Contains("tool")
+                        && s.Arguments.Contains("restore")
+                    ),
+                    Arg.Any<CancellationToken>()
+                );
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
     private (
         IGenerationEngine Engine,
         IProcessRunner ProcessRunner,
@@ -262,5 +309,21 @@ public class NewGrpcCommandTests
         );
         consoleMock.Profile.Returns(profile);
         return consoleMock;
+    }
+
+    private (
+        IGenerationEngine Engine,
+        IProcessRunner ProcessRunner,
+        NewGrpcCommand Command,
+        TestConsole Console
+    ) CreateCommandWithRealTestConsole()
+    {
+        var engine = Substitute.For<IGenerationEngine>();
+        var processRunner = Substitute.For<IProcessRunner>();
+        var console = new TestConsole().Width(int.MaxValue);
+        console.Profile.Capabilities.Unicode = true;
+        var theme = new DornTheme(console);
+        var command = new NewGrpcCommand(engine, processRunner, console, theme);
+        return (engine, processRunner, command, console);
     }
 }
