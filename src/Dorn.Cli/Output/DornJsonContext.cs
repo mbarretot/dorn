@@ -6,7 +6,7 @@ namespace Dorn.Cli.Output;
 /// Source-generated metadata for envelope payload types. Commands register their concrete
 /// <c>CliEnvelope&lt;TData&gt;</c> closed type here as JSON support lands; anything not yet
 /// registered falls back to reflection via <see cref="CliJson.Options"/>. <c>string</c>/<c>int</c>
-/// cover the envelope-shape round-trip test until Doctor/Coverage DTOs land.
+/// cover the envelope-shape round-trip test; Coverage's DTO still lands via reflection fallback.
 /// </summary>
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
@@ -14,4 +14,5 @@ namespace Dorn.Cli.Output;
 )]
 [JsonSerializable(typeof(CliEnvelope<string>))]
 [JsonSerializable(typeof(CliEnvelope<int>))]
+[JsonSerializable(typeof(CliEnvelope<DoctorReport>))]
 internal partial class DornJsonContext : JsonSerializerContext { }
