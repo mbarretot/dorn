@@ -11,10 +11,15 @@ public interface IDotnetTestRunner
     /// <param name="database">Database provider — controls the Docker preflight warning.</param>
     /// <param name="tiers">Tiers to run. Empty list = IncludeTests=false scenario.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <param name="suppressLiveOutput">
+    /// When true, skips the Spectre progress region even if live regions are enabled — required
+    /// by callers (e.g. JSON output) that must keep stdout free of interleaved render output.
+    /// </param>
     Task<TestRunResult> RunAsync(
         ProjectContext context,
         DatabaseProvider database,
         IReadOnlyList<TestTier> tiers,
-        CancellationToken ct
+        CancellationToken ct,
+        bool suppressLiveOutput = false
     );
 }

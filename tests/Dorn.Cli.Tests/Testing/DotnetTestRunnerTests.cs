@@ -359,6 +359,50 @@ public class DotnetTestRunnerTests : IDisposable
         Assert.Contains("Running Application tests", console.Output);
     }
 
+    [Fact]
+    public async Task RunAsync_SuppressLiveOutputTrueWithLiveRegionsEnabled_DoesNotRenderProgressRegion()
+    {
+        CreateTestsDir("MyProject.Application.Tests");
+        var console = CreateConsole(interactive: true);
+        var processRunner = Substitute.For<IProcessRunner>();
+        processRunner.RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>()).Returns(0);
+        var runner = new DotnetTestRunner(processRunner, new DornTheme(console));
+        var ctx = CreateContextWithAllTiers("MyProject");
+
+        var result = await runner.RunAsync(
+            ctx,
+            DatabaseProvider.Sqlite,
+            [TestTier.Application],
+            CancellationToken.None,
+            suppressLiveOutput: true
+        );
+
+        Assert.DoesNotContain("Running Application tests", console.Output);
+        Assert.True(result.AllSucceeded);
+        Assert.Single(result.Specs);
+    }
+
+    [Fact]
+    public async Task RunAsync_SuppressLiveOutputOmitted_StillRendersProgressRegionWhenInteractive()
+    {
+        // Regression proof: default (`false`) preserves today's exact behavior for existing callers.
+        CreateTestsDir("MyProject.Application.Tests");
+        var console = CreateConsole(interactive: true);
+        var processRunner = Substitute.For<IProcessRunner>();
+        processRunner.RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>()).Returns(0);
+        var runner = new DotnetTestRunner(processRunner, new DornTheme(console));
+        var ctx = CreateContextWithAllTiers("MyProject");
+
+        await runner.RunAsync(
+            ctx,
+            DatabaseProvider.Sqlite,
+            [TestTier.Application],
+            CancellationToken.None
+        );
+
+        Assert.Contains("Running Application tests", console.Output);
+    }
+
     // Helpers
 
     private DotnetTestRunner CreateRunner(int processExitCode = 0, bool interactive = false)

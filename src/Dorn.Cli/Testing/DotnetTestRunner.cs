@@ -23,7 +23,8 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
         ProjectContext context,
         DatabaseProvider database,
         IReadOnlyList<TestTier> tiers,
-        CancellationToken ct
+        CancellationToken ct,
+        bool suppressLiveOutput = false
     )
     {
         // Resolve tier plans and emit the Docker warning up front — writes inside a live
@@ -51,7 +52,7 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
         var specs = new List<CapturedProcessSpec>();
         var allSucceeded = true;
 
-        if (_theme.LiveRegionsEnabled)
+        if (_theme.LiveRegionsEnabled && !suppressLiveOutput)
         {
             await _theme
                 .CreateProgress()
