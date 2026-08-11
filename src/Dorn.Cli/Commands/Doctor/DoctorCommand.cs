@@ -1,4 +1,5 @@
 using Dorn.Cli.Execution;
+using Dorn.Cli.Output;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Templating;
 using Dorn.Cli.Theming;
@@ -21,13 +22,15 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
     private readonly IProjectContextResolver _resolver;
     private readonly IAnsiConsole _console;
     private readonly IDornTheme _theme;
+    private readonly ICliOutputWriter _writer;
 
     public DoctorCommand(
         ITemplatesRootLocator templatesRootLocator,
         IProcessRunner processRunner,
         IProjectContextResolver resolver,
         IAnsiConsole console,
-        IDornTheme theme
+        IDornTheme theme,
+        ICliOutputWriter writer
     )
     {
         _templatesRootLocator = templatesRootLocator;
@@ -35,6 +38,7 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
         _resolver = resolver;
         _console = console;
         _theme = theme;
+        _writer = writer;
     }
 
     // Spectre.Console.Cli 0.55.0 moved ExecuteAsync to protected; RunAsync below is the public
@@ -51,9 +55,19 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
     /// </summary>
     public async Task<int> RunAsync(DoctorSettings settings, CancellationToken cancellationToken)
     {
+        var formatResult = OutputFormatValidator.Validate(settings.Format);
+        if (!formatResult.IsValid)
+        {
+            _theme.Message(Severity.Error, Markup.Escape(formatResult.ErrorMessage!));
+            return 1;
+        }
+
+        var format = formatResult.Format;
         var root = settings.Project ?? Directory.GetCurrentDirectory();
 
-        var results = _theme.LiveRegionsEnabled
+        // Live status region renders through IAnsiConsole; JSON mode must never touch it.
+        var useLive = _theme.LiveRegionsEnabled && format == OutputFormat.Table;
+        var results = useLive
             ? await _theme
                 .CreateStatus()
                 .StartAsync(
@@ -62,10 +76,45 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
                 )
             : await CollectChecksAsync(root, statusContext: null, cancellationToken);
 
-        Render(results);
+        var exitCode = results.Any(r => r.Status == CheckStatus.Fail) ? 1 : 0;
 
-        return results.Any(r => r.Status == CheckStatus.Fail) ? 1 : 0;
+        if (format == OutputFormat.Json)
+        {
+            EmitJson(results, exitCode);
+        }
+        else
+        {
+            Render(results);
+        }
+
+        return exitCode;
     }
+
+    private void EmitJson(IReadOnlyList<CheckResult> results, int exitCode)
+    {
+        var report = new DoctorReport(
+            results
+                .Select(r => new DoctorCheckDto(r.Name, StatusToken(r.Status), r.Detail))
+                .ToList()
+        );
+        var envelope = new CliEnvelope<DoctorReport>(
+            SchemaVersion: 1,
+            Command: "doctor",
+            Success: exitCode == 0,
+            ExitCode: exitCode,
+            Data: report
+        );
+        _writer.WriteLine(CliJson.Serialize(envelope));
+    }
+
+    private static string StatusToken(CheckStatus status) =>
+        status switch
+        {
+            CheckStatus.Pass => "pass",
+            CheckStatus.Fail => "fail",
+            CheckStatus.Warn => "warn",
+            _ => status.ToString().ToLowerInvariant(),
+        };
 
     private async Task<List<CheckResult>> CollectChecksAsync(
         string root,
@@ -226,13 +275,4 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
             CheckStatus.Warn => _theme.Label(Severity.Warning, "WARN"),
             _ => status.ToString(),
         };
-
-    private enum CheckStatus
-    {
-        Pass,
-        Fail,
-        Warn,
-    }
-
-    private sealed record CheckResult(string Name, CheckStatus Status, string Detail);
 }
