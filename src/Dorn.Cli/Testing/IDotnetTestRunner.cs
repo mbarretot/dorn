@@ -3,7 +3,8 @@ using Dorn.Cli.Projects;
 namespace Dorn.Cli.Testing;
 
 /// <summary>
-/// Runs <c>dotnet test</c> for generated webapi test tiers without parsing output; exit codes are tracked per tier.
+/// Runs <c>dotnet test</c> for generated webapi test tiers. Exit codes are tracked per tier, and
+/// each tier's TRX report is read for pass/fail counts when available.
 /// </summary>
 public interface IDotnetTestRunner
 {
