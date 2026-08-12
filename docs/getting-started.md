@@ -81,9 +81,36 @@ DORN_TEMPLATES_PATH="$(pwd)/templates" \
 | --- | --- |
 | `dotnet dorn test` | Run all available test tiers |
 | `dotnet dorn test --tier unit` | Run one tier |
+| `dotnet dorn test --format json` | Run all tiers and emit a machine-readable JSON report |
 | `dotnet dorn run` | Select Aspire, Compose, or plain .NET from project files |
 | `dotnet dorn coverage` | Merge tier coverage and enforce the 80% gate |
 | `dotnet dorn coverage --all` | Show every class in the coverage table |
+
+### 🤖 `dorn test --format json`
+
+Pass `--format json` to get one compact, single-line JSON document on stdout instead of the table renderer — useful for CI pipelines that need per-tier pass/fail counts without scraping console output. Table mode (the default) is unaffected.
+
+```bash
+dotnet dorn test --format json
+```
+
+```json
+{"schemaVersion":1,"command":"test","success":true,"exitCode":0,"data":{"outcome":"ok","tierFilter":null,"tierFilterRecognized":null,"totalTests":16,"passedTests":16,"failedTests":0,"skippedTests":0,"durationSeconds":4.2,"reportUnavailableTiers":[],"tiers":[{"tier":"Application","outcome":"passed","countsAvailable":true,"total":9,"passed":9,"failed":0,"skipped":0,"durationSeconds":1.1}]}}
+```
+
+The envelope is the same `schemaVersion`/`command`/`success`/`exitCode`/`data` shape used by `dorn doctor` and `dorn coverage`. `data.outcome` is one of:
+
+| Value | Meaning |
+| --- | --- |
+| `ok` | All attempted tiers passed |
+| `tests-failed` | At least one tier failed (`exitCode: 1`) |
+| `no-test-tiers` | The project was generated with `IncludeTests=false`; `tiers` is empty and `exitCode` stays `0` |
+
+Each entry in `data.tiers[]` has its own `outcome` (`passed` \| `failed`), always derived from that tier's process exit code — independent of whether its report was readable. `countsAvailable` is `false`, and `total`/`passed`/`failed`/`skipped`/`durationSeconds` are `null`, when that tier's test report was missing or malformed; the tier's name is then also listed in the top-level `reportUnavailableTiers` array. A tier can be `passed` with `countsAvailable: false` — a reporting gap never flips the verdict or the exit code. Top-level `totalTests`/`passedTests`/`failedTests`/`skippedTests`/`durationSeconds` sum only tiers with `countsAvailable: true`, and are `null` when no tier reported counts.
+
+`tierFilter` echoes the raw `--tier` value; `tierFilterRecognized` is `null` when `--tier` is omitted, `true` when it matched a known alias, and `false` when it did not (all tiers still run either way — an unrecognized `--tier` never narrows the run).
+
+Out of scope: per-test-case detail (individual test names, failure messages, stack traces) is not part of this payload. Use the underlying `.trx` reports or a CI test-reporting plugin for that level of detail.
 
 ## 📦 Use vanilla `dotnet new`
 
