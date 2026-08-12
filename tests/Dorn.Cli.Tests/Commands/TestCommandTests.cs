@@ -172,7 +172,7 @@ public class TestCommandTests : IDisposable
                 Arg.Any<IReadOnlyList<TestTier>>(),
                 Arg.Any<CancellationToken>()
             )
-            .Returns(new TestRunResult([], AllSucceeded: true));
+            .Returns(new TestRunResult([], AllSucceeded: true, TierResults: []));
 
         var consoleMock = CreateConsoleMock();
         var theme = new DornTheme(consoleMock);
