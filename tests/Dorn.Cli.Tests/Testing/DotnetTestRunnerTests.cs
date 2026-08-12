@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using Dorn.Cli.Execution;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Testing;
@@ -240,6 +241,111 @@ public class DotnetTestRunnerTests : IDisposable
         Assert.StartsWith(Path.Combine(ctx.Root, "TestResults"), resultsDir);
     }
 
+    // TRX logger argv + TierRunResult
+
+    [Fact]
+    public async Task RunAsync_AppendsTrxLoggerArgsAfterNoBuildAtTheTail()
+    {
+        CreateTestsDir("MyProject.Application.Tests");
+        var runner = CreateRunner();
+        var ctx = CreateContextWithAllTiers("MyProject");
+
+        var result = await runner.RunAsync(
+            ctx,
+            DatabaseProvider.Sqlite,
+            [TestTier.Application],
+            CancellationToken.None
+        );
+
+        var args = result.Specs[0].Arguments;
+        Assert.Equal("test", args[0]);
+        Assert.Equal("--collect:XPlat Code Coverage", args[2]);
+        Assert.Equal("--no-build", args[5]);
+        Assert.Equal("--logger", args[6]);
+        Assert.Equal("trx;LogFileName=dorn.trx", args[7]);
+        Assert.Equal(8, args.Count);
+    }
+
+    [Fact]
+    public async Task RunAsync_WithFreshTrxReport_PopulatesTierRunResultCounts()
+    {
+        CreateTestsDir("MyProject.Application.Tests");
+        var processRunner = Substitute.For<IProcessRunner>();
+        processRunner
+            .RunAsync(Arg.Any<ProcessSpec>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                var spec = ci.Arg<ProcessSpec>();
+                WriteTrxNextToResultsDirectory(spec, total: 10, passed: 9, failed: 0, skipped: 1);
+                return 0;
+            });
+        var runner = new DotnetTestRunner(processRunner, new DornTheme(CreateConsole()));
+        var ctx = CreateContextWithAllTiers("MyProject");
+
+        var result = await runner.RunAsync(
+            ctx,
+            DatabaseProvider.Sqlite,
+            [TestTier.Application],
+            CancellationToken.None
+        );
+
+        var tierResult = Assert.Single(result.TierResults);
+        Assert.Equal(TestTier.Application, tierResult.Tier);
+        Assert.True(tierResult.Succeeded);
+        Assert.Equal(10, tierResult.Total);
+        Assert.Equal(9, tierResult.Passed);
+        Assert.Equal(0, tierResult.Failed);
+        Assert.Equal(1, tierResult.Skipped);
+        Assert.NotNull(tierResult.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task RunAsync_WithoutTrxReport_TierSucceededFromExitCodeWithNullCounts()
+    {
+        CreateTestsDir("MyProject.Application.Tests");
+        var runner = CreateRunner();
+        var ctx = CreateContextWithAllTiers("MyProject");
+
+        var result = await runner.RunAsync(
+            ctx,
+            DatabaseProvider.Sqlite,
+            [TestTier.Application],
+            CancellationToken.None
+        );
+
+        var tierResult = Assert.Single(result.TierResults);
+        Assert.True(tierResult.Succeeded);
+        Assert.Null(tierResult.Total);
+        Assert.Null(tierResult.Passed);
+        Assert.Null(tierResult.Failed);
+        Assert.Null(tierResult.Skipped);
+        Assert.Null(tierResult.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task RunAsync_WithStaleTrxReport_IgnoresItAndReturnsNullCounts()
+    {
+        CreateTestsDir("MyProject.Application.Tests");
+        var ctx = CreateContextWithAllTiers("MyProject");
+        var resultsDir = Path.Combine(ctx.Root, "TestResults", "MyProject.Application.Tests");
+        Directory.CreateDirectory(resultsDir);
+        var trxPath = Path.Combine(resultsDir, "dorn.trx");
+        File.WriteAllText(trxPath, BuildTrx(total: 3, passed: 3, failed: 0, skipped: 0));
+        File.SetLastWriteTimeUtc(trxPath, DateTime.UtcNow.AddMinutes(-5));
+
+        var runner = CreateRunner();
+        var result = await runner.RunAsync(
+            ctx,
+            DatabaseProvider.Sqlite,
+            [TestTier.Application],
+            CancellationToken.None
+        );
+
+        var tierResult = Assert.Single(result.TierResults);
+        Assert.True(tierResult.Succeeded);
+        Assert.Null(tierResult.Total);
+    }
+
     // Failure propagation
 
     [Fact]
@@ -258,6 +364,9 @@ public class DotnetTestRunnerTests : IDisposable
 
         Assert.False(result.AllSucceeded);
         Assert.Single(result.Specs);
+        var tierResult = Assert.Single(result.TierResults);
+        Assert.False(tierResult.Succeeded);
+        Assert.Null(tierResult.Total);
     }
 
     [Fact]
@@ -442,6 +551,51 @@ public class DotnetTestRunnerTests : IDisposable
     private void CreateTestsDir(string name)
     {
         Directory.CreateDirectory(Path.Combine(_tempRoot, "tests", name));
+    }
+
+    private static void WriteTrxNextToResultsDirectory(
+        ProcessSpec spec,
+        int total,
+        int passed,
+        int failed,
+        int skipped
+    )
+    {
+        var args = spec.Arguments;
+        var resultsDirIndex = Array.IndexOf(args.ToArray(), "--results-directory");
+        var resultsDir = args[resultsDirIndex + 1];
+        Directory.CreateDirectory(resultsDir);
+        File.WriteAllText(
+            Path.Combine(resultsDir, "dorn.trx"),
+            BuildTrx(total, passed, failed, skipped)
+        );
+    }
+
+    private static string BuildTrx(int total, int passed, int failed, int skipped)
+    {
+        XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010";
+        var start = DateTime.UtcNow;
+        var root = new XElement(
+            ns + "TestRun",
+            new XElement(
+                ns + "ResultSummary",
+                new XAttribute("outcome", "Completed"),
+                new XElement(
+                    ns + "Counters",
+                    new XAttribute("total", total),
+                    new XAttribute("passed", passed),
+                    new XAttribute("failed", failed),
+                    new XAttribute("notExecuted", skipped)
+                )
+            ),
+            new XElement(
+                ns + "Times",
+                new XAttribute("start", start.ToString("O")),
+                new XAttribute("finish", start.AddSeconds(1).ToString("O"))
+            )
+        );
+
+        return new XDocument(root).ToString();
     }
 
     private ProjectContext CreateContextWithAllTiers(string projectName)

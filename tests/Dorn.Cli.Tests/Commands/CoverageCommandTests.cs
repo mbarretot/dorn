@@ -633,7 +633,7 @@ public class CoverageCommandTests : IDisposable
             .Returns(ci =>
             {
                 writeReports?.Invoke();
-                return new TestRunResult(specs ?? [], allSucceeded);
+                return new TestRunResult(specs ?? [], allSucceeded, []);
             });
 
         var console = new TestConsole().Width(int.MaxValue);
