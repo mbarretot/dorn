@@ -16,4 +16,5 @@ namespace Dorn.Cli.Output;
 [JsonSerializable(typeof(CliEnvelope<int>))]
 [JsonSerializable(typeof(CliEnvelope<DoctorReport>))]
 [JsonSerializable(typeof(CliEnvelope<CoverageReport>))]
+[JsonSerializable(typeof(CliEnvelope<TestReport>))]
 internal partial class DornJsonContext : JsonSerializerContext { }
