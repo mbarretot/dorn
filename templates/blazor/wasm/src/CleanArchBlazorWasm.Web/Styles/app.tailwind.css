@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/* Placeholder token — the full --ui-* / @theme inline token and theme system lands in a
+   later template slice (design B1-B7). This proves the v4 CSS-first pipeline end to end. */
+@theme {
+  --color-brand: oklch(0.6 0.2 264);
+}

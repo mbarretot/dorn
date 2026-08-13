@@ -1,0 +1,4 @@
+<Solution>
+    <Project Path="src/CleanArchBlazorWasm.AppHost/CleanArchBlazorWasm.AppHost.csproj" />
+    <Project Path="src/CleanArchBlazorWasm.Web/CleanArchBlazorWasm.Web.csproj" />
+</Solution>
