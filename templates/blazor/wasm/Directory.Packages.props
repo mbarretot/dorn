@@ -19,4 +19,13 @@
          server-side APIs with no meaning inside the browser sandbox. -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Testing. The Application/Integration tiers land in this slice; Functional (bUnit) and
+         Architecture (ArchUnitNET) tiers are pinned in later slices when they first ship. -->
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+  </ItemGroup>
 </Project>
