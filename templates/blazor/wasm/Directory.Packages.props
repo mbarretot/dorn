@@ -21,11 +21,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Testing. The Application/Integration tiers land in this slice; Functional (bUnit) and
-         Architecture (ArchUnitNET) tiers are pinned in later slices when they first ship. -->
+    <!-- Testing. The Application/Integration tiers landed in slice 3; Functional (bUnit) lands
+         in this slice. Architecture (ArchUnitNET) is pinned when it first ships. -->
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+    <!-- net10.0-compatible per its own nuspec dependency groups; resolved live, see
+         sdd/feat-blazor-ui-template apply-progress obs #241. -->
+    <PackageVersion Include="bunit" Version="2.9.0" />
   </ItemGroup>
 </Project>
