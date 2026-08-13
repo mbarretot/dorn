@@ -134,9 +134,7 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_DornTailwindOnPath" />
       <Output TaskParameter="ExitCode" PropertyName="_DornTailwindOnPathExitCode" />
     </Exec>
-    <PropertyGroup
-      Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindOnPathExitCode)' == '0' and '@(_DornTailwindOnPath)' != ''"
-    >
+    <PropertyGroup Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindOnPathExitCode)' == '0' and '@(_DornTailwindOnPath)' != ''">
       <TailwindExePath>%(_DornTailwindOnPath.Identity)</TailwindExePath>
     </PropertyGroup>
 
