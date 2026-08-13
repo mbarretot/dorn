@@ -107,7 +107,11 @@
       <TailwindExePath>$(TailwindCachedExePath)</TailwindExePath>
     </PropertyGroup>
 
-    <!-- (3) tailwindcss on PATH — best-effort, never fails the build if absent. -->
+    <!-- (3) tailwindcss on PATH — best-effort, never fails the build if absent. On Windows,
+         `where.exe`'s "not found" message is written to STDOUT (unlike POSIX `command -v`,
+         which prints nothing on a miss), so ConsoleOutput alone cannot distinguish a hit from a
+         miss — the ExitCode must be checked too, or a not-found "INFO: Could not find files for
+         the given pattern(s)." line gets treated as a resolved executable path. -->
     <Exec
       Condition="'$(TailwindExePath)' == '' and '$(OS)' != 'Windows_NT'"
       Command="command -v tailwindcss"
@@ -117,6 +121,7 @@
       IgnoreExitCode="true"
     >
       <Output TaskParameter="ConsoleOutput" ItemName="_DornTailwindOnPath" />
+      <Output TaskParameter="ExitCode" PropertyName="_DornTailwindOnPathExitCode" />
     </Exec>
     <Exec
       Condition="'$(TailwindExePath)' == '' and '$(OS)' == 'Windows_NT'"
@@ -127,8 +132,11 @@
       IgnoreExitCode="true"
     >
       <Output TaskParameter="ConsoleOutput" ItemName="_DornTailwindOnPath" />
+      <Output TaskParameter="ExitCode" PropertyName="_DornTailwindOnPathExitCode" />
     </Exec>
-    <PropertyGroup Condition="'$(TailwindExePath)' == '' and '@(_DornTailwindOnPath)' != ''">
+    <PropertyGroup
+      Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindOnPathExitCode)' == '0' and '@(_DornTailwindOnPath)' != ''"
+    >
       <TailwindExePath>%(_DornTailwindOnPath.Identity)</TailwindExePath>
     </PropertyGroup>
 
