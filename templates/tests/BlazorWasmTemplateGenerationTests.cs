@@ -96,8 +96,8 @@ public class BlazorWasmTemplateGenerationTests
 
             var appCss = await File.ReadAllTextAsync(appCssPath);
             Assert.False(string.IsNullOrWhiteSpace(appCss));
-            Assert.Contains("bg-brand", appCss, StringComparison.Ordinal);
-            Assert.Contains("--color-brand", appCss, StringComparison.Ordinal);
+            Assert.Contains("bg-primary", appCss, StringComparison.Ordinal);
+            Assert.Contains("--ui-primary", appCss, StringComparison.Ordinal);
         }
         finally
         {
@@ -115,6 +115,76 @@ public class BlazorWasmTemplateGenerationTests
             else
             {
                 Console.WriteLine("KEPT: " + outputDirectory);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Phase 2 go/no-go for the theming slice: <c>--theme rose</c> must replace the single
+    /// literal <c>DEFAULT_THEME</c> seed in <c>theme-boot.js</c> (design B6) and must not
+    /// corrupt <c>Styles/themes/slate.css</c>'s own <c>data-ui-theme='slate'</c> selector,
+    /// proving the single-quote convention keeps the two from colliding.
+    /// </summary>
+    [Fact]
+    public async Task GenerateWithThemeRose_ReplacesBootDefaultThemeLiteral_WithoutCorruptingSlateCss()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(
+            RealTempRoot,
+            $"dorn-tests-blazor-wasm-theme-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-blazor-wasm",
+                "DornThemeRoseApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["Theme"] = "rose" }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var themeBootPath = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornThemeRoseApp.Web",
+                "wwwroot",
+                "theme-boot.js"
+            );
+            Assert.True(File.Exists(themeBootPath), $"Expected boot script at '{themeBootPath}'.");
+
+            var themeBoot = await File.ReadAllTextAsync(themeBootPath);
+            Assert.Contains("DEFAULT_THEME = \"rose\"", themeBoot, StringComparison.Ordinal);
+            Assert.DoesNotContain("DEFAULT_THEME = \"slate\"", themeBoot, StringComparison.Ordinal);
+
+            var slateThemePath = Path.Combine(
+                outputDirectory,
+                "src",
+                "DornThemeRoseApp.Web",
+                "Styles",
+                "themes",
+                "slate.css"
+            );
+            var slateTheme = await File.ReadAllTextAsync(slateThemePath);
+            Assert.Contains("[data-ui-theme='slate']", slateTheme, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
             }
         }
     }

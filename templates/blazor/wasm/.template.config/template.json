@@ -14,6 +14,23 @@
       "datatype": "bool",
       "defaultValue": "true",
       "description": "Include the xUnit test projects (added in a later template slice)."
+    },
+    "Theme": {
+      "type": "parameter",
+      "datatype": "choice",
+      "choices": [
+        {
+          "choice": "slate",
+          "description": "Cool neutral gray with a blue-leaning primary accent."
+        },
+        {
+          "choice": "rose",
+          "description": "Warm neutral with a rose/pink primary accent."
+        }
+      ],
+      "defaultValue": "slate",
+      "replaces": "__DORN_DEFAULT_THEME__",
+      "description": "Boot-default theme (matches Styles/themes/*.css and wwwroot/theme-boot.js). Both theme stylesheets always ship regardless of this choice."
     }
   },
   "sources": [
