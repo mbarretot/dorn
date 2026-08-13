@@ -20,6 +20,19 @@ public class BlazorWasmTemplateGenerationTests
     private const string DornToolsHomeEnvironmentVariableName = "DORN_TOOLS_HOME";
     private const string DornTailwindPathEnvironmentVariableName = "DORN_TAILWIND_PATH";
 
+    /// <summary>
+    /// On macOS, <see cref="Path.GetTempPath"/> returns a path through the <c>/var</c> -&gt;
+    /// <c>/private/var</c> symlink. Passing that symlinked absolute path as a nested
+    /// <c>dotnet build</c> project argument makes the Razor component source generator resolve
+    /// it to the canonical <c>/private/...</c> form while restore artifacts stay keyed to the
+    /// symlinked form, breaking folder-based namespace computation for <c>Components/**</c>
+    /// (manifests as a spurious CS0234 on generated <c>_Imports.razor</c>). Resolving once via
+    /// an actual chdir/getcwd round-trip keeps every path used by this test canonical. Other
+    /// generation tests (webapi/grpc/worker) never observed this because their SDKs have no
+    /// path-sensitive Razor codegen step.
+    /// </summary>
+    private static readonly string RealTempRoot = ResolveRealPath(Path.GetTempPath());
+
     [Fact]
     public async Task GenerateAndBuild_DornBlazorWasmTemplate_ProducesRealTailwindCss()
     {
@@ -32,11 +45,11 @@ public class BlazorWasmTemplateGenerationTests
         var engine = provider.GetRequiredService<IGenerationEngine>();
 
         var outputDirectory = Path.Combine(
-            Path.GetTempPath(),
+            RealTempRoot,
             $"dorn-tests-blazor-wasm-{Guid.NewGuid():N}"
         );
         var toolsHome = Path.Combine(
-            Path.GetTempPath(),
+            RealTempRoot,
             $"dorn-tests-blazor-wasm-tools-{Guid.NewGuid():N}"
         );
         try
@@ -114,7 +127,7 @@ public class BlazorWasmTemplateGenerationTests
     public async Task Build_WithWrongExpectedTailwindChecksum_FailsWithMismatchError_AndLeavesCacheEmpty()
     {
         var toolsHome = Path.Combine(
-            Path.GetTempPath(),
+            RealTempRoot,
             $"dorn-tests-blazor-wasm-tools-{Guid.NewGuid():N}"
         );
         try
@@ -168,7 +181,7 @@ public class BlazorWasmTemplateGenerationTests
     public async Task Build_WithUnmappedTailwindRid_FailsWithOverrideInstruction()
     {
         var toolsHome = Path.Combine(
-            Path.GetTempPath(),
+            RealTempRoot,
             $"dorn-tests-blazor-wasm-tools-{Guid.NewGuid():N}"
         );
         try
@@ -208,7 +221,7 @@ public class BlazorWasmTemplateGenerationTests
     public async Task Build_WithDornTailwindPathPointingAtMissingFile_FailsWithActionableMessage()
     {
         var missingPath = Path.Combine(
-            Path.GetTempPath(),
+            RealTempRoot,
             $"dorn-tests-blazor-wasm-missing-{Guid.NewGuid():N}.exe"
         );
 
@@ -229,6 +242,25 @@ public class BlazorWasmTemplateGenerationTests
         Assert.NotEqual(0, buildResult.ExitCode);
         Assert.Contains("DORN_TAILWIND_PATH", buildResult.StdOut, StringComparison.Ordinal);
         Assert.Contains(missingPath, buildResult.StdOut, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Resolves symlink components (e.g. macOS's <c>/var</c> -&gt; <c>/private/var</c>) via an
+    /// actual chdir/getcwd round-trip, since <see cref="Path.GetFullPath(string)"/> never
+    /// dereferences symlinks. No-op on platforms/paths with no symlinked ancestor.
+    /// </summary>
+    private static string ResolveRealPath(string path)
+    {
+        var original = Directory.GetCurrentDirectory();
+        try
+        {
+            Directory.SetCurrentDirectory(path);
+            return Directory.GetCurrentDirectory();
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(original);
+        }
     }
 
     private static string ResolveWebCsprojPath()

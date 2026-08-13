@@ -56,10 +56,15 @@
   </ItemGroup>
 
   <Target Name="DornResolveTailwindCli" BeforeTargets="DornBuildTailwindCss">
-    <!-- (1) DORN_TAILWIND_PATH env var override — used verbatim (design A2). -->
+    <!-- (1) DORN_TAILWIND_PATH env var override — used verbatim (design A2). A set-but-missing
+         override is an operator mistake, not a fallback trigger: fail loud with an actionable
+         message instead of silently falling through to the cache/PATH/download resolution. -->
     <PropertyGroup Condition="'$(DORN_TAILWIND_PATH)' != ''">
       <TailwindExePath>$(DORN_TAILWIND_PATH)</TailwindExePath>
     </PropertyGroup>
+    <Error
+      Condition="'$(DORN_TAILWIND_PATH)' != '' and !Exists('$(DORN_TAILWIND_PATH)')"
+      Text="DORN_TAILWIND_PATH is set to '$(DORN_TAILWIND_PATH)' but no file exists at that path. Point DORN_TAILWIND_PATH at a valid Tailwind CSS CLI executable, or unset it to use the pinned download." />
 
     <!-- (2) cached binary. -->
     <PropertyGroup Condition="'$(TailwindExePath)' == '' and Exists('$(TailwindCachedExePath)')">
@@ -89,7 +94,15 @@
       <TailwindExePath>%(_DornTailwindOnPath.Identity)</TailwindExePath>
     </PropertyGroup>
 
-    <!-- (4) download to cache. -->
+    <!-- (4) unmapped RID guard: no override, no cache hit, not on PATH, and no asset name for
+         this RID means there is no URL to download at all — refuse instead of downloading
+         something arbitrary (A7). Covers both a truly unmapped host RID and a bogus
+         DornTailwindRidOverride value (test-only escape hatch, see the RID map above). -->
+    <Error
+      Condition="'$(TailwindExePath)' == '' and '$(TailwindAssetName)' == ''"
+      Text="No Tailwind CSS CLI binary is mapped for RID '$(TailwindRid)'. Set DORN_TAILWIND_PATH to a local Tailwind CSS CLI executable, install tailwindcss on PATH, or add a mapping to build/Tailwind.targets." />
+
+    <!-- (5) download to cache. -->
     <MakeDir Condition="'$(TailwindExePath)' == ''" Directories="$(TailwindCacheDir)" />
     <DownloadFile
       Condition="'$(TailwindExePath)' == ''"
@@ -107,15 +120,27 @@
       <Output TaskParameter="Items" ItemName="_DornTailwindDownloadHashed" />
     </GetFileHash>
 
+    <!-- Mandatory SHA-256 verification before the binary is ever moved into the cache or
+         executed (A4, A3 threat matrix). A mismatch deletes the partial download and fails the
+         build loudly — never a silent skip. -->
+    <PropertyGroup Condition="'$(TailwindExePath)' == ''">
+      <_DornTailwindDownloadedHash>@(_DornTailwindDownloadHashed->'%(FileHash)')</_DornTailwindDownloadedHash>
+      <_DornTailwindChecksumMismatch Condition="'$(_DornTailwindDownloadedHash)' != '$(TailwindSha256)'">true</_DornTailwindChecksumMismatch>
+    </PropertyGroup>
+    <Delete Condition="'$(_DornTailwindChecksumMismatch)' == 'true'" Files="@(_DornTailwindDownload)" />
+    <Error
+      Condition="'$(_DornTailwindChecksumMismatch)' == 'true'"
+      Text="Tailwind CSS CLI download checksum mismatch for RID '$(TailwindRid)': expected '$(TailwindSha256)' but computed '$(_DornTailwindDownloadedHash)'. The corrupt download has been deleted." />
+
     <Move
-      Condition="'$(TailwindExePath)' == ''"
+      Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindChecksumMismatch)' != 'true'"
       SourceFiles="@(_DornTailwindDownload)"
       DestinationFiles="$(TailwindCachedExePath)" />
     <!-- chmod +x runs only after the download is in its final cached location. -->
     <Exec
-      Condition="'$(TailwindExePath)' == '' and '$(OS)' != 'Windows_NT'"
+      Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindChecksumMismatch)' != 'true' and '$(OS)' != 'Windows_NT'"
       Command="chmod +x &quot;$(TailwindCachedExePath)&quot;" />
-    <PropertyGroup Condition="'$(TailwindExePath)' == ''">
+    <PropertyGroup Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindChecksumMismatch)' != 'true'">
       <TailwindExePath>$(TailwindCachedExePath)</TailwindExePath>
     </PropertyGroup>
   </Target>
