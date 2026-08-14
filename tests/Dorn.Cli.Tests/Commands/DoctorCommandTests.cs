@@ -270,6 +270,190 @@ public class DoctorCommandTests : IDisposable
         Assert.Equal(1, exitCode);
     }
 
+    // Tailwind advisory check (Blazor projects only)
+
+    [Fact]
+    public async Task Doctor_TailwindProject_WithBinaryOnPath_RendersPassRow()
+    {
+        var resolver = Substitute.For<IProjectContextResolver>();
+        resolver
+            .Resolve(Arg.Any<string>())
+            .Returns(
+                new ProjectContext(
+                    _tempRoot,
+                    string.Empty,
+                    Orchestrator.Aspire,
+                    null,
+                    [],
+                    Path.Combine(_tempRoot, "src", "MyApp.Web")
+                )
+            );
+        var (templatesRootLocator, processRunner, console, command) =
+            CreateCommandWithResolverAndConsole(resolver);
+        templatesRootLocator.Resolve().Returns("/opt/dorn/templates");
+        StubDotnetVersion(processRunner, 0, PassingSdkVersion);
+        StubTailwindHelp(processRunner, 0, "tailwindcss v4.3.1\n");
+
+        int exitCode;
+        using (IsolateToolsHome())
+        {
+            exitCode = await command.RunAsync(
+                new DoctorSettings { Project = _tempRoot },
+                CancellationToken.None
+            );
+        }
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Tailwind", console.Output);
+        Assert.Contains("PASS", console.Output);
+    }
+
+    [Fact]
+    public async Task Doctor_NonTailwindProject_HidesTailwindRowAndNeverProbesTailwind()
+    {
+        var (_, processRunner, _, console, _, command) = CreateCommand();
+
+        var exitCode = await command.RunAsync(
+            new DoctorSettings { Project = _tempRoot },
+            CancellationToken.None
+        );
+
+        Assert.Equal(0, exitCode);
+        Assert.DoesNotContain("Tailwind", console.Output);
+        await processRunner
+            .DidNotReceive()
+            .RunCapturedAsync(
+                Arg.Is<ProcessSpec>(s => s.FileName == "tailwindcss"),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task Doctor_TailwindProjectWithBinaryMissingEverywhere_RendersWarnAndExitCodeStaysZero()
+    {
+        var resolver = Substitute.For<IProjectContextResolver>();
+        resolver
+            .Resolve(Arg.Any<string>())
+            .Returns(
+                new ProjectContext(
+                    _tempRoot,
+                    string.Empty,
+                    Orchestrator.Aspire,
+                    null,
+                    [],
+                    Path.Combine(_tempRoot, "src", "MyApp.Web")
+                )
+            );
+        var (templatesRootLocator, processRunner, console, command) =
+            CreateCommandWithResolverAndConsole(resolver);
+        templatesRootLocator.Resolve().Returns("/opt/dorn/templates");
+        StubDotnetVersion(processRunner, 0, PassingSdkVersion);
+        StubTailwindHelp(processRunner, 127, string.Empty);
+
+        int exitCode;
+        using (IsolateToolsHome())
+        {
+            exitCode = await command.RunAsync(
+                new DoctorSettings { Project = _tempRoot },
+                CancellationToken.None
+            );
+        }
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("WARN", console.Output);
+        Assert.Contains("Tailwind", console.Output);
+    }
+
+    [Fact]
+    public async Task Doctor_TailwindPathOverrideSetToExistingFile_RendersPassWithoutProbingPathOrCache()
+    {
+        var resolver = Substitute.For<IProjectContextResolver>();
+        resolver
+            .Resolve(Arg.Any<string>())
+            .Returns(
+                new ProjectContext(
+                    _tempRoot,
+                    string.Empty,
+                    Orchestrator.Aspire,
+                    null,
+                    [],
+                    Path.Combine(_tempRoot, "src", "MyApp.Web")
+                )
+            );
+        var (templatesRootLocator, processRunner, console, command) =
+            CreateCommandWithResolverAndConsole(resolver);
+        templatesRootLocator.Resolve().Returns("/opt/dorn/templates");
+        StubDotnetVersion(processRunner, 0, PassingSdkVersion);
+        var overridePath = Path.Combine(_tempRoot, "tailwindcss-override");
+        File.WriteAllText(overridePath, "#!/bin/sh");
+        var original = Environment.GetEnvironmentVariable("DORN_TAILWIND_PATH");
+        try
+        {
+            Environment.SetEnvironmentVariable("DORN_TAILWIND_PATH", overridePath);
+
+            var exitCode = await command.RunAsync(
+                new DoctorSettings { Project = _tempRoot },
+                CancellationToken.None
+            );
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("Tailwind", console.Output);
+            Assert.Contains("PASS", console.Output);
+            Assert.DoesNotContain("WARN", console.Output);
+            await processRunner
+                .DidNotReceive()
+                .RunCapturedAsync(
+                    Arg.Is<ProcessSpec>(s => s.FileName == "tailwindcss"),
+                    Arg.Any<CancellationToken>()
+                );
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("DORN_TAILWIND_PATH", original);
+        }
+    }
+
+    [Fact]
+    public async Task Doctor_TailwindPathOverrideSetToMissingFile_RendersWarnNeverFail()
+    {
+        var resolver = Substitute.For<IProjectContextResolver>();
+        resolver
+            .Resolve(Arg.Any<string>())
+            .Returns(
+                new ProjectContext(
+                    _tempRoot,
+                    string.Empty,
+                    Orchestrator.Aspire,
+                    null,
+                    [],
+                    Path.Combine(_tempRoot, "src", "MyApp.Web")
+                )
+            );
+        var (templatesRootLocator, processRunner, console, command) =
+            CreateCommandWithResolverAndConsole(resolver);
+        templatesRootLocator.Resolve().Returns("/opt/dorn/templates");
+        StubDotnetVersion(processRunner, 0, PassingSdkVersion);
+        var missingPath = Path.Combine(_tempRoot, "does-not-exist-tailwindcss");
+        var original = Environment.GetEnvironmentVariable("DORN_TAILWIND_PATH");
+        try
+        {
+            Environment.SetEnvironmentVariable("DORN_TAILWIND_PATH", missingPath);
+
+            var exitCode = await command.RunAsync(
+                new DoctorSettings { Project = _tempRoot },
+                CancellationToken.None
+            );
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("WARN", console.Output);
+            Assert.Contains("Tailwind", console.Output);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("DORN_TAILWIND_PATH", original);
+        }
+    }
+
     // Bad -p handling (D4)
 
     [Fact]
@@ -547,6 +731,33 @@ public class DoctorCommandTests : IDisposable
             .Returns(new ProcessResult(exitCode, stdout, string.Empty));
     }
 
+    private static void StubTailwindHelp(IProcessRunner processRunner, int exitCode, string stdout)
+    {
+        processRunner
+            .RunCapturedAsync(
+                Arg.Is<ProcessSpec>(s => s.FileName == "tailwindcss"),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(new ProcessResult(exitCode, stdout, string.Empty));
+    }
+
+    /// <summary>Points DORN_TOOLS_HOME at an empty temp directory so a real developer machine's cached Tailwind CLI never leaks into a test.</summary>
+    private static IDisposable IsolateToolsHome()
+    {
+        var isolatedHome = Path.Combine(
+            Path.GetTempPath(),
+            $"dorn-doctor-tools-{Guid.NewGuid():N}"
+        );
+        var original = Environment.GetEnvironmentVariable("DORN_TOOLS_HOME");
+        Environment.SetEnvironmentVariable("DORN_TOOLS_HOME", isolatedHome);
+        return new RestoreEnvironmentVariable("DORN_TOOLS_HOME", original);
+    }
+
+    private sealed class RestoreEnvironmentVariable(string name, string? original) : IDisposable
+    {
+        public void Dispose() => Environment.SetEnvironmentVariable(name, original);
+    }
+
     private (
         ITemplatesRootLocator TemplatesRootLocator,
         IProcessRunner ProcessRunner,
@@ -607,5 +818,32 @@ public class DoctorCommandTests : IDisposable
         );
 
         return (templatesRootLocator, processRunner, writer, command);
+    }
+
+    private (
+        ITemplatesRootLocator TemplatesRootLocator,
+        IProcessRunner ProcessRunner,
+        TestConsole Console,
+        DoctorCommand Command
+    ) CreateCommandWithResolverAndConsole(IProjectContextResolver resolver)
+    {
+        var templatesRootLocator = Substitute.For<ITemplatesRootLocator>();
+        var processRunner = Substitute.For<IProcessRunner>();
+        var console = new TestConsole().Width(int.MaxValue);
+        console.Profile.Capabilities.Unicode = true;
+        console.Profile.Capabilities.Interactive = false;
+        var theme = new DornTheme(console);
+        var writer = new RecordingCliOutputWriter();
+
+        var command = new DoctorCommand(
+            templatesRootLocator,
+            processRunner,
+            resolver,
+            console,
+            theme,
+            writer
+        );
+
+        return (templatesRootLocator, processRunner, console, command);
     }
 }

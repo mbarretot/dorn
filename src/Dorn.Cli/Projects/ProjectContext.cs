@@ -9,10 +9,12 @@ namespace Dorn.Cli.Projects;
 /// <param name="Orchestrator">The orchestrator to use when running the project.</param>
 /// <param name="WebApiProject">Absolute path to the WebApi project folder, or null if none found.</param>
 /// <param name="Tiers">The set of test tiers discovered in the project.</param>
+/// <param name="TailwindProject">Absolute path to the Blazor/Tailwind project folder, or null if none found.</param>
 public sealed record ProjectContext(
     string Root,
     string SolutionPath,
     Orchestrator Orchestrator,
     string? WebApiProject,
-    IReadOnlyList<TestTier> Tiers
+    IReadOnlyList<TestTier> Tiers,
+    string? TailwindProject = null
 );

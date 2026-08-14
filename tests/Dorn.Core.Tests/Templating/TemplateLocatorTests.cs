@@ -51,6 +51,27 @@ public class TemplateLocatorTests
     }
 
     [Fact]
+    public void ResolveTemplatesRoot_WithBlazorGroupingSubfolder_StillResolvesRoot()
+    {
+        // templates/blazor/ is a non-template grouping folder; templates/blazor/wasm/ is the real one.
+        var original = Environment.GetEnvironmentVariable(EnvironmentVariableName);
+        try
+        {
+            Environment.SetEnvironmentVariable(EnvironmentVariableName, null);
+
+            var resolved = TemplateLocator.ResolveTemplatesRoot();
+
+            Assert.True(
+                Directory.Exists(Path.Combine(resolved, "blazor", "wasm", ".template.config"))
+            );
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(EnvironmentVariableName, original);
+        }
+    }
+
+    [Fact]
     public void ResolveTemplatesRoot_WithEnvironmentVariableUnset_FallsBackToDirectoryWalk()
     {
         var original = Environment.GetEnvironmentVariable(EnvironmentVariableName);

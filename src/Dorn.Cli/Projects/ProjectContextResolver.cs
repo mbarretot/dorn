@@ -15,8 +15,16 @@ public sealed class ProjectContextResolver : IProjectContextResolver
         var orchestrator = ResolveOrchestrator(root);
         var webApiProject = ResolveWebApiProject(root);
         var tiers = ResolveTiers(root);
+        var tailwindProject = ResolveTailwindProject(root);
 
-        return new ProjectContext(root, solutionPath, orchestrator, webApiProject, tiers);
+        return new ProjectContext(
+            root,
+            solutionPath,
+            orchestrator,
+            webApiProject,
+            tiers,
+            tailwindProject
+        );
     }
 
     private static string ResolveSolutionPath(string root)
@@ -70,6 +78,18 @@ public sealed class ProjectContextResolver : IProjectContextResolver
                 string.Equals(Path.GetFileName(d), "WebApi", StringComparison.OrdinalIgnoreCase)
                 || Path.GetFileName(d).EndsWith(".WebApi", StringComparison.OrdinalIgnoreCase)
             );
+    }
+
+    private static string? ResolveTailwindProject(string root)
+    {
+        var srcDir = Path.Combine(root, "src");
+        if (!Directory.Exists(srcDir))
+            return null;
+
+        return Directory
+            .EnumerateDirectories(srcDir)
+            .Select(d => Path.GetFullPath(d))
+            .FirstOrDefault(d => File.Exists(Path.Combine(d, "Styles", "app.tailwind.css")));
     }
 
     private static IReadOnlyList<TestTier> ResolveTiers(string root)

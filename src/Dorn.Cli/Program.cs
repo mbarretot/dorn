@@ -58,6 +58,17 @@ app.Configure(config =>
                 .WithDescription(
                     "Generate a Clean Architecture worker service (sqlite + EF Core + Aspire)."
                 );
+            branch.AddBranch(
+                "blazor",
+                blazorBranch =>
+                {
+                    blazorBranch
+                        .AddCommand<NewBlazorWasmCommand>("wasm")
+                        .WithDescription(
+                            "Generate a Blazor WebAssembly app with a Tailwind design system (Aspire)."
+                        );
+                }
+            );
         }
     );
     config

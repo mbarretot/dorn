@@ -17,7 +17,7 @@ Keep changes focused, preserve template self-containment, and run the same check
 | `webapi` | Configurable reference implementation |
 | `grpc` | Fixed SQLite + EF Core + Aspire service |
 | `worker` | Fixed SQLite + EF Core + Aspire background service |
-| `ui` | Placeholder for future work |
+| `blazor wasm` | Front-end-only Blazor WebAssembly app with a Tailwind design system, fixed Aspire orchestration |
 
 Use this checklist for a new template:
 
