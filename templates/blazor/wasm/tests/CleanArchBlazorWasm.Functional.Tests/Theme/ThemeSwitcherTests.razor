@@ -1,0 +1,59 @@
+@inherits UiTestContext
+@using Bunit
+@using CleanArchBlazorWasm.Web.Components.Theme
+@using Microsoft.Extensions.DependencyInjection
+@using Xunit
+
+@code {
+    // PR5 ships a real, functional stub (not a fake): plain toggle buttons wired to
+    // ThemeState/ThemeInterop, exactly as the design's DropdownMenu-based ThemeSwitcher will be
+    // once PR6 lands (task 5.13/6.5) — only the trigger markup changes on rewire, not the state
+    // plumbing these tests exercise.
+
+    public ThemeSwitcherTests()
+    {
+        Services.AddScoped<ThemeInterop>();
+        Services.AddScoped<ThemeState>();
+    }
+
+    [Fact]
+    public void OnFirstRender_ReadsSnapshot_AndShowsResolvedMode()
+    {
+        JSInterop
+            .Setup<ThemeSnapshot>("dornTheme.getSnapshot")
+            .SetResult(new ThemeSnapshot("rose", "dark", true));
+
+        var cut = Render(@<ThemeSwitcher />);
+
+        Assert.Contains("Dark", cut.Markup);
+        Assert.Contains("rose", cut.Markup);
+    }
+
+    [Fact]
+    public async Task ClickingModeToggle_CyclesLightToDark_AndCallsSetMode()
+    {
+        JSInterop
+            .Setup<ThemeSnapshot>("dornTheme.getSnapshot")
+            .SetResult(new ThemeSnapshot("slate", "light", false));
+        var setMode = JSInterop.SetupVoid("dornTheme.setMode", "dark").SetVoidResult();
+
+        var cut = Render(@<ThemeSwitcher />);
+        await cut.InvokeAsync(() => cut.Find("[data-testid=mode-toggle]").Click());
+
+        Assert.Single(setMode.Invocations);
+    }
+
+    [Fact]
+    public async Task ClickingThemeToggle_CyclesSlateToRose_AndCallsSetTheme()
+    {
+        JSInterop
+            .Setup<ThemeSnapshot>("dornTheme.getSnapshot")
+            .SetResult(new ThemeSnapshot("slate", "light", false));
+        var setTheme = JSInterop.SetupVoid("dornTheme.setTheme", "rose").SetVoidResult();
+
+        var cut = Render(@<ThemeSwitcher />);
+        await cut.InvokeAsync(() => cut.Find("[data-testid=theme-toggle]").Click());
+
+        Assert.Single(setTheme.Invocations);
+    }
+}
