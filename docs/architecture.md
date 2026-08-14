@@ -13,7 +13,7 @@ Dorn has one job: turn a template into a self-contained .NET service without cou
 | `src/Dorn.Abstractions` | Generation and template contracts | BCL only |
 | `src/Dorn.Core` | Template discovery, validation, and instantiation | Abstractions + Template Engine |
 | `src/Dorn.Cli` | Commands, prompts, output, and project operations | Core + Abstractions |
-| `templates/` | Source for generated Web API, gRPC, and worker services | Published Dorn packages |
+| `templates/` | Source for generated Web API, gRPC, and worker services, plus a front-end-only Blazor WebAssembly app | Published Dorn packages |
 | `packages/` | CQRS contracts, mediator runtime, and DDD primitives | Contracts point inward |
 
 The dependency rule is deliberate: Template Engine details stop at `Dorn.Core`, while generated projects never reference `src/`.
@@ -52,6 +52,9 @@ The presentation changes by template, but the dependency direction does not:
 - **Web API** maps Minimal API endpoints to requests.
 - **gRPC** maps proto services to the same request model.
 - **Worker** dispatches requests from a timer tick.
+- **Blazor WebAssembly** has no backend at all — Domain/Application/Infrastructure/Host do not
+  apply; its own boundary is `Components/Ui/` (design system) never depending on `Features/`
+  (app code), enforced by its Architecture test tier.
 
 ## 🔁 Messaging rules
 
@@ -64,7 +67,7 @@ The presentation changes by template, but the dependency direction does not:
 
 - Every template owns its nearest `Directory.Build.props` and `Directory.Packages.props`.
 - Generated solutions must build outside this repository.
-- Web API options are composed at generation time. gRPC and worker intentionally use fixed MVP profiles.
+- Web API options are composed at generation time. gRPC, worker, and Blazor WebAssembly intentionally use fixed MVP profiles.
 - `templates/tests` proves generation and standalone compilation from a temporary directory.
 
 ## 📚 Decision trail
@@ -75,4 +78,7 @@ The presentation changes by template, but the dependency direction does not:
 | Custom mediator | [ADR 0003](./adr/0003-custom-mediator-instead-of-mediatr.md) |
 | Shared NuGet packages | [ADR 0010](./adr/0010-extract-messaging-and-shared-kernel-as-nuget-packages.md) |
 | Four-tier testing | [ADR 0012](./adr/0012-four-tier-test-strategy.md) |
-| Template guides | [Web API](./templates/webapi.md) · [gRPC](./templates/grpc.md) · [Worker](./templates/worker.md) |
+| Tailwind CLI acquisition | [ADR 0021](./adr/0021-tailwind-standalone-cli.md) |
+| Copy-owned UI components | [ADR 0022](./adr/0022-copy-owned-ui-components.md) |
+| Blazor WASM scoped MVP | [ADR 0023](./adr/0023-blazor-wasm-scoped-mvp.md) |
+| Template guides | [Web API](./templates/webapi.md) · [gRPC](./templates/grpc.md) · [Worker](./templates/worker.md) · [Blazor WASM](./templates/blazor-wasm.md) |
