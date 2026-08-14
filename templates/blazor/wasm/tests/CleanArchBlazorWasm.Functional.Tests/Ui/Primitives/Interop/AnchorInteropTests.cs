@@ -36,4 +36,26 @@ public class AnchorInteropTests : UiTestContext
 
         Assert.Single(dispose.Invocations);
     }
+
+    [Fact]
+    public async Task ShowAsync_InvokesJsShow_WithFloatingElement()
+    {
+        var show = AnchorModule.SetupVoid("show", _ => true).SetVoidResult();
+        var sut = new AnchorInterop(JSInterop.JSRuntime);
+
+        await sut.ShowAsync(default);
+
+        Assert.Single(show.Invocations);
+    }
+
+    [Fact]
+    public async Task HideAsync_InvokesJsHide_WithFloatingElement()
+    {
+        var hide = AnchorModule.SetupVoid("hide", _ => true).SetVoidResult();
+        var sut = new AnchorInterop(JSInterop.JSRuntime);
+
+        await sut.HideAsync(default);
+
+        Assert.Single(hide.Invocations);
+    }
 }

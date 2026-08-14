@@ -113,4 +113,20 @@ public sealed class RovingFocusState(
             ActiveId = _items[index].Id;
         }
     }
+
+    /// <summary>
+    /// Jumps directly to <paramref name="id"/> (e.g. Select's "focus the selected-or-first
+    /// option" requirement) instead of moving relative to the current item. No-op, returning
+    /// false, when the id is unknown or disabled.
+    /// </summary>
+    public bool TrySetActive(string id)
+    {
+        if (!_items.Any(item => item.Id == id && !item.Disabled))
+        {
+            return false;
+        }
+
+        ActiveId = id;
+        return true;
+    }
 }
