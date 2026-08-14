@@ -2,31 +2,47 @@
 @implements IDisposable
 
 <div class="flex items-center gap-2" @attributes="AdditionalAttributes">
-    <button
-        type="button"
-        data-testid="mode-toggle"
-        class="@ToggleButtonClass"
-        aria-label="Toggle color mode"
-        @onclick="CycleModeAsync"
-    >
-        @ThemeState.ResolvedMode
-    </button>
-    <button
-        type="button"
-        data-testid="theme-toggle"
-        class="@ToggleButtonClass"
-        aria-label="Toggle theme"
-        @onclick="CycleThemeAsync"
-    >
-        @ThemeState.Theme
-    </button>
+    <DropdownMenu>
+        <DropdownMenuTrigger data-testid="mode-trigger" Class="@TriggerClass" aria-label="Change color mode">
+            @ThemeState.ResolvedMode
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+            <DropdownMenuLabel>Mode</DropdownMenuLabel>
+            @foreach (var mode in Modes)
+            {
+                <DropdownMenuItem
+                    data-testid="@($"mode-option-{mode}")"
+                    OnClick="@(() => ThemeState.SetModeAsync(mode))"
+                >
+                    @mode
+                </DropdownMenuItem>
+            }
+        </DropdownMenuContent>
+    </DropdownMenu>
+    <DropdownMenu>
+        <DropdownMenuTrigger data-testid="theme-trigger" Class="@TriggerClass" aria-label="Change theme">
+            @ThemeState.Theme
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+            <DropdownMenuLabel>Theme</DropdownMenuLabel>
+            @foreach (var theme in Themes)
+            {
+                <DropdownMenuItem
+                    data-testid="@($"theme-option-{theme}")"
+                    OnClick="@(() => ThemeState.SetThemeAsync(theme))"
+                >
+                    @theme
+                </DropdownMenuItem>
+            }
+        </DropdownMenuContent>
+    </DropdownMenu>
 </div>
 
 @code {
-    // Stub trigger (design tasks 5.13/6.5): rewired to a real DropdownMenu once PR6 ships it —
-    // the state plumbing below (ThemeState/ThemeInterop) does not change on that rewire.
-    private const string ToggleButtonClass =
+    private const string TriggerClass =
         "inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium capitalize text-foreground transition-colors hover:bg-accent hover:text-accent-foreground";
+
+    private static readonly ThemeMode[] Modes = [ThemeMode.Light, ThemeMode.Dark, ThemeMode.System];
 
     private static readonly string[] Themes = ["slate", "rose"];
 
@@ -40,24 +56,6 @@
             ThemeState.Changed += OnThemeChanged;
             await ThemeState.InitializeAsync();
         }
-    }
-
-    private Task CycleModeAsync()
-    {
-        var next = ThemeState.Mode switch
-        {
-            ThemeMode.Light => ThemeMode.Dark,
-            ThemeMode.Dark => ThemeMode.System,
-            _ => ThemeMode.Light,
-        };
-        return ThemeState.SetModeAsync(next);
-    }
-
-    private Task CycleThemeAsync()
-    {
-        var currentIndex = Array.IndexOf(Themes, ThemeState.Theme);
-        var next = Themes[(currentIndex + 1) % Themes.Length];
-        return ThemeState.SetThemeAsync(next);
     }
 
     private void OnThemeChanged() => InvokeAsync(StateHasChanged);
