@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Dorn.Cli.Execution;
 using Dorn.Cli.Output;
 using Dorn.Cli.Projects;
@@ -16,6 +17,11 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
 {
     // Keep in sync with global.json and templates/webapi/global.json.
     internal const string MinimumSdkVersion = "10.0.301";
+
+    // Keep in sync with templates/blazor/wasm/build/Tailwind.targets' TailwindVersion.
+    private const string TailwindVersion = "4.3.1";
+    private const string TailwindPathEnvironmentVariable = "DORN_TAILWIND_PATH";
+    private const string ToolsHomeEnvironmentVariable = "DORN_TOOLS_HOME";
 
     private readonly ITemplatesRootLocator _templatesRootLocator;
     private readonly IProcessRunner _processRunner;
@@ -128,11 +134,18 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
         statusContext?.Status("Checking .NET SDK...");
         results.Add(await CheckDotnetSdkAsync(ct));
 
-        var orchestrator = TryResolveOrchestrator(root);
-        if (orchestrator == Orchestrator.Compose)
+        var context = TryResolveProjectContext(root);
+
+        if (context?.Orchestrator == Orchestrator.Compose)
         {
             statusContext?.Status("Checking Docker...");
             results.Add(await CheckDockerAsync(ct));
+        }
+
+        if (context?.TailwindProject is not null)
+        {
+            statusContext?.Status("Checking Tailwind CSS CLI...");
+            results.Add(await CheckTailwindAsync(ct));
         }
 
         return results;
@@ -193,16 +206,16 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
         );
     }
 
-    private Orchestrator? TryResolveOrchestrator(string root)
+    private ProjectContext? TryResolveProjectContext(string root)
     {
         try
         {
-            return _resolver.Resolve(root).Orchestrator;
+            return _resolver.Resolve(root);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // A bad -p (e.g. missing path) must never break the environment-level mandatory
-            // checks (D4) — degrade to "not Compose" so the Docker row is simply hidden.
+            // checks (D4) — degrade to "no signal" so the Docker/Tailwind rows are simply hidden.
             return null;
         }
     }
@@ -228,6 +241,96 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
             CheckStatus.Warn,
             "Docker not found. Needed for Compose orchestration and non-sqlite integration tests."
         );
+    }
+
+    // Mirrors build/Tailwind.targets' resolution order; never Fail (a broken pipeline still builds green).
+    private async Task<CheckResult> CheckTailwindAsync(CancellationToken ct)
+    {
+        var overridePath = Environment.GetEnvironmentVariable(TailwindPathEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(overridePath))
+        {
+            return File.Exists(overridePath)
+                ? new CheckResult("Tailwind CSS CLI", CheckStatus.Pass, overridePath)
+                : new CheckResult(
+                    "Tailwind CSS CLI",
+                    CheckStatus.Warn,
+                    $"{TailwindPathEnvironmentVariable} is set to '{overridePath}' but no file exists there."
+                );
+        }
+
+        var cachedPath = ResolveCachedTailwindPath();
+        if (cachedPath is not null && File.Exists(cachedPath))
+        {
+            return new CheckResult("Tailwind CSS CLI", CheckStatus.Pass, cachedPath);
+        }
+
+        var result = await _processRunner.RunCapturedAsync(
+            new ProcessSpec("tailwindcss", ["--help"]),
+            ct
+        );
+
+        if (result.ExitCode == 0)
+        {
+            var firstLine = result.StandardOutput.Split('\n')[0].Trim();
+            return new CheckResult("Tailwind CSS CLI", CheckStatus.Pass, firstLine);
+        }
+
+        return new CheckResult(
+            "Tailwind CSS CLI",
+            CheckStatus.Warn,
+            "Tailwind CSS CLI not found. The build downloads a pinned copy on first build; set DORN_TAILWIND_PATH to use a local binary or build offline."
+        );
+    }
+
+    private static string? ResolveCachedTailwindPath()
+    {
+        var rid = ResolveCachedTailwindRid();
+        if (rid is null)
+            return null;
+
+        var exeName = rid == "windows-x64" ? "tailwindcss.exe" : "tailwindcss";
+        return Path.Combine(ResolveDornToolsHome(), "tailwindcss", TailwindVersion, rid, exeName);
+    }
+
+    private static string ResolveDornToolsHome()
+    {
+        var overrideHome = Environment.GetEnvironmentVariable(ToolsHomeEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(overrideHome))
+            return overrideHome;
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, ".dorn", "tools");
+    }
+
+    // Best-effort subset of Tailwind.targets' full RID map — the build is the authoritative gate.
+    internal static string? ResolveCachedTailwindRid()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return RuntimeInformation.OSArchitecture == Architecture.X64 ? "windows-x64" : null;
+        }
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            return RuntimeInformation.OSArchitecture switch
+            {
+                Architecture.Arm64 => "macos-arm64",
+                Architecture.X64 => "macos-x64",
+                _ => null,
+            };
+        }
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            return RuntimeInformation.OSArchitecture switch
+            {
+                Architecture.Arm64 => "linux-arm64",
+                Architecture.X64 => "linux-x64",
+                _ => null,
+            };
+        }
+
+        return null;
     }
 
     /// <summary>

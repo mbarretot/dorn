@@ -1,0 +1,28 @@
+@page "/playground/dropdown-menu"
+
+<PageTitle>Playground · DropdownMenu</PageTitle>
+
+<div class="mx-auto flex max-w-2xl flex-col gap-8 p-8">
+    <PlaygroundSection
+        Title="Anchored menu"
+        Description="ArrowDown/ArrowUp rove focus between items; Escape or an outside click dismisses."
+    >
+        <DropdownMenu>
+            <DropdownMenuTrigger Class="@Button.ResolveClass(ButtonVariant.Outline, ButtonSize.Default, null)">
+                Open menu
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem OnClick="@(() => _lastAction = "Edit")">Edit</DropdownMenuItem>
+                <DropdownMenuItem OnClick="@(() => _lastAction = "Duplicate")">Duplicate</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem OnClick="@(() => _lastAction = "Delete")">Delete</DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+        <p class="text-sm text-muted-foreground">Last action: @(_lastAction ?? "none")</p>
+    </PlaygroundSection>
+</div>
+
+@code {
+    private string? _lastAction;
+}
