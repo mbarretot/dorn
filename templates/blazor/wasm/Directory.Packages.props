@@ -1,0 +1,22 @@
+<Project>
+  <!-- Self-contained on purpose: not shared with the Dorn repo root, see Directory.Build.props. -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.9" />
+    <PackageVersion
+      Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer"
+      Version="10.0.9"
+    />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Aspire orchestration (design F): AppHost registers the WASM front-end as a project
+         resource. No ServiceDefaults — OpenTelemetry/health-check/service-discovery are
+         server-side APIs with no meaning inside the browser sandbox. -->
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
+  </ItemGroup>
+</Project>

@@ -15,6 +15,10 @@
         <Project Path="src/Dorn.Core/Dorn.Core.csproj" />
     </Folder>
     <Folder Name="/templates/" />
+    <Folder Name="/templates/blazor/">
+        <Project Path="templates/blazor/wasm/src/CleanArchBlazorWasm.AppHost/CleanArchBlazorWasm.AppHost.csproj" />
+        <Project Path="templates/blazor/wasm/src/CleanArchBlazorWasm.Web/CleanArchBlazorWasm.Web.csproj" />
+    </Folder>
     <Folder Name="/templates/grpc/">
         <Project Path="templates/grpc/src/CleanArchGrpcService.AppHost/CleanArchGrpcService.AppHost.csproj" />
         <Project Path="templates/grpc/src/CleanArchGrpcService.Application/CleanArchGrpcService.Application.csproj" />
