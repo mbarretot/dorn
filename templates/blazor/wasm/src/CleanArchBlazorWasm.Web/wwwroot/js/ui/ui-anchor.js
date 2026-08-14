@@ -67,3 +67,13 @@ export function dispose(floatingEl) {
   window.removeEventListener("resize", reposition);
   observers.delete(floatingEl);
 }
+
+export function show(floatingEl) {
+  floatingEl.showPopover();
+}
+
+export function hide(floatingEl) {
+  if (floatingEl.matches(":popover-open")) {
+    floatingEl.hidePopover();
+  }
+}

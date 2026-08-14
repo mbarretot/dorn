@@ -132,4 +132,31 @@ public class RovingFocusStateTests
         Assert.Equal(-1, sut.TabIndexFor("b"));
         Assert.Equal(-1, sut.TabIndexFor("c"));
     }
+
+    [Fact]
+    public void TrySetActive_ExistingEnabledItem_ActivatesIt_AndReturnsTrue()
+    {
+        var sut = CreateWithThreeItems();
+
+        var result = sut.TrySetActive("c");
+
+        Assert.True(result);
+        Assert.True(sut.IsActive("c"));
+    }
+
+    [Fact]
+    public void TrySetActive_DisabledOrMissingItem_LeavesActiveUnchanged_AndReturnsFalse()
+    {
+        var sut = new RovingFocusState(RovingFocusOrientation.Vertical, loop: true).WithItems(
+            ("a", false),
+            ("b", true)
+        );
+
+        var disabledResult = sut.TrySetActive("b");
+        var missingResult = sut.TrySetActive("z");
+
+        Assert.False(disabledResult);
+        Assert.False(missingResult);
+        Assert.True(sut.IsActive("a"));
+    }
 }
