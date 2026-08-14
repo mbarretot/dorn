@@ -139,13 +139,21 @@ public sealed class CoverageReporter
         return doc;
     }
 
-    /// <summary>Filename-based exclusion for build output, migrations, and compiler/tool-generated files.</summary>
+    /// <summary>Filename-based exclusion for build output, migrations, generated demo/layout markup, and compiler/tool-generated files.</summary>
     private static bool IsExcluded(string filename)
     {
         var segments = filename.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (segments.Any(s => s.Equals("obj", StringComparison.OrdinalIgnoreCase)))
             return true;
         if (segments.Any(s => s.Equals("Migrations", StringComparison.OrdinalIgnoreCase)))
+            return true;
+        // Blazor WASM template (templates/blazor/wasm): the playground showcase pages are
+        // generated demo markup, and the layout shell has no behavior of its own to assert on —
+        // neither is meant to count toward the 80% gate. Harmless for every other template,
+        // which has no folder with either name.
+        if (segments.Any(s => s.Equals("Playground", StringComparison.OrdinalIgnoreCase)))
+            return true;
+        if (segments.Any(s => s.Equals("Layout", StringComparison.OrdinalIgnoreCase)))
             return true;
 
         return filename.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase)

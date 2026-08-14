@@ -197,6 +197,37 @@ public class CoverageReporterTests : IDisposable
     }
 
     [Fact]
+    public void MergeCobertura_ExcludesBlazorPlaygroundAndLayoutFiles()
+    {
+        var report = BuildCobertura(
+            new ClassSpec(
+                "CleanArchBlazorWasm.Web",
+                "ButtonPlayground",
+                "Features/Playground/ButtonPlayground.razor",
+                [(1, 1)]
+            ),
+            new ClassSpec(
+                "CleanArchBlazorWasm.Web",
+                "MainLayout",
+                "Components/Layout/MainLayout.razor",
+                [(1, 1)]
+            ),
+            new ClassSpec(
+                "CleanArchBlazorWasm.Web",
+                "Button",
+                "Components/Ui/Button/Button.razor",
+                [(1, 1)]
+            )
+        );
+        var path = WriteReport(report, "report.xml");
+
+        var summary = new CoverageReporter().MergeCobertura([path]);
+
+        var survivor = Assert.Single(summary.Classes);
+        Assert.Equal("Button", survivor.Class);
+    }
+
+    [Fact]
     public void MergeCobertura_AllEntriesExcluded_ReturnsZeroLineRate()
     {
         var report = BuildCobertura(
