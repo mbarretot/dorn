@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>CleanArchBlazorWasm</title>
     <base href="/" />
+    <!-- Classic script, no type="module"/defer/async: must run synchronously before the
+         stylesheet is applied so data-ui-theme/data-ui-mode exist on <html> before first
+         paint (design B5) — Blazor WASM only starts after that paint. -->
+    <script src="theme-boot.js"></script>
     <link rel="stylesheet" href="app.css" />
 </head>
 
