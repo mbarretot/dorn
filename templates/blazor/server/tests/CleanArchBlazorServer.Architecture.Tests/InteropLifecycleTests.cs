@@ -1,7 +1,6 @@
 namespace CleanArchBlazorServer.Architecture.Tests;
 
-// S-P fitness function. Reflection fallback per design (IL call-site walking judged brittle):
-// no Components.Ui type injecting an Interop service may override a pre-connect lifecycle hook.
+// Reflection fallback (IL call-site walking judged brittle): no Ui type injecting Interop may override a pre-connect lifecycle hook.
 public sealed class InteropLifecycleTests
 {
     private const string UiRoot = "CleanArchBlazorServer.Web.Components.Ui";
@@ -9,9 +8,7 @@ public sealed class InteropLifecycleTests
 
     private static readonly System.Reflection.Assembly WebAssembly = typeof(Program).Assembly;
 
-    // OnParametersSet (sync) is excluded: the design's "set pending flag" shape overrides it
-    // legitimately without ever touching JS there — only the Async hooks and OnInitialized run
-    // early enough during prerender to be a real risk.
+    // OnParametersSet (sync) is excluded — the "set pending flag" shape never touches JS there.
     private static readonly string[] PreConnectHooks =
     [
         "OnInitialized",

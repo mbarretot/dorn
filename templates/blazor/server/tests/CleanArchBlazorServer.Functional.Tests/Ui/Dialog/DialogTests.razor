@@ -6,9 +6,7 @@
 @using Xunit
 
 @code {
-    // Native <dialog> gives top layer/::backdrop/inertness/focus-restore for free (WHATWG). These
-    // tests prove the contract: Dialog calls exactly the JS this design says, only once the
-    // circuit/OnAfterRenderAsync gate opens, and every dismissal source funnels through one path.
+    // Proves Dialog calls the expected JS only after the OnAfterRenderAsync gate opens.
 
     [Fact]
     public void Render_WithDialogClosed_MakesNoModalInteropCalls()
