@@ -122,6 +122,32 @@ public class ProjectContextResolverTests : IDisposable
         Assert.Null(ctx.WebApiProject);
     }
 
+    // Tailwind project
+
+    [Fact]
+    public void Resolve_WithAppTailwindCssUnderSrcSubdirectory_ReturnsThatProject()
+    {
+        CreateFile(_tempRoot, "src/MyProject.Web/Styles/app.tailwind.css");
+        CreateSolution(_tempRoot, "MyProject.sln");
+
+        var resolver = new ProjectContextResolver();
+        var ctx = resolver.Resolve(_tempRoot);
+
+        Assert.EndsWith("MyProject.Web", ctx.TailwindProject);
+    }
+
+    [Fact]
+    public void Resolve_WithNoAppTailwindCss_ReturnsNullTailwindProject()
+    {
+        CreateFile(_tempRoot, "src/MyProject.WebApi/Program.cs");
+        CreateSolution(_tempRoot, "MyProject.sln");
+
+        var resolver = new ProjectContextResolver();
+        var ctx = resolver.Resolve(_tempRoot);
+
+        Assert.Null(ctx.TailwindProject);
+    }
+
     // Tier detection
 
     [Fact]
