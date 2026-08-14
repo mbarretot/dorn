@@ -15,6 +15,12 @@
       "defaultValue": "true",
       "description": "Include the xUnit test projects (added in a later template slice)."
     },
+    "IncludePlayground": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "true",
+      "description": "Include the /playground showcase pages demonstrating all seven Ui components. When false, the generated project excludes Features/Playground and its nav link, producing a lean project."
+    },
     "Theme": {
       "type": "parameter",
       "datatype": "choice",
@@ -39,6 +45,24 @@
         {
           "condition": "(!IncludeTests)",
           "exclude": ["tests/**"]
+        },
+        {
+          "condition": "(!IncludePlayground)",
+          "exclude": ["src/CleanArchBlazorWasm.Web/Features/Playground/**"]
+        },
+        {
+          "condition": "(IncludePlayground)",
+          "rename": {
+            "src/CleanArchBlazorWasm.Web/Components/Layout/NavMenu.Playground.razor": "src/CleanArchBlazorWasm.Web/Components/Layout/NavMenu.razor"
+          },
+          "exclude": ["src/CleanArchBlazorWasm.Web/Components/Layout/NavMenu.Lean.razor"]
+        },
+        {
+          "condition": "(!IncludePlayground)",
+          "rename": {
+            "src/CleanArchBlazorWasm.Web/Components/Layout/NavMenu.Lean.razor": "src/CleanArchBlazorWasm.Web/Components/Layout/NavMenu.razor"
+          },
+          "exclude": ["src/CleanArchBlazorWasm.Web/Components/Layout/NavMenu.Playground.razor"]
         }
       ]
     }
