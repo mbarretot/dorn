@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using Dorn.Abstractions.Generation;
 using Dorn.Core.DependencyInjection;
 using Dorn.Core.Templating;
@@ -413,6 +414,79 @@ public class BlazorWasmTemplateGenerationTests
         Assert.NotEqual(0, buildResult.ExitCode);
         Assert.Contains("DORN_TAILWIND_PATH", buildResult.StdOut, StringComparison.Ordinal);
         Assert.Contains(missingPath, buildResult.StdOut, StringComparison.Ordinal);
+    }
+
+    /// <summary>Drift guard: every RID mapped in <c>Tailwind.targets</c> carries a real, non-placeholder SHA-256.</summary>
+    [Fact]
+    public void TailwindTargets_EveryMappedRid_HasNonPlaceholderChecksum()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        var targetsPath = Path.Combine(
+            templatesRoot,
+            "blazor",
+            "wasm",
+            "build",
+            "Tailwind.targets"
+        );
+        Assert.True(File.Exists(targetsPath), $"Expected {targetsPath} to exist.");
+
+        var contents = File.ReadAllText(targetsPath);
+        var assetNameMatches = Regex.Matches(
+            contents,
+            @"<TailwindAssetName Condition=""'\$\(TailwindRid\)' == '([^']+)'"""
+        );
+        Assert.NotEmpty(assetNameMatches);
+
+        foreach (Match match in assetNameMatches)
+        {
+            var rid = match.Groups[1].Value;
+            var shaMatch = Regex.Match(
+                contents,
+                $@"<TailwindSha256 Condition=""'\$\(TailwindRid\)' == '{Regex.Escape(rid)}'""\s*>\s*([0-9a-fA-F]+)\s*</TailwindSha256>"
+            );
+            Assert.True(shaMatch.Success, $"Expected a TailwindSha256 entry for RID '{rid}'.");
+            var hash = shaMatch.Groups[1].Value;
+            Assert.Equal(64, hash.Length);
+            Assert.False(
+                hash.All(c => c == '0'),
+                $"RID '{rid}' has a placeholder (all-zero) checksum."
+            );
+        }
+    }
+
+    /// <summary>No template file may hardcode a raw Tailwind palette class; theming flows through <c>--ui-*</c> tokens only.</summary>
+    [Fact]
+    public void TemplateFiles_ContainNoRawTailwindPaletteClass()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        var wasmRoot = Path.Combine(templatesRoot, "blazor", "wasm");
+        Assert.True(Directory.Exists(wasmRoot));
+
+        var paletteClassPattern = new Regex(
+            @"\b(?:bg|text|border|ring|from|via|to|fill|stroke|divide|outline|decoration|caret|accent)-(?:slate|rose)-\d{2,3}\b"
+        );
+        var extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".razor",
+            ".css",
+            ".cs",
+            ".html",
+        };
+
+        var offendingFiles = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(wasmRoot, "*", SearchOption.AllDirectories))
+        {
+            if (!extensions.Contains(Path.GetExtension(file)))
+                continue;
+
+            var text = File.ReadAllText(file);
+            if (paletteClassPattern.IsMatch(text))
+            {
+                offendingFiles.Add(Path.GetRelativePath(wasmRoot, file));
+            }
+        }
+
+        Assert.Empty(offendingFiles);
     }
 
     /// <summary>
