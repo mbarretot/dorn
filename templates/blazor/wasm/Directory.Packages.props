@@ -21,8 +21,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Testing. The Application/Integration tiers landed in slice 3; Functional (bUnit) lands
-         in this slice. Architecture (ArchUnitNET) is pinned when it first ships. -->
+    <!-- Testing. The Application/Integration tiers landed in slice 3; Functional (bUnit) landed
+         in slice 4. Architecture (ArchUnitNET) ships here, pinned to the same version grpc/webapi/
+         worker already use. -->
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
@@ -30,5 +31,6 @@
     <!-- net10.0-compatible per its own nuspec dependency groups; resolved live, see
          sdd/feat-blazor-ui-template apply-progress obs #241. -->
     <PackageVersion Include="bunit" Version="2.9.0" />
+    <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.3" />
   </ItemGroup>
 </Project>
