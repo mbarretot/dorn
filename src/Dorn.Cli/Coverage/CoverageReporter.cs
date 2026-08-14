@@ -147,10 +147,7 @@ public sealed class CoverageReporter
             return true;
         if (segments.Any(s => s.Equals("Migrations", StringComparison.OrdinalIgnoreCase)))
             return true;
-        // Blazor WASM template (templates/blazor/wasm): the playground showcase pages are
-        // generated demo markup, and the layout shell has no behavior of its own to assert on —
-        // neither is meant to count toward the 80% gate. Harmless for every other template,
-        // which has no folder with either name.
+        // Demo markup and layout shells have no behavior of their own to assert on.
         if (segments.Any(s => s.Equals("Playground", StringComparison.OrdinalIgnoreCase)))
             return true;
         if (segments.Any(s => s.Equals("Layout", StringComparison.OrdinalIgnoreCase)))

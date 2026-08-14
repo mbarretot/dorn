@@ -7,6 +7,5 @@ global using ArchUnitNET.xUnit;
 global using CleanArchBlazorWasm.Web;
 global using Microsoft.JSInterop;
 global using Xunit;
-// "Architecture" collides with this project's own namespace segment
-// (CleanArchBlazorWasm.Architecture.Tests) — alias to the ArchUnitNET model type explicitly.
+// Aliased: "Architecture" collides with this project's own namespace segment.
 global using ArchitectureModel = ArchUnitNET.Domain.Architecture;

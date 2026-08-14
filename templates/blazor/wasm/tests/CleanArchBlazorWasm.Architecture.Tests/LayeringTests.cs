@@ -1,14 +1,6 @@
 namespace CleanArchBlazorWasm.Architecture.Tests;
 
-/// <summary>
-/// Enforces the two structural rules the design calls out as "enforced by the Architecture
-/// tier, not convention": <c>Components/Ui/</c> (the design system) never references
-/// <c>Features/</c> (app code), and <c>IJSRuntime</c> usage is confined to
-/// <c>Components/Ui/Primitives/Interop/</c>. <c>Components/Theme/</c> is intentionally out of
-/// scope for the JS-interop rule — the spec's requirement text scopes it to
-/// <c>Components/Ui/</c> only, and <c>ThemeInterop</c> legitimately injects
-/// <see cref="IJSRuntime"/> from outside that folder.
-/// </summary>
+// Components/Theme/ThemeInterop is exempt from the JS-interop confinement rule below by design.
 public sealed class LayeringTests
 {
     private const string UiRoot = "CleanArchBlazorWasm.Web.Components.Ui";
@@ -53,9 +45,7 @@ public sealed class LayeringTests
     [Fact]
     public void JsRuntimeUsage_Should_BeConfinedToUiPrimitivesInterop()
     {
-        // ArchUnitNET's fluent predicates don't reliably express "everywhere except this one
-        // sub-namespace", so this rule uses plain reflection instead — same precedent as
-        // webapi/grpc/worker's RequestHandlers_Should_ResideInApplicationAssembly.
+        // ArchUnitNET can't express "everywhere except this sub-namespace", so this uses reflection.
         var violators = WebAssembly
             .GetTypes()
             .Where(type =>
@@ -72,9 +62,7 @@ public sealed class LayeringTests
     [Fact]
     public void NoTypeOutsideComponentsUi_Should_ShareANameWithAUiComponent()
     {
-        // "_Imports" is Razor tooling infrastructure generated once per folder that opts into
-        // scoped @using directives (Components/Ui/_Imports.razor is a legitimate example) — it
-        // is never a real component and must not count as a collision candidate.
+        // "_Imports" is Razor scoped-usings infrastructure, never a real component.
         var uiTypeNames = WebAssembly
             .GetTypes()
             .Where(type =>
