@@ -2,5 +2,6 @@
     <Project Path="src/CleanArchBlazorServer.AppHost/CleanArchBlazorServer.AppHost.csproj" />
     <Project Path="src/CleanArchBlazorServer.ServiceDefaults/CleanArchBlazorServer.ServiceDefaults.csproj" />
     <Project Path="src/CleanArchBlazorServer.Web/CleanArchBlazorServer.Web.csproj" />
+    <Project Path="tests/CleanArchBlazorServer.Application.Tests/CleanArchBlazorServer.Application.Tests.csproj" />
     <Project Path="tests/CleanArchBlazorServer.Integration.Tests/CleanArchBlazorServer.Integration.Tests.csproj" />
 </Solution>
