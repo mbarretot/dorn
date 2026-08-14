@@ -1,0 +1,66 @@
+@inject ThemeState ThemeState
+@implements IDisposable
+
+<div class="flex items-center gap-2" @attributes="AdditionalAttributes">
+    <button
+        type="button"
+        data-testid="mode-toggle"
+        class="@ToggleButtonClass"
+        aria-label="Toggle color mode"
+        @onclick="CycleModeAsync"
+    >
+        @ThemeState.ResolvedMode
+    </button>
+    <button
+        type="button"
+        data-testid="theme-toggle"
+        class="@ToggleButtonClass"
+        aria-label="Toggle theme"
+        @onclick="CycleThemeAsync"
+    >
+        @ThemeState.Theme
+    </button>
+</div>
+
+@code {
+    // Stub trigger (design tasks 5.13/6.5): rewired to a real DropdownMenu once PR6 ships it —
+    // the state plumbing below (ThemeState/ThemeInterop) does not change on that rewire.
+    private const string ToggleButtonClass =
+        "inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium capitalize text-foreground transition-colors hover:bg-accent hover:text-accent-foreground";
+
+    private static readonly string[] Themes = ["slate", "rose"];
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            ThemeState.Changed += OnThemeChanged;
+            await ThemeState.InitializeAsync();
+        }
+    }
+
+    private Task CycleModeAsync()
+    {
+        var next = ThemeState.Mode switch
+        {
+            ThemeMode.Light => ThemeMode.Dark,
+            ThemeMode.Dark => ThemeMode.System,
+            _ => ThemeMode.Light,
+        };
+        return ThemeState.SetModeAsync(next);
+    }
+
+    private Task CycleThemeAsync()
+    {
+        var currentIndex = Array.IndexOf(Themes, ThemeState.Theme);
+        var next = Themes[(currentIndex + 1) % Themes.Length];
+        return ThemeState.SetThemeAsync(next);
+    }
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => ThemeState.Changed -= OnThemeChanged;
+}
