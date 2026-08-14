@@ -190,6 +190,107 @@ public class BlazorWasmTemplateGenerationTests
     }
 
     /// <summary>
+    /// Phase 7 go/no-go for the playground toggle (design E2): <c>IncludePlayground=false</c>
+    /// must exclude <c>Features/Playground/**</c> entirely, rename
+    /// <c>NavMenu.Lean.razor</c> (not <c>NavMenu.Playground.razor</c>) to the canonical
+    /// <c>NavMenu.razor</c>, and still build cleanly — proving the lean project is a real,
+    /// buildable output, not just an excluded-files assertion.
+    /// </summary>
+    [Fact]
+    public async Task GenerateWithIncludePlaygroundFalse_ExcludesPlaygroundAndRenamesLeanNavMenu_AndBuilds()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(
+            RealTempRoot,
+            $"dorn-tests-blazor-wasm-lean-{Guid.NewGuid():N}"
+        );
+        var toolsHome = Path.Combine(
+            RealTempRoot,
+            $"dorn-tests-blazor-wasm-lean-tools-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-blazor-wasm",
+                "DornLeanBlazorWasmApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["IncludePlayground"] = "false" }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webRoot = Path.Combine(outputDirectory, "src", "DornLeanBlazorWasmApp.Web");
+            var playgroundDir = Path.Combine(webRoot, "Features", "Playground");
+            Assert.False(
+                Directory.Exists(playgroundDir),
+                $"Expected no playground directory at '{playgroundDir}'."
+            );
+
+            var layoutDir = Path.Combine(webRoot, "Components", "Layout");
+            var navMenuPath = Path.Combine(layoutDir, "NavMenu.razor");
+            Assert.True(File.Exists(navMenuPath), $"Expected renamed NavMenu at '{navMenuPath}'.");
+            Assert.False(
+                File.Exists(Path.Combine(layoutDir, "NavMenu.Lean.razor")),
+                "NavMenu.Lean.razor must be renamed away, not left alongside NavMenu.razor."
+            );
+            Assert.False(
+                File.Exists(Path.Combine(layoutDir, "NavMenu.Playground.razor")),
+                "NavMenu.Playground.razor must be excluded when IncludePlayground=false."
+            );
+
+            var navMenu = await File.ReadAllTextAsync(navMenuPath);
+            Assert.DoesNotContain("/playground", navMenu, StringComparison.Ordinal);
+
+            var slnFiles = Directory.GetFiles(
+                outputDirectory,
+                "*.slnx",
+                SearchOption.TopDirectoryOnly
+            );
+            Assert.Single(slnFiles);
+
+            var buildResult = await RunDotnetBuildAsync(slnFiles[0], toolsHome);
+
+            Assert.True(
+                buildResult.ExitCode == 0,
+                $"dotnet build exited with {buildResult.ExitCode}."
+                    + $"{Environment.NewLine}STDOUT:{Environment.NewLine}{buildResult.StdOut}"
+                    + $"{Environment.NewLine}STDERR:{Environment.NewLine}{buildResult.StdErr}"
+            );
+            Assert.DoesNotContain("RZ10012", buildResult.StdOut, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Environment.GetEnvironmentVariable("DORN_TEST_KEEP_TEMP") != "true")
+            {
+                if (Directory.Exists(outputDirectory))
+                {
+                    Directory.Delete(outputDirectory, recursive: true);
+                }
+                if (Directory.Exists(toolsHome))
+                {
+                    Directory.Delete(toolsHome, recursive: true);
+                }
+            }
+            else
+            {
+                Console.WriteLine("KEPT: " + outputDirectory);
+            }
+        }
+    }
+
+    /// <summary>
     /// Threat matrix: a wrong expected checksum must fail the build with the mismatch message
     /// and must never leave an executable behind in the tool cache (A4).
     /// </summary>

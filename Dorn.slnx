@@ -18,6 +18,10 @@
     <Folder Name="/templates/blazor/">
         <Project Path="templates/blazor/wasm/src/CleanArchBlazorWasm.AppHost/CleanArchBlazorWasm.AppHost.csproj" />
         <Project Path="templates/blazor/wasm/src/CleanArchBlazorWasm.Web/CleanArchBlazorWasm.Web.csproj" />
+        <Project Path="templates/blazor/wasm/tests/CleanArchBlazorWasm.Application.Tests/CleanArchBlazorWasm.Application.Tests.csproj" />
+        <Project Path="templates/blazor/wasm/tests/CleanArchBlazorWasm.Architecture.Tests/CleanArchBlazorWasm.Architecture.Tests.csproj" />
+        <Project Path="templates/blazor/wasm/tests/CleanArchBlazorWasm.Functional.Tests/CleanArchBlazorWasm.Functional.Tests.csproj" />
+        <Project Path="templates/blazor/wasm/tests/CleanArchBlazorWasm.Integration.Tests/CleanArchBlazorWasm.Integration.Tests.csproj" />
     </Folder>
     <Folder Name="/templates/grpc/">
         <Project Path="templates/grpc/src/CleanArchGrpcService.AppHost/CleanArchGrpcService.AppHost.csproj" />

@@ -1,0 +1,40 @@
+@page "/playground/tabs"
+
+<PageTitle>Playground · Tabs</PageTitle>
+
+<div class="mx-auto flex max-w-2xl flex-col gap-8 p-8">
+    <PlaygroundSection
+        Title="Uncontrolled tabs"
+        Description="Manages its own active tab; use ArrowLeft/ArrowRight to move between triggers."
+    >
+        <Tabs DefaultValue="account">
+            <TabsList>
+                <TabsTrigger Value="account">Account</TabsTrigger>
+                <TabsTrigger Value="password">Password</TabsTrigger>
+            </TabsList>
+            <TabsContent Value="account">Update your account details here.</TabsContent>
+            <TabsContent Value="password">Change your password here.</TabsContent>
+        </Tabs>
+    </PlaygroundSection>
+
+    <PlaygroundSection
+        Title="Controlled tabs"
+        Description="Active tab is owned by this page and echoed below."
+    >
+        <Tabs Value="_activeTab" ValueChanged="@(value => _activeTab = value)">
+            <TabsList>
+                <TabsTrigger Value="overview">Overview</TabsTrigger>
+                <TabsTrigger Value="activity">Activity</TabsTrigger>
+                <TabsTrigger Value="settings">Settings</TabsTrigger>
+            </TabsList>
+            <TabsContent Value="overview">Overview panel content.</TabsContent>
+            <TabsContent Value="activity">Activity panel content.</TabsContent>
+            <TabsContent Value="settings">Settings panel content.</TabsContent>
+        </Tabs>
+        <p class="text-sm text-muted-foreground">Active tab: @_activeTab</p>
+    </PlaygroundSection>
+</div>
+
+@code {
+    private string _activeTab = "overview";
+}
