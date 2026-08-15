@@ -1,9 +1,6 @@
 namespace CleanArchBlazorWasm.Web.Components.Ui.Primitives;
 
-/// <summary>
-/// Generates unique DOM ids for a11y wiring (e.g. <c>FormField</c>'s <c>Label/@for</c> and
-/// <c>Input/@id</c> pairing, design D's Input+Label part).
-/// </summary>
+// Generates unique DOM ids for a11y wiring (FormField's Label/@for and Input/@id pairing).
 public static class UiId
 {
     private static long _counter;
