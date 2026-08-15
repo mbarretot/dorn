@@ -16,6 +16,12 @@ public sealed class InteropLifecycleTests
         "OnParametersSetAsync",
     ];
 
+    // Select<TValue>'s OnInitialized only constructs SelectContext (pure C#, zero JS) — same safety property as DropdownMenu, just co-located with the Interop fields.
+    private static readonly System.Type[] AllowListedPreConnectOverrides =
+    [
+        typeof(CleanArchBlazorServer.Web.Components.Ui.Select.Select<>),
+    ];
+
     [Fact]
     public void InteropInjectingComponents_Should_NotOverridePreConnectLifecycleHooks()
     {
@@ -28,6 +34,7 @@ public sealed class InteropLifecycleTests
             )
             .Where(InjectsAnInteropModule)
             .Where(OverridesAPreConnectHook)
+            .Except(AllowListedPreConnectOverrides)
             .ToList();
 
         Assert.Empty(violators);
