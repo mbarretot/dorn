@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace CleanArchBlazorServer.Web.Components.Ui.DropdownMenu;
 
-// Cascades open state, the roving-tabindex state machine (design C5), and the trigger/item element registry so DropdownMenuContent/DropdownMenuItem can drive real focus movement without a child-to-parent round trip — same shape as DialogContext/TabsContext.
+// Same cascading-context shape as DialogContext/TabsContext: open state, roving-tabindex state, element registry.
 public sealed class DropdownMenuContext
 {
     private readonly List<(string Id, ElementReference Element, bool Disabled)> _items = [];

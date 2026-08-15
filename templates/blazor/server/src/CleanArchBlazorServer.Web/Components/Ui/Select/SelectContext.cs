@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace CleanArchBlazorServer.Web.Components.Ui.Select;
 
-// Cascaded by Select<TValue> to its SelectItem<TValue> children — same roving-tabindex shape as DropdownMenuContext, plus the bound value comparison and commit/cancel paths the listbox pattern needs (design D, Select row).
+// Same roving-tabindex shape as DropdownMenuContext, plus the value comparison/commit/cancel paths a listbox needs.
 public sealed class SelectContext<TValue>
 {
     private readonly List<(

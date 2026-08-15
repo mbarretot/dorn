@@ -16,7 +16,7 @@ public sealed class InteropLifecycleTests
         "OnParametersSetAsync",
     ];
 
-    // Select<TValue> combines trigger+listbox in one component (WASM's verbatim shape, unlike DropdownMenu's Trigger/Content split); its OnInitialized only constructs SelectContext (pure C#, zero JS) — same safety property as DropdownMenu.razor's OnInitialized, just co-located with the Interop-injecting fields.
+    // Select<TValue>'s OnInitialized only constructs SelectContext (pure C#, zero JS) — same safety property as DropdownMenu, just co-located with the Interop fields.
     private static readonly System.Type[] AllowListedPreConnectOverrides =
     [
         typeof(CleanArchBlazorServer.Web.Components.Ui.Select.Select<>),
