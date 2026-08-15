@@ -24,7 +24,7 @@ Use this checklist for a new template:
 
 - [ ] Add `templates/<name>/.template.config/template.json` with identity, `shortName`, `sourceName`, and symbols.
 - [ ] Add self-contained `Directory.Build.props` and `Directory.Packages.props`. Never inherit the repository root files.
-- [ ] Reference `Dorn.SharedKernel`, `Dorn.Messaging.Contracts`, or `Dorn.Messaging` instead of copying shared code.
+- [ ] Reference `Dorn.SharedKernel`, `Dorn.Messaging.Contracts`, `Dorn.Messaging`, or `Dorn.WebUI.Primitives` instead of copying shared code.
 - [ ] Add the template projects to `Dorn.slnx`.
 - [ ] Add a generation test that writes outside the repository and runs `dotnet build` on the result.
 - [ ] Add and register `New<Name>Command` under `src/Dorn.Cli/Commands/New/`.
