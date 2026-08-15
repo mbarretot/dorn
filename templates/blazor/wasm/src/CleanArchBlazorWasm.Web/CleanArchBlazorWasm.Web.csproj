@@ -12,4 +12,8 @@
       PrivateAssets="all"
     />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dorn.WebUI.Primitives" />
+  </ItemGroup>
 </Project>
