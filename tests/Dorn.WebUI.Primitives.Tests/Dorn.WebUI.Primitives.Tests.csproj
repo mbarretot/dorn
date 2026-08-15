@@ -2,6 +2,8 @@
     <PropertyGroup>
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
+        <!-- TestComponentRenderer intentionally uses Microsoft.AspNetCore.Components.RenderTree, same pattern both templates already accept. -->
+        <NoWarn>$(NoWarn);BL0006</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
