@@ -1,5 +1,5 @@
 using Bunit;
-using CleanArchBlazorServer.Web.Components.Ui.Primitives.Interop;
+using Dorn.WebUI.Primitives.Interop;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CleanArchBlazorServer.Functional.Tests;

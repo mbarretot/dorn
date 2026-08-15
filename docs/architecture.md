@@ -35,6 +35,7 @@ The dependency rule is deliberate: Template Engine details stop at `Dorn.Core`, 
 | `Dorn.Messaging.Contracts` | Requests, handlers, behaviors, notifications, sender, publisher | None |
 | `Dorn.Messaging` | Mediator and DI assembly scanning | Messaging.Contracts |
 | `Dorn.SharedKernel` | `Entity`, `AggregateRoot`, `Result` | Messaging.Contracts |
+| `Dorn.WebUI.Primitives` | Class merging, roving-focus/typeahead state, `UiId`, value-component base types, JS interop wrappers, theme state | ASP.NET Core Components, JSInterop |
 
 Packages are the canonical source. Templates consume them through `PackageReference`, so shared code cannot drift between templates.
 
