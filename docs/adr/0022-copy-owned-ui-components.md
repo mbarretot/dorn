@@ -28,6 +28,11 @@ for a single consumer.
 the trigger named above has fired. Extraction remains deliberately deferred; see ADR 0024's
 Consequences and Alternatives for why.
 
+**Update (ADR 0025):** extraction has now happened. The non-Razor primitive/interop/theme layer
+moved to `packages/Dorn.WebUI.Primitives`; both templates consume it via `PackageReference`. The
+decision recorded in *this* ADR — that `.razor` components stay copy-owned source, never packaged
+— is unchanged and was explicitly reaffirmed as part of ADR 0025.
+
 ## Consequences
 
 - Every generated app owns and can freely modify its design system with no package-version
@@ -52,3 +57,5 @@ Consequences and Alternatives for why.
 - [ADR 0007: Superseded physical sync](./0007-templates-shared-physical-copy-sync.md)
 - [ADR 0010: Extract messaging and shared kernel as NuGet packages](./0010-extract-messaging-and-shared-kernel-as-nuget-packages.md)
 - [ADR 0023: Blazor WASM scoped MVP](./0023-blazor-wasm-scoped-mvp.md)
+- [ADR 0024: Blazor Server template scoped MVP](./0024-blazor-server-scoped-mvp.md)
+- [ADR 0025: Extract Dorn.WebUI.Primitives as a NuGet package](./0025-extract-dorn-webui-primitives-as-nuget-package.md)

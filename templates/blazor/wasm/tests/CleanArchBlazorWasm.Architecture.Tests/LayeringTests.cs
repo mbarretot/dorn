@@ -1,11 +1,8 @@
 namespace CleanArchBlazorWasm.Architecture.Tests;
 
-// Components/Theme/ThemeInterop is exempt from the JS-interop confinement rule below by design.
 public sealed class LayeringTests
 {
     private const string UiRoot = "CleanArchBlazorWasm.Web.Components.Ui";
-    private const string UiPrimitivesInteropRoot =
-        "CleanArchBlazorWasm.Web.Components.Ui.Primitives.Interop";
     private const string FeaturesRoot = "CleanArchBlazorWasm.Web.Features";
 
     private static readonly System.Reflection.Assembly WebAssembly = typeof(App).Assembly;
@@ -43,18 +40,10 @@ public sealed class LayeringTests
     }
 
     [Fact]
-    public void JsRuntimeUsage_Should_BeConfinedToUiPrimitivesInterop()
+    public void NoWebAssemblyType_Should_TouchJsRuntimeDirectly()
     {
-        // ArchUnitNET can't express "everywhere except this sub-namespace", so this uses reflection.
-        var violators = WebAssembly
-            .GetTypes()
-            .Where(type =>
-                type.Namespace is not null
-                && type.Namespace.StartsWith(UiRoot, StringComparison.Ordinal)
-                && !type.Namespace.StartsWith(UiPrimitivesInteropRoot, StringComparison.Ordinal)
-            )
-            .Where(InjectsJsRuntime)
-            .ToList();
+        // ArchUnitNET has no member-level type predicate, so this uses reflection directly.
+        var violators = WebAssembly.GetTypes().Where(InjectsJsRuntime).ToList();
 
         Assert.Empty(violators);
     }
@@ -98,6 +87,16 @@ public sealed class LayeringTests
 
         return type.GetFields(flags).Any(f => typeof(IJSRuntime).IsAssignableFrom(f.FieldType))
             || type.GetProperties(flags)
-                .Any(p => typeof(IJSRuntime).IsAssignableFrom(p.PropertyType));
+                .Any(p => typeof(IJSRuntime).IsAssignableFrom(p.PropertyType))
+            || type.GetConstructors(flags).Any(HasJsRuntimeParameter)
+            || type.GetMethods(flags)
+                .Where(m => m.GetCustomAttribute<JSInvokableAttribute>() is null)
+                .Any(m => HasJsRuntimeParameter(m) || HasJsRuntimeReturnType(m));
     }
+
+    private static bool HasJsRuntimeParameter(MethodBase method) =>
+        method.GetParameters().Any(p => typeof(IJSRuntime).IsAssignableFrom(p.ParameterType));
+
+    private static bool HasJsRuntimeReturnType(MethodInfo method) =>
+        typeof(IJSRuntime).IsAssignableFrom(method.ReturnType);
 }

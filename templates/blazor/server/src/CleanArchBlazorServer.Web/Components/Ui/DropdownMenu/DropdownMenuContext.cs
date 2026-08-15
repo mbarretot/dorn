@@ -1,4 +1,4 @@
-using CleanArchBlazorServer.Web.Components.Ui.Primitives;
+using Dorn.WebUI.Primitives;
 using Microsoft.AspNetCore.Components;
 
 namespace CleanArchBlazorServer.Web.Components.Ui.DropdownMenu;

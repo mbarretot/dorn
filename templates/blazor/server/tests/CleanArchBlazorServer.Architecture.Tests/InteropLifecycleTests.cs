@@ -4,7 +4,6 @@ namespace CleanArchBlazorServer.Architecture.Tests;
 public sealed class InteropLifecycleTests
 {
     private const string UiRoot = "CleanArchBlazorServer.Web.Components.Ui";
-    private const string InteropRoot = "CleanArchBlazorServer.Web.Components.Ui.Primitives.Interop";
 
     private static readonly System.Reflection.Assembly WebAssembly = typeof(Program).Assembly;
 
@@ -30,7 +29,6 @@ public sealed class InteropLifecycleTests
             .Where(type =>
                 type.Namespace is not null
                 && type.Namespace.StartsWith(UiRoot, StringComparison.Ordinal)
-                && !type.Namespace.StartsWith(InteropRoot, StringComparison.Ordinal)
             )
             .Where(InjectsAnInteropModule)
             .Where(OverridesAPreConnectHook)

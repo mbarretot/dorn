@@ -4,4 +4,8 @@
   <ItemGroup>
     <ProjectReference Include="..\CleanArchBlazorServer.ServiceDefaults\CleanArchBlazorServer.ServiceDefaults.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dorn.WebUI.Primitives" />
+  </ItemGroup>
 </Project>

@@ -39,8 +39,11 @@ without the flag falls back to `slate`.
 | `<Name>.AppHost` | Aspire orchestration |
 
 Inside `<Name>.Web`, `Components/Ui/` (the design system) never depends on `Features/` (app
-code), and all `IJSRuntime` use is confined to `Components/Ui/Primitives/Interop/` — both rules
-are enforced by the Architecture test tier, not convention alone.
+code), and no app type touches `IJSRuntime` directly — both rules are enforced by the
+Architecture test tier, not convention alone. `<Name>.Web` references the `Dorn.WebUI.Primitives`
+NuGet package for class-merge, roving-focus/typeahead state, `UiId`/`UiValueComponent`/
+`UiInputBase`, the JS-interop wrappers, and theme state; only the `.razor` components (including
+`ThemeSwitcher`) stay copy-owned local source.
 
 ## 🎨 Theming
 
@@ -63,7 +66,7 @@ same way — `OnParametersSet` sets a pending flag, `OnAfterRenderAsync` acts on
 
 For non-lifecycle interop needs, `RendererInfo.IsInteractive` is the documented escape hatch: it
 distinguishes prerender from a connected circuit directly, at the cost of a Server-only API
-inside the primitives layer.
+inside the `Dorn.WebUI.Primitives` package.
 
 ## 🧩 Playground
 
@@ -108,7 +111,7 @@ covering prerender-with-JS-disabled and circuit disconnect/reconnect.
 | Application | Pure C# primitive logic: class-merge, roving tabindex, controlled/uncontrolled value, `UiInputBase` inside a real `EditForm`+`EditContext` |
 | Functional | bUnit renders the real component tree, ARIA, keyboard interaction, and that no interop call happens before the first `OnAfterRenderAsync` |
 | Integration | The Tailwind build pipeline produced real, fingerprinted CSS; the root document (`GET /`) carries the correct theme-boot script, no server-emitted theme attributes, and working health endpoints |
-| Architecture | `Components/Ui/` never depends on `Features/`; `IJSRuntime` stays confined to the primitives layer; interop calls only originate from `OnAfterRenderAsync`/`DisposeAsync`; no `CircuitOptions`/reconnect-UI type exists |
+| Architecture | `Components/Ui/` never depends on `Features/`; no app type touches `IJSRuntime` directly; interop calls only originate from `OnAfterRenderAsync`/`DisposeAsync`; no `CircuitOptions`/reconnect-UI type exists |
 
 Note the one tier-placement divergence from `blazor wasm`: the root-document assertions live in
 Integration (`WebApplicationFactory<Program>`), not Functional — they verify what the build
@@ -122,5 +125,6 @@ pipeline actually produced, the same tier that already owns the Tailwind CSS ass
 - [ADR 0022: Copy-owned UI components](../adr/0022-copy-owned-ui-components.md)
 - [ADR 0023: Blazor WASM scoped MVP](../adr/0023-blazor-wasm-scoped-mvp.md)
 - [ADR 0024: Blazor Server template scoped MVP](../adr/0024-blazor-server-scoped-mvp.md)
+- [ADR 0025: Extract Dorn.WebUI.Primitives as a NuGet package](../adr/0025-extract-dorn-webui-primitives-as-nuget-package.md)
 - [Architecture](../architecture.md)
 - [Blazor WASM template](./blazor-wasm.md)

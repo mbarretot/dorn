@@ -2,7 +2,7 @@ using Bunit;
 using Dorn.WebUI.Primitives.Interop;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CleanArchBlazorServer.Functional.Tests;
+namespace Dorn.WebUI.Primitives.Tests;
 
 // Strict JS interop (unconfigured call fails, not silently defaults) + the owned modules stubbed and wired like Program.cs.
 public abstract class UiTestContext : BunitContext
