@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <PackageId>Dorn.WebUI.Primitives</PackageId>
+        <Description>Framework-agnostic Blazor UI primitives shared by Dorn's Blazor templates: class merging (Cn/ClassGroups), roving-focus and typeahead state, UiId, UiValueComponent/UiInputBase, lazy JS-module interop wrappers, and theme state. Contains no .razor components -- see ADR 0022.</Description>
+        <PackageTags>dorn;blazor;ui;primitives;interop</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Components" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.Forms" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+        <PackageReference Include="Microsoft.JSInterop" />
+    </ItemGroup>
+</Project>
