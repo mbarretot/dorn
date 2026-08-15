@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Dorn Contributors",
+  "classifications": ["Blazor", "Server", "Design System"],
+  "identity": "Dorn.Templates.BlazorServer",
+  "name": "Dorn Blazor Server App",
+  "description": "Front-end-only Blazor Server app with Interactive Server rendering, a Tailwind CSS pipeline, and Aspire orchestration.",
+  "shortName": "dorn-blazor-server",
+  "preferNameDirectory": true,
+  "sourceName": "CleanArchBlazorServer",
+  "symbols": {
+    "IncludeTests": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "true",
+      "description": "Include the xUnit test projects (added in a later template slice)."
+    },
+    "Theme": {
+      "type": "parameter",
+      "datatype": "choice",
+      "choices": [
+        {
+          "choice": "slate",
+          "description": "Cool neutral gray with a blue-leaning primary accent."
+        },
+        {
+          "choice": "rose",
+          "description": "Warm neutral with a rose/pink primary accent."
+        }
+      ],
+      "defaultValue": "slate",
+      "replaces": "__DORN_DEFAULT_THEME__",
+      "description": "Boot-default theme (matches Styles/themes/*.css and wwwroot/theme-boot.js). Both theme stylesheets always ship regardless of this choice."
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(!IncludeTests)",
+          "exclude": ["tests/**"]
+        }
+      ]
+    }
+  ],
+  "postActions": [
+    {
+      "description": "Restore NuGet packages required by this project.",
+      "manualInstructions": [
+        {
+          "text": "Run 'dotnet restore'"
+        }
+      ],
+      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
+      "continueOnError": true
+    }
+  ],
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  }
+}
