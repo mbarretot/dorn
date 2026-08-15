@@ -35,8 +35,11 @@ a selection; a non-interactive session without the flag falls back to `slate`.
 | `<Name>.AppHost` | Aspire orchestration |
 
 Inside `<Name>.Web`, `Components/Ui/` (the design system) never depends on `Features/` (app
-code), and all `IJSRuntime` use is confined to `Components/Ui/Primitives/Interop/` — both rules
-are enforced by the Architecture test tier, not convention alone.
+code), and no app type touches `IJSRuntime` directly — both rules are enforced by the
+Architecture test tier, not convention alone. `<Name>.Web` references the `Dorn.WebUI.Primitives`
+NuGet package for class-merge, roving-focus/typeahead state, `UiId`/`UiValueComponent`/
+`UiInputBase`, the JS-interop wrappers, and theme state; only the `.razor` components stay
+copy-owned local source.
 
 ## 🎨 Theming
 
@@ -83,7 +86,7 @@ dorn today.
 | Application | Pure C# primitive logic: class-merge, roving tabindex, controlled/uncontrolled value |
 | Functional | bUnit renders the real component tree, ARIA, and keyboard interaction |
 | Integration | The Tailwind build pipeline produced real CSS with the expected tokens |
-| Architecture | `Components/Ui/` never depends on `Features/`; `IJSRuntime` stays confined to the primitives layer |
+| Architecture | `Components/Ui/` never depends on `Features/`; no app type touches `IJSRuntime` directly |
 
 ## 📚 Related
 
