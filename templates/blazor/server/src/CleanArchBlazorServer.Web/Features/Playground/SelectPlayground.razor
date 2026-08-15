@@ -1,0 +1,24 @@
+@page "/playground/select"
+
+<PageTitle>Playground · Select</PageTitle>
+
+<div class="mx-auto flex max-w-2xl flex-col gap-8 p-8">
+    <PlaygroundSection
+        Title="Listbox select"
+        Description="Arrow/Home/End move between options; Enter/Space/Tab commit and close; Escape cancels."
+    >
+        <div class="flex flex-col gap-1.5">
+            <Label For="color-select">Favorite color</Label>
+            <Select @bind-Value="_selectedColor" Placeholder="Choose a color" id="color-select">
+                <SelectItem Value="@("red")">Red</SelectItem>
+                <SelectItem Value="@("green")">Green</SelectItem>
+                <SelectItem Value="@("blue")">Blue</SelectItem>
+            </Select>
+        </div>
+        <p class="text-sm text-muted-foreground">Selected: @(string.IsNullOrEmpty(_selectedColor) ? "none" : _selectedColor)</p>
+    </PlaygroundSection>
+</div>
+
+@code {
+    private string _selectedColor = "";
+}
