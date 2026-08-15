@@ -1,4 +1,4 @@
-using CleanArchBlazorWasm.Web.Components.Ui.Primitives;
+using Dorn.WebUI.Primitives;
 using Microsoft.AspNetCore.Components;
 
 namespace CleanArchBlazorWasm.Web.Components.Ui.Select;
