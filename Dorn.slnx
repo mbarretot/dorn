@@ -8,6 +8,7 @@
         <Project Path="packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj" />
         <Project Path="packages/Dorn.Messaging/Dorn.Messaging.csproj" />
         <Project Path="packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj" />
+        <Project Path="packages/Dorn.WebUI.Primitives/Dorn.WebUI.Primitives.csproj" />
     </Folder>
     <Folder Name="/src/">
         <Project Path="src/Dorn.Abstractions/Dorn.Abstractions.csproj" />
