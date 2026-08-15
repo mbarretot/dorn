@@ -44,12 +44,14 @@ Want a guided setup? Run `dorn new webapi` in an interactive terminal and choose
 | `grpc` | gRPC services | Fixed EF Core, SQLite, and Aspire setup | [Open](./docs/templates/grpc.md) |
 | `worker` | Jobs and scheduled work | Fixed EF Core, SQLite, and Aspire setup | [Open](./docs/templates/worker.md) |
 | `blazor wasm` | Front-end apps | Theme (`slate`/`rose`) and playground toggle, fixed Aspire setup | [Open](./docs/templates/blazor-wasm.md) |
+| `blazor server` | Server-rendered front-end apps | Theme (`slate`/`rose`) and playground toggle, fixed Aspire setup (3 projects) | [Open](./docs/templates/blazor-server.md) |
 
 ```bash
 dorn new webapi MyApp --database postgres --orm dapper
 dorn new grpc MyService
 dorn new worker MyWorker
 dorn new blazor wasm MyFrontend --theme rose
+dorn new blazor server MyFrontend --theme rose
 ```
 
 ## ✨ Built in

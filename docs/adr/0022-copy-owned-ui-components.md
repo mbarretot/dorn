@@ -24,6 +24,10 @@ Extraction to a shared `Dorn.WebUI.Primitives` package is deferred until
 mirroring ADR 0007's physical-copy-then-extract precedent, not skipping straight to a package
 for a single consumer.
 
+**Update (ADR 0024):** `templates/blazor/server` shipped and is now that second real consumer —
+the trigger named above has fired. Extraction remains deliberately deferred; see ADR 0024's
+Consequences and Alternatives for why.
+
 ## Consequences
 
 - Every generated app owns and can freely modify its design system with no package-version

@@ -92,6 +92,10 @@ public sealed class DornTheme : IDornTheme
             "Generate a Blazor WebAssembly app with a Tailwind design system (Aspire)."
         );
         table.AddRow(
+            $"[{DornPalette.SuccessMarkup}]new blazor server[/] <name>",
+            "Generate a Blazor Server app with Interactive Server rendering and a Tailwind design system (Aspire)."
+        );
+        table.AddRow(
             $"[{DornPalette.SuccessMarkup}]test[/]",
             "Run the generated project's test tiers."
         );

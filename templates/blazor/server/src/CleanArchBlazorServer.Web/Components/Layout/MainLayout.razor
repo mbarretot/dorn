@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@using CleanArchBlazorServer.Web.Components.Theme
 
 <div class="min-h-screen bg-background text-foreground">
     <header class="border-b border-border">
@@ -6,6 +7,7 @@
             <a href="/" class="font-semibold text-foreground">CleanArchBlazorServer</a>
             <div class="flex items-center gap-4">
                 <NavMenu />
+                <ThemeSwitcher />
             </div>
         </div>
     </header>

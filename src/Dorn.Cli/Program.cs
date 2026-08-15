@@ -67,6 +67,11 @@ app.Configure(config =>
                         .WithDescription(
                             "Generate a Blazor WebAssembly app with a Tailwind design system (Aspire)."
                         );
+                    blazorBranch
+                        .AddCommand<NewBlazorServerCommand>("server")
+                        .WithDescription(
+                            "Generate a Blazor Server app with Interactive Server rendering and a Tailwind design system (Aspire)."
+                        );
                 }
             );
         }
