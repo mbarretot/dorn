@@ -26,6 +26,9 @@
         <Project Path="templates/blazor/server/src/CleanArchBlazorServer.AppHost/CleanArchBlazorServer.AppHost.csproj" />
         <Project Path="templates/blazor/server/src/CleanArchBlazorServer.ServiceDefaults/CleanArchBlazorServer.ServiceDefaults.csproj" />
         <Project Path="templates/blazor/server/src/CleanArchBlazorServer.Web/CleanArchBlazorServer.Web.csproj" />
+        <Project Path="templates/blazor/server/tests/CleanArchBlazorServer.Application.Tests/CleanArchBlazorServer.Application.Tests.csproj" />
+        <Project Path="templates/blazor/server/tests/CleanArchBlazorServer.Architecture.Tests/CleanArchBlazorServer.Architecture.Tests.csproj" />
+        <Project Path="templates/blazor/server/tests/CleanArchBlazorServer.Functional.Tests/CleanArchBlazorServer.Functional.Tests.csproj" />
         <Project Path="templates/blazor/server/tests/CleanArchBlazorServer.Integration.Tests/CleanArchBlazorServer.Integration.Tests.csproj" />
     </Folder>
     <Folder Name="/templates/grpc/">
@@ -70,5 +73,6 @@
     <Folder Name="/tests/">
         <Project Path="tests/Dorn.Cli.Tests/Dorn.Cli.Tests.csproj" />
         <Project Path="tests/Dorn.Core.Tests/Dorn.Core.Tests.csproj" />
+        <Project Path="tests/Dorn.WebUI.Primitives.Tests/Dorn.WebUI.Primitives.Tests.csproj" />
     </Folder>
 </Solution>
