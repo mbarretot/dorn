@@ -1,5 +1,5 @@
 # Pack Dorn packages to ./artifacts for local dev/CI feed
-param([string]$Version = "1.0.1", [string]$WebUIPrimitivesVersion = "1.0.0")
+param([string]$Version = "1.0.1", [string]$WebUIPrimitivesVersion = $Version)
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "../..")
 $artifactsDir = Join-Path $repoRoot "artifacts"
