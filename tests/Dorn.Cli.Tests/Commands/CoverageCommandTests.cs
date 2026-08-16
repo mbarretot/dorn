@@ -1,8 +1,11 @@
+using System.Text.Json;
 using System.Xml.Linq;
 using Dorn.Cli.Commands.Coverage;
 using Dorn.Cli.Coverage;
+using Dorn.Cli.Output;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Testing;
+using Dorn.Cli.Tests.Output;
 using Dorn.Cli.Theming;
 using NSubstitute;
 using Spectre.Console.Cli;
@@ -11,7 +14,7 @@ using Xunit;
 
 namespace Dorn.Cli.Tests.Commands;
 
-///<summary>Tests for <see cref="CoverageCommand"/>: tier dispatch → freshest-per-tier discovery → merge → threshold gate → table. Drives RunAsync directly (CommandAppTester removed in Spectre.Console.Cli 0.55.0).</summary>
+///<summary>Tests for <see cref="CoverageCommand"/>: tier dispatch → freshest-per-tier discovery → merge → threshold gate → table/JSON. Drives RunAsync directly (CommandAppTester removed in Spectre.Console.Cli 0.55.0).</summary>
 public class CoverageCommandTests : IDisposable
 {
     private readonly string _tempRoot;
@@ -31,7 +34,7 @@ public class CoverageCommandTests : IDisposable
     [Fact]
     public async Task CoverageCommand_WithoutTiers_ReturnsExitOneWithClearMessage()
     {
-        var (_, console, command) = CreateCommand();
+        var (_, console, _, command) = CreateCommand();
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         var settings = new CoverageSettings { Project = _tempRoot };
@@ -48,7 +51,7 @@ public class CoverageCommandTests : IDisposable
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
-        var (_, console, command) = CreateCommand(
+        var (_, console, _, command) = CreateCommand(
             specs: [TierSpec("MyProject.Application.Tests")],
             writeReports: () =>
                 CreateTierReport(
@@ -70,7 +73,7 @@ public class CoverageCommandTests : IDisposable
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
-        var (_, console, command) = CreateCommand(
+        var (_, console, _, command) = CreateCommand(
             specs: [TierSpec("MyProject.Application.Tests")],
             writeReports: () =>
                 CreateTierReport(
@@ -92,7 +95,7 @@ public class CoverageCommandTests : IDisposable
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
-        var (_, console, command) = CreateCommand(
+        var (_, console, _, command) = CreateCommand(
             specs: [TierSpec("MyProject.Application.Tests")],
             writeReports: () =>
                 CreateTierReport(
@@ -114,7 +117,7 @@ public class CoverageCommandTests : IDisposable
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
-        var (_, console, command) = CreateCommand(allSucceeded: false);
+        var (_, console, _, command) = CreateCommand(allSucceeded: false);
         var settings = new CoverageSettings { Project = _tempRoot };
 
         var exitCode = await command.RunAsync(settings, CancellationToken.None);
@@ -129,7 +132,7 @@ public class CoverageCommandTests : IDisposable
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
-        var (_, console, command) = CreateCommand();
+        var (_, console, _, command) = CreateCommand();
         var settings = new CoverageSettings { Project = _tempRoot };
 
         var exitCode = await command.RunAsync(settings, CancellationToken.None);
@@ -145,7 +148,7 @@ public class CoverageCommandTests : IDisposable
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
         CreateTestsDir("MyProject.Architecture.Tests");
-        var (_, console, command) = CreateCommand(
+        var (_, console, _, command) = CreateCommand(
             specs:
             [
                 TierSpec("MyProject.Application.Tests"),
@@ -194,7 +197,9 @@ public class CoverageCommandTests : IDisposable
             SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 10, coveredLines: 9)
         );
         BackdateAllReports(TimeSpan.FromMinutes(10));
-        var (_, console, command) = CreateCommand(specs: [TierSpec("MyProject.Application.Tests")]);
+        var (_, console, _, command) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")]
+        );
         var settings = new CoverageSettings { Project = _tempRoot };
 
         var exitCode = await command.RunAsync(settings, CancellationToken.None);
@@ -210,7 +215,7 @@ public class CoverageCommandTests : IDisposable
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
         CreateTestsDir("MyProject.Architecture.Tests");
-        var (_, console, command) = CreateCommand(
+        var (_, console, _, command) = CreateCommand(
             specs:
             [
                 TierSpec("MyProject.Application.Tests"),
@@ -255,7 +260,7 @@ public class CoverageCommandTests : IDisposable
             totalLines: 10,
             coveredLines: 10
         );
-        var (_, console, command) = CreateCommand(
+        var (_, console, _, command) = CreateCommand(
             specs: [TierSpec("MyProject.Application.Tests")],
             writeReports: () =>
                 CreateTierReport("MyProject.Application.Tests", [.. belowThreshold, aboveThreshold])
@@ -275,7 +280,7 @@ public class CoverageCommandTests : IDisposable
         CreateSolution("MyProject.slnx");
         CreateWebApi("MyProject.WebApi");
         CreateTestsDir("MyProject.Application.Tests");
-        var (_, console, command) = CreateCommand(
+        var (_, console, _, command) = CreateCommand(
             specs: [TierSpec("MyProject.Application.Tests")],
             writeReports: () =>
                 CreateTierReport(
@@ -305,7 +310,312 @@ public class CoverageCommandTests : IDisposable
         Assert.Contains("HighClass", console.Output);
     }
 
-    private (IDotnetTestRunner Runner, TestConsole Console, CoverageCommand Command) CreateCommand(
+    // --format handling (R1/R2/R3/R6/R7/R8/R9)
+
+    [Fact]
+    public async Task Coverage_InvalidFormat_ExitsOneWithErrorAndEmitsNoJson()
+    {
+        var (_, console, writer, command) = CreateCommand();
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        var settings = new CoverageSettings { Project = _tempRoot, Format = "xml" };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("Unknown format", console.Output);
+        Assert.Empty(writer.Lines);
+    }
+
+    [Fact]
+    public async Task Coverage_FormatJsonNoTestTiers_OutcomeNoTestTiersExitOne()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        var (_, console, writer, command) = CreateCommand();
+        var settings = new CoverageSettings { Project = _tempRoot, Format = "json" };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Equal(string.Empty, console.Output);
+        var report = DeserializeSingle(writer);
+        Assert.Equal("no-test-tiers", report.Data.Outcome);
+        Assert.False(report.Success);
+        Assert.Equal(1, report.ExitCode);
+    }
+
+    [Fact]
+    public async Task Coverage_FormatJsonTestRunFailed_OutcomeTestRunFailedExitOne()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+        var (_, console, writer, command) = CreateCommand(allSucceeded: false);
+        var settings = new CoverageSettings { Project = _tempRoot, Format = "json" };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Equal(string.Empty, console.Output);
+        var report = DeserializeSingle(writer);
+        Assert.Equal("test-run-failed", report.Data.Outcome);
+    }
+
+    [Fact]
+    public async Task Coverage_FormatJsonNoReport_OutcomeNoReportExitOne()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+        var (_, console, writer, command) = CreateCommand();
+        var settings = new CoverageSettings { Project = _tempRoot, Format = "json" };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Equal(string.Empty, console.Output);
+        var report = DeserializeSingle(writer);
+        Assert.Equal("no-report", report.Data.Outcome);
+    }
+
+    [Fact]
+    public async Task Coverage_FormatJsonMissingTierDir_ReturnsStructuredArrayNotProse()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+        CreateTestsDir("MyProject.Architecture.Tests");
+        var (_, console, writer, command) = CreateCommand(
+            specs:
+            [
+                TierSpec("MyProject.Application.Tests"),
+                TierSpec("MyProject.Architecture.Tests"),
+            ],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 10, coveredLines: 9)
+                )
+        );
+        var settings = new CoverageSettings { Project = _tempRoot, Format = "json" };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(string.Empty, console.Output);
+        var report = DeserializeSingle(writer);
+        Assert.Equal(["MyProject.Architecture.Tests"], report.Data.MissingTierDirs);
+    }
+
+    [Fact]
+    public async Task Coverage_FormatJsonBelowThreshold_SuccessFalseExitOneOutcomeBelowThreshold()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+        var (_, console, writer, command) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 100, coveredLines: 50)
+                )
+        );
+        var settings = new CoverageSettings { Project = _tempRoot, Format = "json" };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Equal(string.Empty, console.Output);
+        var report = DeserializeSingle(writer);
+        Assert.Equal("below-threshold", report.Data.Outcome);
+        Assert.False(report.Success);
+        Assert.False(report.Data.ThresholdPassed);
+        Assert.Equal(0.5, report.Data.LineRate);
+    }
+
+    [Fact]
+    public async Task Coverage_FormatJsonPasses_OutcomeOkThresholdPassedTrueExitZeroClassesNonEmpty()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+        var (_, console, writer, command) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 100, coveredLines: 85)
+                )
+        );
+        var settings = new CoverageSettings { Project = _tempRoot, Format = "json" };
+
+        var exitCode = await command.RunAsync(settings, CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(string.Empty, console.Output);
+        var report = DeserializeSingle(writer);
+        Assert.Equal("ok", report.Data.Outcome);
+        Assert.True(report.Data.ThresholdPassed);
+        Assert.True(report.Success);
+        Assert.NotEmpty(report.Data.Classes);
+        // lineRate is a 0-1 fraction, not a percentage (R8).
+        Assert.Equal(0.85, report.Data.LineRate);
+    }
+
+    [Fact]
+    public async Task Coverage_FormatJsonAllFlagIgnored_ClassesAlwaysFullListRegardlessOfAll()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+        var belowThreshold = Enumerable
+            .Range(1, 18)
+            .Select(i =>
+                SimpleClass(
+                    "MyApp",
+                    $"BelowClass{i:D2}",
+                    $"BelowClass{i:D2}.cs",
+                    totalLines: 10,
+                    coveredLines: 0
+                )
+            )
+            .ToArray();
+        var aboveThreshold = SimpleClass(
+            "MyApp",
+            "AboveClass",
+            "AboveClass.cs",
+            totalLines: 10,
+            coveredLines: 10
+        );
+
+        var (_, _, writerWithoutAll, commandWithoutAll) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport("MyProject.Application.Tests", [.. belowThreshold, aboveThreshold])
+        );
+        await commandWithoutAll.RunAsync(
+            new CoverageSettings
+            {
+                Project = _tempRoot,
+                Format = "json",
+                All = false,
+            },
+            CancellationToken.None
+        );
+        var reportWithoutAll = DeserializeSingle(writerWithoutAll);
+
+        var (_, _, writerWithAll, commandWithAll) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport("MyProject.Application.Tests", [.. belowThreshold, aboveThreshold])
+        );
+        await commandWithAll.RunAsync(
+            new CoverageSettings
+            {
+                Project = _tempRoot,
+                Format = "json",
+                All = true,
+            },
+            CancellationToken.None
+        );
+        var reportWithAll = DeserializeSingle(writerWithAll);
+
+        Assert.Equal(19, reportWithoutAll.Data.Classes.Count);
+        Assert.Equal(19, reportWithAll.Data.Classes.Count);
+        Assert.Contains(reportWithoutAll.Data.Classes, c => c.Class == "AboveClass");
+    }
+
+    [Fact]
+    public async Task Coverage_SameFixtureBothFormats_ExitCodesAreIdentical()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+
+        var (_, _, _, tableCommand) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 100, coveredLines: 50)
+                )
+        );
+        var tableExitCode = await tableCommand.RunAsync(
+            new CoverageSettings { Project = _tempRoot },
+            CancellationToken.None
+        );
+
+        var (_, _, _, jsonCommand) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 100, coveredLines: 50)
+                )
+        );
+        var jsonExitCode = await jsonCommand.RunAsync(
+            new CoverageSettings { Project = _tempRoot, Format = "json" },
+            CancellationToken.None
+        );
+
+        Assert.Equal(tableExitCode, jsonExitCode);
+    }
+
+    [Fact]
+    public async Task Coverage_FormatTableExplicit_RendersIdenticalToOmittedFormat()
+    {
+        CreateSolution("MyProject.slnx");
+        CreateWebApi("MyProject.WebApi");
+        CreateTestsDir("MyProject.Application.Tests");
+
+        var (_, console1, _, command1) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 100, coveredLines: 85)
+                )
+        );
+        await command1.RunAsync(
+            new CoverageSettings { Project = _tempRoot },
+            CancellationToken.None
+        );
+
+        var (_, console2, _, command2) = CreateCommand(
+            specs: [TierSpec("MyProject.Application.Tests")],
+            writeReports: () =>
+                CreateTierReport(
+                    "MyProject.Application.Tests",
+                    SimpleClass("MyApp", "Widget", "Widget.cs", totalLines: 100, coveredLines: 85)
+                )
+        );
+        await command2.RunAsync(
+            new CoverageSettings { Project = _tempRoot, Format = "table" },
+            CancellationToken.None
+        );
+
+        Assert.Equal(console1.Output, console2.Output);
+    }
+
+    private static CliEnvelope<CoverageReport> DeserializeSingle(RecordingCliOutputWriter writer)
+    {
+        var line = Assert.Single(writer.Lines);
+        var envelope = JsonSerializer.Deserialize<CliEnvelope<CoverageReport>>(
+            line,
+            CliJson.Options
+        );
+        Assert.NotNull(envelope);
+        return envelope!;
+    }
+
+    private (
+        IDotnetTestRunner Runner,
+        TestConsole Console,
+        RecordingCliOutputWriter Writer,
+        CoverageCommand Command
+    ) CreateCommand(
         IReadOnlyList<CapturedProcessSpec>? specs = null,
         bool allSucceeded = true,
         Action? writeReports = null
@@ -317,12 +627,13 @@ public class CoverageCommandTests : IDisposable
                 Arg.Any<ProjectContext>(),
                 Arg.Any<DatabaseProvider>(),
                 Arg.Any<IReadOnlyList<TestTier>>(),
-                Arg.Any<CancellationToken>()
+                Arg.Any<CancellationToken>(),
+                Arg.Any<bool>()
             )
             .Returns(ci =>
             {
                 writeReports?.Invoke();
-                return new TestRunResult(specs ?? [], allSucceeded);
+                return new TestRunResult(specs ?? [], allSucceeded, []);
             });
 
         var console = new TestConsole().Width(int.MaxValue);
@@ -331,9 +642,10 @@ public class CoverageCommandTests : IDisposable
         var theme = new DornTheme(console);
         var resolver = new ProjectContextResolver();
         var reporter = new CoverageReporter();
-        var command = new CoverageCommand(resolver, testRunner, reporter, console, theme);
+        var writer = new RecordingCliOutputWriter();
+        var command = new CoverageCommand(resolver, testRunner, reporter, console, theme, writer);
 
-        return (testRunner, console, command);
+        return (testRunner, console, writer, command);
     }
 
     private CapturedProcessSpec TierSpec(string tierDirName) =>

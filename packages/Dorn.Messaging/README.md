@@ -1,6 +1,17 @@
+<!-- prettier-ignore -->
+<div align="center">
+
+<img src="../../docs/images/packages/dorn-messaging-icon.svg" alt="Dorn Messaging package icon with a central mediator routing messages" height="92" />
+
 # Dorn.Messaging
 
-An MIT-licensed in-process mediator for [`Dorn.Messaging.Contracts`](../Dorn.Messaging.Contracts/README.md).
+**An MIT-licensed in-process mediator for [`Dorn.Messaging.Contracts`](../Dorn.Messaging.Contracts/README.md).**
+
+</div>
+
+<p align="center">
+  <img src="../../docs/images/packages/dorn-messaging-flow.gif" alt="Animated mediator flow routing a request through pipeline behaviors and publishing a notification to multiple handlers" width="820" />
+</p>
 
 ## ⚡ Install and register
 

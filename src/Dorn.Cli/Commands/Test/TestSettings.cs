@@ -4,7 +4,7 @@ using Spectre.Console.Cli;
 
 namespace Dorn.Cli.Commands.Test;
 
-public sealed class TestSettings : ProjectCommandSettings
+public sealed class TestSettings : FormattedCommandSettings
 {
     [CommandOption("-t|--tier")]
     [Description(

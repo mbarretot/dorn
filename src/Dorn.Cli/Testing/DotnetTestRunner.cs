@@ -23,7 +23,8 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
         ProjectContext context,
         DatabaseProvider database,
         IReadOnlyList<TestTier> tiers,
-        CancellationToken ct
+        CancellationToken ct,
+        bool suppressLiveOutput = false
     )
     {
         // Resolve tier plans and emit the Docker warning up front — writes inside a live
@@ -45,13 +46,14 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
 
         if (plans.Count == 0)
         {
-            return new TestRunResult([], AllSucceeded: true);
+            return new TestRunResult([], AllSucceeded: true, TierResults: []);
         }
 
         var specs = new List<CapturedProcessSpec>();
+        var tierResults = new List<TierRunResult>();
         var allSucceeded = true;
 
-        if (_theme.LiveRegionsEnabled)
+        if (_theme.LiveRegionsEnabled && !suppressLiveOutput)
         {
             await _theme
                 .CreateProgress()
@@ -65,7 +67,15 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
                             maxValue: 1
                         );
                         task.StartTask();
-                        if (!await RunTierAsync(context, plan.Path, specs, ct))
+                        var tierResult = await RunTierAsync(
+                            context,
+                            plan.Tier,
+                            plan.Path,
+                            specs,
+                            ct
+                        );
+                        tierResults.Add(tierResult);
+                        if (!tierResult.Succeeded)
                             allSucceeded = false;
                         task.Increment(1);
                     }
@@ -75,16 +85,19 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
         {
             foreach (var plan in plans)
             {
-                if (!await RunTierAsync(context, plan.Path, specs, ct))
+                var tierResult = await RunTierAsync(context, plan.Tier, plan.Path, specs, ct);
+                tierResults.Add(tierResult);
+                if (!tierResult.Succeeded)
                     allSucceeded = false;
             }
         }
 
-        return new TestRunResult(specs, allSucceeded);
+        return new TestRunResult(specs, allSucceeded, tierResults);
     }
 
-    private async Task<bool> RunTierAsync(
+    private async Task<TierRunResult> RunTierAsync(
         ProjectContext context,
+        TestTier tier,
         string tierPath,
         List<CapturedProcessSpec> specs,
         CancellationToken ct
@@ -106,14 +119,35 @@ public sealed class DotnetTestRunner : IDotnetTestRunner
                 "--results-directory",
                 resultsDirectory,
                 "--no-build",
+                "--logger",
+                "trx;LogFileName=dorn.trx",
             ],
             context.Root
         );
 
         specs.Add(new CapturedProcessSpec(spec.FileName, spec.Arguments, spec.WorkingDirectory));
 
+        // -2s slack covers coarse-granularity filesystems and rejects a stale TRX left over
+        // from a previous run when dotnet itself fails to start.
+        var tierStartedUtc = DateTime.UtcNow.AddSeconds(-2);
         var exitCode = await _processRunner.RunAsync(spec, ct);
-        return exitCode == 0;
+        var succeeded = exitCode == 0;
+
+        var trxPath = Path.Combine(resultsDirectory, "dorn.trx");
+        var summary =
+            File.Exists(trxPath) && File.GetLastWriteTimeUtc(trxPath) >= tierStartedUtc
+                ? TrxSummaryReader.TryRead(trxPath)
+                : null;
+
+        return new TierRunResult(
+            tier,
+            succeeded,
+            summary?.Total,
+            summary?.Passed,
+            summary?.Failed,
+            summary?.Skipped,
+            summary?.DurationSeconds
+        );
     }
 
     private static string? ResolveTierPath(ProjectContext context, TestTier tier)

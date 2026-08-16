@@ -1,0 +1,31 @@
+@page "/playground/card"
+
+<PageTitle>Playground · Card</PageTitle>
+
+<div class="mx-auto flex max-w-2xl flex-col gap-8 p-8">
+    <PlaygroundSection Title="Slot composition" Description="Header, content, and footer render only when supplied.">
+        <Card>
+            <CardHeader>
+                <CardTitle>Project Alpha</CardTitle>
+                <CardDescription>A short description of what this card represents.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p class="text-sm text-foreground">
+                    Card content composes any children — text, other components, or forms.
+                </p>
+            </CardContent>
+            <CardFooter>
+                <Button Variant="ButtonVariant.Outline">Cancel</Button>
+                <Button>Save</Button>
+            </CardFooter>
+        </Card>
+    </PlaygroundSection>
+
+    <PlaygroundSection Title="Content-only card" Description="Header and footer are optional.">
+        <Card>
+            <CardContent>
+                <p class="text-sm text-foreground">A card with only a content slot.</p>
+            </CardContent>
+        </Card>
+    </PlaygroundSection>
+</div>

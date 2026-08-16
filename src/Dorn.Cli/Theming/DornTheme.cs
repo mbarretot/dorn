@@ -88,6 +88,14 @@ public sealed class DornTheme : IDornTheme
             "Generate a Clean Architecture worker service (sqlite + EF Core + Aspire)."
         );
         table.AddRow(
+            $"[{DornPalette.SuccessMarkup}]new blazor wasm[/] <name>",
+            "Generate a Blazor WebAssembly app with a Tailwind design system (Aspire)."
+        );
+        table.AddRow(
+            $"[{DornPalette.SuccessMarkup}]new blazor server[/] <name>",
+            "Generate a Blazor Server app with Interactive Server rendering and a Tailwind design system (Aspire)."
+        );
+        table.AddRow(
             $"[{DornPalette.SuccessMarkup}]test[/]",
             "Run the generated project's test tiers."
         );

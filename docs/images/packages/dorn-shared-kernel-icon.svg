@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title description">
+  <title id="title">Dorn Shared Kernel package icon</title>
+  <desc id="description">A stable layered foundation supports a domain core and its event.</desc>
+  <rect x="4" y="4" width="248" height="248" rx="40" fill="#F8F5EF" stroke="#292826" stroke-width="8"/>
+  <g transform="translate(30 24) scale(0.057554)" aria-hidden="true">
+    <path d="M255 76 379 0 754 219 754 530 618 618 618 300Z" fill="#292826"/>
+    <path d="M128 260 242 188 535 362 535 613 411 695 411 440Z" fill="#292826"/>
+    <path d="M0 453 114 382 321 504 321 657Z" fill="#E8613E"/>
+  </g>
+  <path d="m128 77 38 22v44l-38 22-38-22V99z" fill="#FDEAE3" stroke="#292826" stroke-width="7" stroke-linejoin="round"/>
+  <circle cx="128" cy="121" r="14" fill="#E8613E"/>
+  <path d="M128 77V62c0-11 9-20 20-20h22" fill="none" stroke="#E8613E" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="182" cy="42" r="12" fill="#E8613E" stroke="#292826" stroke-width="6"/>
+  <path d="m59 160 34-19 34 19-34 20z" fill="#FFFFFF" stroke="#292826" stroke-width="7" stroke-linejoin="round"/>
+  <path d="m129 160 34-19 34 19-34 20z" fill="#FFFFFF" stroke="#292826" stroke-width="7" stroke-linejoin="round"/>
+  <path d="m48 184 45-25 45 25-45 26z" fill="#E8613E" stroke="#292826" stroke-width="7" stroke-linejoin="round"/>
+  <path d="m118 184 45-25 45 25-45 26z" fill="#FDEAE3" stroke="#292826" stroke-width="7" stroke-linejoin="round"/>
+</svg>

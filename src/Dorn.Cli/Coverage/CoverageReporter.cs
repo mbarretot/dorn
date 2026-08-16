@@ -139,13 +139,18 @@ public sealed class CoverageReporter
         return doc;
     }
 
-    /// <summary>Filename-based exclusion for build output, migrations, and compiler/tool-generated files.</summary>
+    /// <summary>Filename-based exclusion for build output, migrations, generated demo/layout markup, and compiler/tool-generated files.</summary>
     private static bool IsExcluded(string filename)
     {
         var segments = filename.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (segments.Any(s => s.Equals("obj", StringComparison.OrdinalIgnoreCase)))
             return true;
         if (segments.Any(s => s.Equals("Migrations", StringComparison.OrdinalIgnoreCase)))
+            return true;
+        // Demo markup and layout shells have no behavior of their own to assert on.
+        if (segments.Any(s => s.Equals("Playground", StringComparison.OrdinalIgnoreCase)))
+            return true;
+        if (segments.Any(s => s.Equals("Layout", StringComparison.OrdinalIgnoreCase)))
             return true;
 
         return filename.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase)

@@ -6,6 +6,7 @@ using Dorn.Cli.Commands.Test;
 using Dorn.Cli.Coverage;
 using Dorn.Cli.Execution;
 using Dorn.Cli.Infrastructure;
+using Dorn.Cli.Output;
 using Dorn.Cli.Projects;
 using Dorn.Cli.Templating;
 using Dorn.Cli.Testing;
@@ -26,6 +27,7 @@ services.AddDornCore();
 services.AddSingleton(AnsiConsole.Console);
 services.AddSingleton<IDornTheme, DornTheme>();
 services.AddSingleton<IProcessRunner, ProcessRunner>();
+services.AddSingleton<ICliOutputWriter, ConsoleCliOutputWriter>();
 services.AddSingleton<ISignalRegistration, SignalRegistration>();
 services.AddSingleton<IProjectContextResolver, ProjectContextResolver>();
 services.AddSingleton<ITemplatesRootLocator, TemplatesRootLocator>();
@@ -56,6 +58,22 @@ app.Configure(config =>
                 .WithDescription(
                     "Generate a Clean Architecture worker service (sqlite + EF Core + Aspire)."
                 );
+            branch.AddBranch(
+                "blazor",
+                blazorBranch =>
+                {
+                    blazorBranch
+                        .AddCommand<NewBlazorWasmCommand>("wasm")
+                        .WithDescription(
+                            "Generate a Blazor WebAssembly app with a Tailwind design system (Aspire)."
+                        );
+                    blazorBranch
+                        .AddCommand<NewBlazorServerCommand>("server")
+                        .WithDescription(
+                            "Generate a Blazor Server app with Interactive Server rendering and a Tailwind design system (Aspire)."
+                        );
+                }
+            );
         }
     );
     config

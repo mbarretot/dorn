@@ -6,58 +6,34 @@ Accepted
 
 ## Context
 
-Dorn needs a generation engine to turn `templates/webapi` plus a project name and
-parameters into a new project on disk: either shell out to the `dotnet new` CLI and
-parse its stdout/exit code, or embed `Microsoft.TemplateEngine.Edge`, `.Abstractions`,
-and `.Orchestrator.RunnableProjects` (the libraries that power `dotnet new` itself)
-directly inside `Dorn.Core`.
-
-Shelling out is simpler initially but has real downsides for a tool meant to be embedded
-elsewhere:
-
-- **Mutates global state**: changes the user's global `dotnet new` cache
-  (`~/.templateengine`).
-- **Pollutes discovery**: adds Dorn's templates to `dotnet new --list` unasked.
-- **Untyped results**: unstructured stdout/exit codes rather than a typed result.
-- **Harder to test**: an in-process fake isn't possible when work happens in a spawned
-  process.
+Dorn can shell out to `dotnet new` or run the same Template Engine in-process. Shelling out is initially simpler, but it mutates the user's global template cache and returns only process output.
 
 ## Decision
 
-`Dorn.Core` embeds the Template Engine directly rather than shelling out:
+Embed `Microsoft.TemplateEngine.Edge` behind Dorn-owned contracts.
 
-- `DornTemplateEngineHost` builds an isolated `IEngineEnvironmentSettings` rooted at
-  `~/.dorn/template-engine`, never the user's global `~/.templateengine`.
-- `FileSystemTemplateCatalog` scans `templates/` directly via
-  `Microsoft.TemplateEngine.Edge.Settings.Scanner`, rather than "installing" templates
-  through the package-manager machinery meant for versioned NuGet-distributed templates:
-  Dorn ships its templates as source alongside the tool.
-- `TemplateEngineGenerationEngine` drives instantiation via
-  `Microsoft.TemplateEngine.Edge.Template.TemplateCreator.InstantiateAsync`, mapping the
-  resulting `ITemplateCreationResult` onto Dorn's own `GenerationResult`/
-  `GenerationDiagnostic` types.
-- All of this is isolated behind `IGenerationEngine`/`ITemplateCatalog` in
-  `Dorn.Abstractions`, so `Dorn.Cli` and other consumers never reference
-  `Microsoft.TemplateEngine.*` directly.
+| Component | Responsibility |
+| --- | --- |
+| `DornTemplateEngineHost` | Isolated settings under `~/.dorn/template-engine` |
+| `FileSystemTemplateCatalog` | Scan source templates through `Scanner` |
+| `TemplateEngineGenerationEngine` | Instantiate through `TemplateCreator` |
+| `IGenerationEngine`, `ITemplateCatalog` | Keep Template Engine types out of CLI consumers |
 
-That isolation mattered immediately: the plan assumed a `Bootstrapper` façade class per
-older docs, but **that class does not exist** in the version actually used (`10.0.301`).
-The real entry points, `EngineEnvironmentSettings` (constructed directly), `Scanner`, and
-`TemplateCreator`, were already confined to `Dorn.Core`, so adapting to the real API only
-touched that one project.
+The scanned mount stays alive for the process because template content is read lazily.
 
 ## Consequences
 
-- No mutation of the user's global `dotnet new` state; Dorn's template cache lives at
-  `~/.dorn/template-engine`, fully separate.
-- Structured, typed results instead of stdout-parsing, rendered directly as a Spectre
-  table/panel.
-- Testable in-process: `tests/Dorn.Core.Tests` exercises the real engine against a small
-  fixture template without spawning a subprocess.
-- **Accepted risk**: the `Microsoft.TemplateEngine.*` public API isn't guaranteed stable
-  across SDK versions; it already broke once. All usage stays behind
-  `IGenerationEngine`/`ITemplateCatalog`, so a future break again only touches
-  `Dorn.Core`.
-- `Microsoft.TemplateEngine.*` packages must stay version-pinned to match the installed
-  SDK (see ADR 0001); they track the SDK's internal implementation, not independent
-  versioning.
+- Dorn never changes `~/.templateengine` or pollutes `dotnet new --list`.
+- Generation returns typed results and is testable in-process.
+- Template Engine API changes are isolated to `Dorn.Core`.
+- The package surface is SDK-coupled and must be upgraded with care.
+
+## Alternatives
+
+- **Shell out to `dotnet new`:** rejected due to global state, untyped output, and weaker tests.
+- **Use older `Bootstrapper` examples:** rejected because that facade is absent from the pinned SDK surface.
+
+## Related
+
+- [ADR 0001: .NET 10](./0001-target-framework-net10.md)
+- [Architecture](../architecture.md)

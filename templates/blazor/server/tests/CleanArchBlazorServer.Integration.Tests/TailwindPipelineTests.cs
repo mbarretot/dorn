@@ -1,0 +1,92 @@
+using System.Text.RegularExpressions;
+using Xunit;
+
+namespace CleanArchBlazorServer.Integration.Tests;
+
+/// <summary>
+/// Asserts the CSS the build actually produced, not what the source declares (design's stated
+/// non-negotiable: without this, a broken pipeline still ships green). The
+/// <c>ProjectReference</c> in this project's csproj guarantees <c>DornBuildTailwindCss</c> has
+/// already run by the time these tests execute.
+/// </summary>
+public class TailwindPipelineTests
+{
+    [Fact]
+    public void GeneratedAppCss_ContainsTokenLayerAndNonDefaultThemeSelector()
+    {
+        var appCss = ReadGeneratedAppCss();
+
+        Assert.True(
+            appCss.Length > 5 * 1024,
+            $"Expected app.css to exceed 5 KB, was {appCss.Length} bytes."
+        );
+        Assert.Contains("--ui-background", appCss, StringComparison.Ordinal);
+
+        // Both theme files always ship regardless of the --theme generation choice (design B6),
+        // so the non-default theme's selector proves both token sets survived the build, not
+        // just the one matching this template's boot default.
+        Assert.Matches(new Regex("\\[data-ui-theme=[\"']?rose[\"']?\\]"), appCss);
+    }
+
+    [Fact]
+    public void GeneratedAppCss_ContainsTokenUtilitiesEmittedByComponentsAndPreflightMarker()
+    {
+        var appCss = ReadGeneratedAppCss();
+
+        Assert.Contains(".bg-primary", appCss, StringComparison.Ordinal);
+        Assert.Contains(".rounded-lg", appCss, StringComparison.Ordinal);
+
+        // Stable substring from Tailwind v4's preflight base layer, present regardless of
+        // minification — proves preflight (not just utilities) made it into the build.
+        Assert.Contains("-webkit-text-size-adjust", appCss, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GeneratedAppCss_ExcludesUtilityNoComponentUses()
+    {
+        var appCss = ReadGeneratedAppCss();
+
+        // Proves @source content scanning actually ran instead of dumping the full utility
+        // corpus: nothing in this template uses aspect-video, so it must not appear.
+        Assert.DoesNotContain("aspect-video", appCss, StringComparison.Ordinal);
+    }
+
+    private static string ReadGeneratedAppCss()
+    {
+        var appCssPath = ResolveAppCssPath();
+        Assert.True(
+            File.Exists(appCssPath),
+            $"Expected a built stylesheet at '{appCssPath}'. Build the Web project first."
+        );
+
+        return File.ReadAllText(appCssPath);
+    }
+
+    private static string ResolveAppCssPath()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (
+            current is not null
+            && !File.Exists(Path.Combine(current.FullName, "CleanArchBlazorServer.slnx"))
+        )
+        {
+            current = current.Parent;
+        }
+
+        if (current is null)
+        {
+            throw new DirectoryNotFoundException(
+                "Could not locate the generated solution root (CleanArchBlazorServer.slnx) by "
+                    + $"walking up from '{AppContext.BaseDirectory}'."
+            );
+        }
+
+        return Path.Combine(
+            current.FullName,
+            "src",
+            "CleanArchBlazorServer.Web",
+            "wwwroot",
+            "app.css"
+        );
+    }
+}
