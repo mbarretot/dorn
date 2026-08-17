@@ -19,7 +19,7 @@ public sealed class NewBlazorWasmSettings : CommandSettings
 
     [CommandOption("-t|--theme")]
     [Description(
-        "Boot-default theme: slate (default) or rose. Prompted interactively if omitted and the session is interactive."
+        "Boot-default theme: slate (default), rose, neutral, linear, primer, or lightning. Prompted interactively if omitted and the session is interactive."
     )]
     public string? Theme { get; init; }
 
