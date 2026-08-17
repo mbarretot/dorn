@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Dorn.Abstractions.Generation;
 using Dorn.Core.DependencyInjection;
 using Dorn.Core.Templating;
+using Dorn.Core.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -179,6 +181,115 @@ public class BlazorServerTemplateGenerationTests
                 Directory.Delete(outputDirectory, recursive: true);
             }
         }
+    }
+
+    /// <summary>
+    /// C6 go/no-go for the 4 new themes: each of <c>--theme neutral|linear|primer|lightning</c>
+    /// must replace <c>theme-boot.js</c>'s literal (mirrors <c>GenerateWithThemeRose...</c> above)
+    /// and must not corrupt the other 5 themes' own <c>data-ui-theme</c> selectors.
+    /// </summary>
+    [Theory]
+    [InlineData("neutral")]
+    [InlineData("linear")]
+    [InlineData("primer")]
+    [InlineData("lightning")]
+    public async Task GenerateWithNewTheme_ReplacesBootDefaultThemeLiteral_WithoutCorruptingOtherThemeCss(
+        string theme
+    )
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var projectName = $"DornServerTheme{theme}App";
+        var outputDirectory = Path.Combine(
+            RealTempRoot,
+            $"dorn-tests-blazor-server-theme-{theme}-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-blazor-server",
+                projectName,
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["Theme"] = theme }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webRoot = Path.Combine(outputDirectory, "src", $"{projectName}.Web");
+            var themeBootPath = Path.Combine(webRoot, "wwwroot", "theme-boot.js");
+            Assert.True(File.Exists(themeBootPath), $"Expected boot script at '{themeBootPath}'.");
+
+            var themeBoot = await File.ReadAllTextAsync(themeBootPath);
+            Assert.Contains($"DEFAULT_THEME = \"{theme}\"", themeBoot, StringComparison.Ordinal);
+            Assert.DoesNotContain("DEFAULT_THEME = \"slate\"", themeBoot, StringComparison.Ordinal);
+
+            foreach (var otherTheme in ThemeValidator.ValidThemes)
+            {
+                var otherThemeCssPath = Path.Combine(
+                    webRoot,
+                    "Styles",
+                    "themes",
+                    $"{otherTheme}.css"
+                );
+                Assert.True(
+                    File.Exists(otherThemeCssPath),
+                    $"Expected theme stylesheet at '{otherThemeCssPath}'."
+                );
+                var otherThemeCss = await File.ReadAllTextAsync(otherThemeCssPath);
+                Assert.Contains(
+                    $"[data-ui-theme='{otherTheme}']",
+                    otherThemeCss,
+                    StringComparison.Ordinal
+                );
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Drift guard (C6.4): <c>template.json</c>'s <c>Theme</c> choices must exactly match
+    /// <c>ThemeValidator.ValidThemes</c> so the CLI and the generator manifest can never diverge.
+    /// </summary>
+    [Fact]
+    public void TemplateJsonThemeChoices_ExactlyMatch_ThemeValidatorAllowList()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        var templateJsonPath = Path.Combine(
+            templatesRoot,
+            "blazor",
+            "server",
+            ".template.config",
+            "template.json"
+        );
+        Assert.True(File.Exists(templateJsonPath), $"Expected {templateJsonPath} to exist.");
+
+        using var templateJson = JsonDocument.Parse(File.ReadAllText(templateJsonPath));
+        var choices = templateJson
+            .RootElement.GetProperty("symbols")
+            .GetProperty("Theme")
+            .GetProperty("choices")
+            .EnumerateArray()
+            .Select(choice => choice.GetProperty("choice").GetString()!)
+            .ToArray();
+
+        Assert.Equal(ThemeValidator.ValidThemes, choices);
     }
 
     /// <summary>Phase 6 playground toggle, mirroring blazor-wasm-template's own test.</summary>

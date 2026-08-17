@@ -32,7 +32,11 @@
         {
           "choice": "rose",
           "description": "Warm neutral with a rose/pink primary accent."
-        }
+        },
+        { "choice": "neutral", "description": "Neutral grayscale with balanced contrast." },
+        { "choice": "linear", "description": "Cool modern palette with restrained accents." },
+        { "choice": "primer", "description": "Productive blue-gray palette with compact radii." },
+        { "choice": "lightning", "description": "Crisp electric palette with compact radii." }
       ],
       "defaultValue": "slate",
       "replaces": "__DORN_DEFAULT_THEME__",
