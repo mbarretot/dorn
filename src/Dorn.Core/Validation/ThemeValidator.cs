@@ -13,6 +13,10 @@ public static class ThemeValidator
     {
         "slate",
         "rose",
+        "neutral",
+        "linear",
+        "primer",
+        "lightning",
     };
 
     public static ThemeValidationResult Validate(string? value)
@@ -25,7 +29,7 @@ public static class ThemeValidator
         if (!ValidThemes.Contains(value))
         {
             return ThemeValidationResult.Invalid(
-                $"Unknown theme '{value}'. Valid values are 'slate', 'rose'."
+                $"Unknown theme '{value}'. Valid values are 'slate', 'rose', 'neutral', 'linear', 'primer', 'lightning'."
             );
         }
 
