@@ -9,15 +9,15 @@ public sealed record ThemeValidationResult(bool IsValid, string? ErrorMessage)
 
 public static class ThemeValidator
 {
-    private static readonly HashSet<string> ValidThemes = new(StringComparer.OrdinalIgnoreCase)
-    {
+    public static readonly IReadOnlyList<string> ValidThemes =
+    [
         "slate",
         "rose",
         "neutral",
         "linear",
         "primer",
         "lightning",
-    };
+    ];
 
     public static ThemeValidationResult Validate(string? value)
     {
@@ -26,10 +26,11 @@ public static class ThemeValidator
             return ThemeValidationResult.Valid;
         }
 
-        if (!ValidThemes.Contains(value))
+        if (!ValidThemes.Contains(value, StringComparer.OrdinalIgnoreCase))
         {
+            var quotedThemes = string.Join(", ", ValidThemes.Select(theme => $"'{theme}'"));
             return ThemeValidationResult.Invalid(
-                $"Unknown theme '{value}'. Valid values are 'slate', 'rose', 'neutral', 'linear', 'primer', 'lightning'."
+                $"Unknown theme '{value}'. Valid values are {quotedThemes}."
             );
         }
 
