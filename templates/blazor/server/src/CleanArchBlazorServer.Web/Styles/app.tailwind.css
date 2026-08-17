@@ -13,6 +13,7 @@
    these paths use (design's Integration.Tests/TailwindPipelineTests asserts on this). */
 @source "../Components/**/*.razor";
 @source "../Features/**/*.razor";
+@source inline("bg-success text-success-foreground bg-warning text-warning-foreground");
 
 @theme inline {
   --color-background: var(--ui-background);
@@ -31,6 +32,10 @@
   --color-accent-foreground: var(--ui-accent-foreground);
   --color-destructive: var(--ui-destructive);
   --color-destructive-foreground: var(--ui-destructive-foreground);
+  --color-success: var(--ui-success);
+  --color-success-foreground: var(--ui-success-foreground);
+  --color-warning: var(--ui-warning);
+  --color-warning-foreground: var(--ui-warning-foreground);
   --color-border: var(--ui-border);
   --color-input: var(--ui-input);
   --color-ring: var(--ui-ring);
