@@ -8,6 +8,10 @@ public class ThemeValidatorTests
     [Theory]
     [InlineData("slate")]
     [InlineData("rose")]
+    [InlineData("neutral")]
+    [InlineData("linear")]
+    [InlineData("primer")]
+    [InlineData("lightning")]
     [InlineData("SLATE")]
     public void Validate_WithAllowedTheme_ReturnsValid(string theme)
     {
