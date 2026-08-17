@@ -19,6 +19,10 @@
   --ui-accent-foreground: oklch(0.257 0.03 16);
   --ui-destructive: oklch(0.577 0.245 27.325);
   --ui-destructive-foreground: oklch(0.969 0.015 12.422);
+  --ui-success: oklch(0.548 0.14 152);
+  --ui-success-foreground: oklch(0.969 0.015 12.422);
+  --ui-warning: oklch(0.64 0.13 75);
+  --ui-warning-foreground: oklch(0.969 0.015 12.422);
   --ui-border: oklch(0.929 0.02 12.5);
   --ui-input: oklch(0.929 0.02 12.5);
   --ui-ring: oklch(0.586 0.222 17.5);
@@ -42,6 +46,10 @@
   --ui-accent-foreground: oklch(0.969 0.015 12.422);
   --ui-destructive: oklch(0.704 0.191 22.216);
   --ui-destructive-foreground: oklch(0.969 0.015 12.422);
+  --ui-success: oklch(0.7 0.16 150);
+  --ui-success-foreground: oklch(0.147 0.033 12.87);
+  --ui-warning: oklch(0.78 0.14 80);
+  --ui-warning-foreground: oklch(0.147 0.033 12.87);
   --ui-border: oklch(1 0 0 / 10%);
   --ui-input: oklch(1 0 0 / 15%);
   --ui-ring: oklch(0.645 0.246 16.439);

@@ -29,6 +29,38 @@ public class TailwindPipelineTests
     }
 
     [Fact]
+    public void GeneratedAppCss_ContainsThemeStatusTokensAndUtilityMappings()
+    {
+        var appCss = ReadGeneratedAppCss();
+
+        AssertStatusTokens(appCss, "slate", isDark: false);
+        AssertStatusTokens(appCss, "slate", isDark: true);
+        AssertStatusTokens(appCss, "rose", isDark: false);
+        AssertStatusTokens(appCss, "rose", isDark: true);
+
+        Assert.Contains(
+            ".bg-success{background-color:var(--ui-success)}",
+            appCss,
+            StringComparison.Ordinal
+        );
+        Assert.Contains(
+            ".text-success-foreground{color:var(--ui-success-foreground)}",
+            appCss,
+            StringComparison.Ordinal
+        );
+        Assert.Contains(
+            ".bg-warning{background-color:var(--ui-warning)}",
+            appCss,
+            StringComparison.Ordinal
+        );
+        Assert.Contains(
+            ".text-warning-foreground{color:var(--ui-warning-foreground)}",
+            appCss,
+            StringComparison.Ordinal
+        );
+    }
+
+    [Fact]
     public void GeneratedAppCss_ContainsTokenUtilitiesEmittedByComponentsAndPreflightMarker()
     {
         var appCss = ReadGeneratedAppCss();
@@ -60,6 +92,23 @@ public class TailwindPipelineTests
         );
 
         return File.ReadAllText(appCssPath);
+    }
+
+    private static void AssertStatusTokens(string appCss, string theme, bool isDark)
+    {
+        var modeSelector = isDark ? "\\[data-ui-mode=[\"']?dark[\"']?\\]" : string.Empty;
+        var selector = $"\\[data-ui-theme=[\"']?{theme}[\"']?\\]{modeSelector}";
+        var tokenBlock = new Regex($"{selector}\\s*\\{{[^}}]*\\}}", RegexOptions.Singleline);
+        var match = tokenBlock.Match(appCss);
+
+        Assert.True(
+            match.Success,
+            $"Expected the {theme} {(isDark ? "dark" : "light")} token block."
+        );
+        Assert.Contains("--ui-success:", match.Value, StringComparison.Ordinal);
+        Assert.Contains("--ui-success-foreground:", match.Value, StringComparison.Ordinal);
+        Assert.Contains("--ui-warning:", match.Value, StringComparison.Ordinal);
+        Assert.Contains("--ui-warning-foreground:", match.Value, StringComparison.Ordinal);
     }
 
     private static string ResolveAppCssPath()
