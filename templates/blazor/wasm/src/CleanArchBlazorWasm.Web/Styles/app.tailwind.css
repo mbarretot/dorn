@@ -3,6 +3,8 @@
 @import "./themes/rose.css";
 @import "./themes/neutral.css";
 @import "./themes/linear.css";
+@import "./themes/primer.css";
+@import "./themes/lightning.css";
 
 /* B3: theme and mode are orthogonal data attributes on <html>, set by wwwroot/theme-boot.js
    before Blazor boots. Re-declaring `dark` against data-ui-mode (instead of Tailwind's default
