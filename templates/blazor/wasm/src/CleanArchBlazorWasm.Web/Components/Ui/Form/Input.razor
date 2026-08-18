@@ -3,6 +3,7 @@
 
 <input
     id="@Context?.Id"
+    type="@Type"
     class="@ComputedClass"
     value="@CurrentValueAsString"
     aria-invalid="@(IsInvalid ? "true" : null)"
@@ -21,6 +22,9 @@
 
     [Parameter]
     public string? Class { get; set; }
+
+    [Parameter]
+    public string Type { get; set; } = "text";
 
     private string ComputedClass => Cn.Merge(BaseClass, IsInvalid ? InvalidClass : null, Class);
 
