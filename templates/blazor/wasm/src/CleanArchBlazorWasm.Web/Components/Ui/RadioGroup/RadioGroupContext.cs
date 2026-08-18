@@ -10,8 +10,7 @@ public sealed class RadioGroupContext<TValue>(RovingFocusOrientation orientation
         string Id,
         ElementReference Element,
         TValue Value,
-        bool Disabled,
-        Action NotifyItemStateChanged
+        bool Disabled
     )> _items = [];
 
     public RovingFocusState Focus { get; } = new(orientation, loop: true);
@@ -24,16 +23,10 @@ public sealed class RadioGroupContext<TValue>(RovingFocusOrientation orientation
 
     public bool IsSelected(TValue value) => EqualityComparer<TValue>.Default.Equals(Value, value);
 
-    internal void RegisterItem(
-        string id,
-        ElementReference element,
-        TValue value,
-        bool disabled,
-        Action notifyItemStateChanged
-    )
+    internal void RegisterItem(string id, ElementReference element, TValue value, bool disabled)
     {
         var index = _items.FindIndex(i => i.Id == id);
-        var entry = (id, element, value, disabled, notifyItemStateChanged);
+        var entry = (id, element, value, disabled);
         if (index >= 0)
         {
             _items[index] = entry;
@@ -47,7 +40,7 @@ public sealed class RadioGroupContext<TValue>(RovingFocusOrientation orientation
         Focus.WithItems([.. _items.Select(i => (i.Id, i.Disabled))]);
         if (!hadActiveId && Focus.ActiveId is not null)
         {
-            NotifyAllChanged();
+            NotifyStateChanged();
         }
     }
 
@@ -66,7 +59,7 @@ public sealed class RadioGroupContext<TValue>(RovingFocusOrientation orientation
 
         var item = _items.Find(i => i.Id == Focus.ActiveId);
         await CommitValueAsync(item.Value);
-        NotifyAllChanged();
+        NotifyStateChanged();
         await FocusActiveItemAsync();
     }
 
@@ -85,16 +78,6 @@ public sealed class RadioGroupContext<TValue>(RovingFocusOrientation orientation
     {
         Focus.TrySetActive(id);
         await CommitValueAsync(value);
-        NotifyAllChanged();
-    }
-
-    // A fixed CascadingValue re-render doesn't reliably reach InputBase-derived generic children, so each item re-renders itself too.
-    private void NotifyAllChanged()
-    {
         NotifyStateChanged();
-        foreach (var item in _items)
-        {
-            item.NotifyItemStateChanged();
-        }
     }
 }

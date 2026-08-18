@@ -53,8 +53,7 @@
         }
     }
 
-    protected override void OnAfterRender(bool firstRender) =>
-        Context.RegisterItem(_id, _element, Value, Disabled, StateHasChanged);
+    protected override void OnAfterRender(bool firstRender) => Context.RegisterItem(_id, _element, Value, Disabled);
 
     private Task HandleActivateAsync() =>
         Disabled ? Task.CompletedTask : Context.ActivateAsync(_id, Value);
