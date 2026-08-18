@@ -63,4 +63,47 @@
 
         Assert.NotNull(cut.Find("[data-testid=save-button]"));
     }
+
+    [Fact]
+    public void Loading_RendersSpinnerAndDisabledAndAriaBusy()
+    {
+        var cut = Render<Button>(parameters =>
+            parameters.Add(p => p.Loading, true).AddChildContent("Save")
+        );
+
+        var button = cut.Find("button");
+        Assert.NotNull(cut.Find("svg"));
+        Assert.True(button.HasAttribute("disabled"));
+        Assert.Equal("true", button.GetAttribute("aria-busy"));
+    }
+
+    [Fact]
+    public void Loading_SuppressesClickHandler()
+    {
+        var clicked = false;
+        var cut = Render<Button>(parameters =>
+            parameters
+                .Add(p => p.Loading, true)
+                .AddChildContent("Save")
+                .AddUnmatched(
+                    "onclick",
+                    EventCallback.Factory.Create<MouseEventArgs>(this, () => clicked = true)
+                )
+        );
+
+        Assert.Throws<MissingEventHandlerException>(() => cut.Find("button").Click());
+        Assert.False(clicked);
+    }
+
+    [Fact]
+    public void NotLoading_RendersNoSpinnerAndNoAriaBusy()
+    {
+        var cut = Render<Button>(parameters =>
+            parameters.Add(p => p.Loading, false).AddChildContent("Save")
+        );
+
+        var button = cut.Find("button");
+        Assert.Empty(cut.FindAll("svg"));
+        Assert.Null(button.GetAttribute("aria-busy"));
+    }
 }

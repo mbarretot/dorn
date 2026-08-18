@@ -1,4 +1,28 @@
-<button type="@Type" class="@ComputedClass" disabled="@Disabled" @attributes="AdditionalAttributes">
+<button
+    type="@Type"
+    class="@ComputedClass"
+    disabled="@(Disabled || Loading)"
+    aria-busy="@(Loading ? "true" : null)"
+    @attributes="ComputedAdditionalAttributes"
+>
+    @if (Loading)
+    {
+        <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+            ></circle>
+            <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            ></path>
+        </svg>
+    }
     @ChildContent
 </button>
 
@@ -16,6 +40,9 @@
     public bool Disabled { get; set; }
 
     [Parameter]
+    public bool Loading { get; set; }
+
+    [Parameter]
     public string Type { get; set; } = "button";
 
     [Parameter]
@@ -28,6 +55,12 @@
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string ComputedClass => ResolveClass(Variant, Size, Class);
+
+    private Dictionary<string, object>? ComputedAdditionalAttributes =>
+        Loading && AdditionalAttributes is not null
+            ? AdditionalAttributes.Where(kvp => kvp.Key != "onclick")
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+            : AdditionalAttributes;
 
     public static string ResolveClass(ButtonVariant variant, ButtonSize size, string? consumerClass) =>
         Cn.Merge(BaseClass, ResolveVariantClass(variant), ResolveSizeClass(size), consumerClass);

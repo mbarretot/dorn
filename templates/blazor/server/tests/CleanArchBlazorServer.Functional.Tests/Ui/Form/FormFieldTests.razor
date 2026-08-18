@@ -81,6 +81,52 @@
         Assert.Null(cut.Find("input").GetAttribute("aria-invalid"));
     }
 
+    [Fact]
+    public void Input_WithTypeParameter_SetsNativeTypeAttribute()
+    {
+        var model = new TestModel { Name = "secret" };
+
+        var cut = Render(@<Input
+            Type="password"
+            Value="@model.Name"
+            ValueChanged="@(v => model.Name = v)"
+            ValueExpression="@(() => model.Name)"
+        />);
+
+        Assert.Equal("password", cut.Find("input").GetAttribute("type"));
+    }
+
+    [Fact]
+    public void Input_WithTypeParameter_StillBindsValue()
+    {
+        var model = new TestModel { Name = "seed" };
+
+        var cut = Render(@<Input
+            Type="password"
+            Value="@model.Name"
+            ValueChanged="@(v => model.Name = v)"
+            ValueExpression="@(() => model.Name)"
+        />);
+
+        cut.Find("input").Input("typed-value");
+
+        Assert.Equal("typed-value", model.Name);
+    }
+
+    [Fact]
+    public void Input_WithOmittedType_DefaultsToTextType()
+    {
+        var model = new TestModel { Name = "seed" };
+
+        var cut = Render(@<Input
+            Value="@model.Name"
+            ValueChanged="@(v => model.Name = v)"
+            ValueExpression="@(() => model.Name)"
+        />);
+
+        Assert.Equal("text", cut.Find("input").GetAttribute("type"));
+    }
+
     private sealed class TestModel
     {
         public string Name { get; set; } = "";
