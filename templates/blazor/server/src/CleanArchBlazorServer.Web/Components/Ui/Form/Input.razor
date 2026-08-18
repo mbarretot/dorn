@@ -3,9 +3,11 @@
 
 <input
     id="@Context?.Id"
+    type="@Type"
     class="@ComputedClass"
     value="@CurrentValueAsString"
     aria-invalid="@(IsInvalid ? "true" : null)"
+    aria-describedby="@(Context?.HasMessage == true ? Context.MessageId : null)"
     @oninput="OnInput"
     @attributes="AdditionalAttributes"
 />
@@ -22,7 +24,16 @@
     [Parameter]
     public string? Class { get; set; }
 
+    [Parameter]
+    public string Type { get; set; } = "text";
+
     private string ComputedClass => Cn.Merge(BaseClass, IsInvalid ? InvalidClass : null, Class);
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        Context?.SetField(FieldIdentifier);
+    }
 
     private void OnInput(ChangeEventArgs e) => CurrentValueAsString = e.Value?.ToString();
 
