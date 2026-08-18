@@ -4,8 +4,7 @@
 @using Xunit
 
 @code {
-    // JSInterop.Mode = Strict (UiTestContext) means any unconfigured IJSRuntime call throws —
-    // these tests pass with zero setup, proving Collapsible's "zero IJSRuntime" requirement.
+    // UiTestContext's Strict JSInterop mode proves zero IJSRuntime usage: unconfigured calls throw.
 
     [Fact]
     public void Uncontrolled_DefaultClosed_ContentHasHiddenAttribute_TriggerAriaExpandedFalse()
