@@ -55,8 +55,9 @@ jobs:
           DORN_TEMPLATES_PATH: ${{ github.workspace }}/templates
           DORN_LOCAL_NUGET_FEED: ${{ github.workspace }}/artifacts
         # Coverage collection only feeds the ubuntu-only aggregate/upload steps below; skipping it on windows avoids paying coverlet's instrumentation cost for unused output.
+        # --settings enables MaxCpuCount (Dorn.runsettings) so the ~23 test projects run in parallel instead of one at a time.
         run: >
-          dotnet test Dorn.slnx --no-build -c Release
+          dotnet test Dorn.slnx --no-build -c Release --settings Dorn.runsettings
           ${{ matrix.os == 'ubuntu-latest' && '--collect:"XPlat Code Coverage"' || '' }}
 
       # Aggregates per-project cobertura reports via ReportGenerator; ubuntu-only since the upload step below reads a single source.
