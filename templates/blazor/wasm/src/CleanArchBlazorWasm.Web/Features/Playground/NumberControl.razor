@@ -1,4 +1,6 @@
+@typeparam TValue where TValue : struct, INumber<TValue>
 @using System.Globalization
+@using System.Numerics
 
 <div class="flex flex-col gap-1.5" data-testid="@($"control-{Label}")">
     <span class="text-sm font-medium text-foreground">@Label</span>
@@ -10,15 +12,15 @@
     public string Label { get; set; } = "";
 
     [Parameter]
-    public double Value { get; set; }
+    public TValue Value { get; set; }
 
     [Parameter]
-    public EventCallback<double> ValueChanged { get; set; }
+    public EventCallback<TValue> ValueChanged { get; set; }
 
-    private string ValueAsString => Value.ToString(CultureInfo.InvariantCulture);
+    private string ValueAsString => Value.ToString(null, CultureInfo.InvariantCulture);
 
     private Task HandleChangedAsync(string value) =>
-        double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+        TValue.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
             ? ValueChanged.InvokeAsync(parsed)
             : Task.CompletedTask;
 }
