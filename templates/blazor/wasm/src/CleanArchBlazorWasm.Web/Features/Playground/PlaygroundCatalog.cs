@@ -23,7 +23,20 @@ public static class PlaygroundCatalog
                 new("/playground/dropdown-menu", "DropdownMenu", ["dropdown", "menu", "overlay"]),
             ]
         ),
-        new("Display", [new("/playground/card", "Card", ["container", "panel"])]),
+        new(
+            "Display",
+            [
+                new("/playground/card", "Card", ["container", "panel"]),
+                new("/playground/avatar", "Avatar", ["profile", "image", "fallback", "initials"]),
+            ]
+        ),
         new("Layout", [new("/playground/tabs", "Tabs", ["navigation", "panel"])]),
+        new(
+            "Feedback",
+            [
+                new("/playground/alert", "Alert", ["banner", "notice", "status", "warning"]),
+                new("/playground/progress", "Progress", ["loading", "bar", "meter", "percentage"]),
+            ]
+        ),
     ];
 }
