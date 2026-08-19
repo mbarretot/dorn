@@ -1,9 +1,18 @@
 @page "/playground/card"
+@layout PlaygroundLayout
 
 <PageTitle>Playground · Card</PageTitle>
 
-<div class="mx-auto flex max-w-2xl flex-col gap-8 p-8">
-    <PlaygroundSection Title="Slot composition" Description="Header, content, and footer render only when supplied.">
+<ComponentPlayground
+    Title="Card"
+    Description="Pure composition — Header, Content, and Footer render only when supplied, with no bindable parameters of their own."
+    CodeSnippet="@CodeSnippet"
+    ApiParameters="ApiParameters"
+>
+    <Controls>
+        <p class="text-sm text-muted-foreground">Card has no bindable parameters — this composition is static.</p>
+    </Controls>
+    <Preview>
         <Card>
             <CardHeader>
                 <CardTitle>Project Alpha</CardTitle>
@@ -19,13 +28,21 @@
                 <Button>Save</Button>
             </CardFooter>
         </Card>
-    </PlaygroundSection>
+    </Preview>
+</ComponentPlayground>
 
-    <PlaygroundSection Title="Content-only card" Description="Header and footer are optional.">
+@code {
+    private const string CodeSnippet =
+        """
         <Card>
-            <CardContent>
-                <p class="text-sm text-foreground">A card with only a content slot.</p>
-            </CardContent>
+            <CardHeader>
+                <CardTitle>Project Alpha</CardTitle>
+                <CardDescription>A short description of what this card represents.</CardDescription>
+            </CardHeader>
+            <CardContent>...</CardContent>
+            <CardFooter>...</CardFooter>
         </Card>
-    </PlaygroundSection>
-</div>
+        """;
+
+    private static readonly PlaygroundParameter[] ApiParameters = [];
+}
