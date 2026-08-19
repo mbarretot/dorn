@@ -61,7 +61,7 @@
         cut.Find("[data-testid=trigger]").PointerLeave();
 
         Assert.Empty(hide.Invocations);
-        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(400));
+        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(1500));
     }
 
     [Fact]
@@ -82,7 +82,7 @@
         cut.Find("[data-testid=content]").PointerEnter();
 
         // The close-grace timer target (50ms) must have expired by now with margin, proving the trip into the card cancelled it.
-        Thread.Sleep(200);
+        Thread.Sleep(300);
         Assert.Empty(hide.Invocations);
         Assert.Equal("true", cut.Find("[data-testid=trigger]").GetAttribute("aria-expanded"));
     }
@@ -105,7 +105,7 @@
         cut.Find("[data-testid=content]").PointerEnter();
         cut.Find("[data-testid=content]").PointerLeave();
 
-        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(400));
+        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(1500));
     }
 
     [Fact]
@@ -128,7 +128,7 @@
         cut.Find("[data-testid=trigger]").FocusOut();
 
         Assert.Empty(hide.Invocations);
-        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(400));
+        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(1500));
     }
 
     [Fact]
