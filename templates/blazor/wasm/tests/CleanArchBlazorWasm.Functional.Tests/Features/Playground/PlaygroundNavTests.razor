@@ -1,0 +1,47 @@
+@inherits UiTestContext
+@using Bunit
+@using CleanArchBlazorWasm.Web.Features.Playground
+@using Xunit
+
+@code {
+    [Fact]
+    public void RendersOneCollapsibleTriggerPerCatalogCategory()
+    {
+        var cut = Render(@<PlaygroundNav />);
+
+        var triggers = cut.FindAll("[data-testid^='nav-category-']");
+
+        Assert.Equal(PlaygroundCatalog.Categories.Count, triggers.Count);
+    }
+
+    [Fact]
+    public void TypingAMatchingQuery_FiltersToMatchingEntry_AndAutoExpandsItsCategory()
+    {
+        var cut = Render(@<PlaygroundNav />);
+
+        cut.Find("[data-testid='playground-nav-search']").Input("card");
+
+        var trigger = cut.Find("[data-testid='nav-category-Display']");
+
+        Assert.Equal("true", trigger.GetAttribute("aria-expanded"));
+        Assert.Single(cut.FindAll("[data-testid='nav-entry-Card']"));
+        Assert.Empty(cut.FindAll("[data-testid='nav-category-Forms']"));
+    }
+
+    [Fact]
+    public void ClearingTheQuery_RestoresAllCategories_AndCollapsesBackToDefaultState()
+    {
+        var cut = Render(@<PlaygroundNav />);
+
+        cut.Find("[data-testid='playground-nav-search']").Input("card");
+        cut.Find("[data-testid='playground-nav-search']").Input("");
+
+        var trigger = cut.Find("[data-testid='nav-category-Display']");
+
+        Assert.Equal("false", trigger.GetAttribute("aria-expanded"));
+        Assert.Equal(
+            PlaygroundCatalog.Categories.Count,
+            cut.FindAll("[data-testid^='nav-category-']").Count
+        );
+    }
+}
