@@ -14,6 +14,9 @@ public static class PlaygroundCatalog
                 new("/playground/button", "Button", ["action", "click", "cta"]),
                 new("/playground/form", "Form", ["input", "label", "text field"]),
                 new("/playground/select", "Select", ["dropdown", "combobox", "options"]),
+                new("/playground/checkbox", "Checkbox", ["input", "tick", "box"]),
+                new("/playground/switch", "Switch", ["toggle", "on", "off"]),
+                new("/playground/textarea", "Textarea", ["input", "multiline", "text field"]),
                 new("/playground/toggle", "Toggle", ["press", "button", "on", "off"]),
                 new(
                     "/playground/toggle-group",
