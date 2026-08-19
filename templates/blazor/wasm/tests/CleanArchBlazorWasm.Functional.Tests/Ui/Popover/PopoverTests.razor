@@ -1,4 +1,4 @@
-@inherits UiTestContext
+@inherits OverlayTestContext
 @using Bunit
 @using CleanArchBlazorWasm.Web.Components.Ui.Popover
 @using Microsoft.AspNetCore.Components
@@ -32,7 +32,7 @@
     public void Click_Opens_WithoutDelay_ShowsPositionsActivatesDismiss_AndFocusesContent()
     {
         var show = AnchorModule.SetupVoid("show", _ => true).SetVoidResult();
-        var position = AnchorModule.SetupVoid("position", _ => true).SetVoidResult();
+        var position = SetupPosition();
         var activate = DismissModule.SetupVoid("activate", _ => true).SetVoidResult();
         var focusCountBeforeOpen = FocusInvocationCount();
 
@@ -40,7 +40,7 @@
         cut.Find("[data-testid=trigger]").Click();
 
         Assert.Single(show.Invocations);
-        Assert.Single(position.Invocations);
+        AssertPositionedWith(position, "bottom", "center", 4, 8);
         Assert.Single(activate.Invocations);
         Assert.Equal("true", cut.Find("[data-testid=trigger]").GetAttribute("aria-expanded"));
         Assert.Equal(focusCountBeforeOpen + 1, FocusInvocationCount());
