@@ -1,28 +1,46 @@
 @page "/playground/dropdown-menu"
+@layout PlaygroundLayout
 
 <PageTitle>Playground · DropdownMenu</PageTitle>
 
-<div class="mx-auto flex max-w-2xl flex-col gap-8 p-8">
-    <PlaygroundSection
-        Title="Anchored menu"
-        Description="ArrowDown/ArrowUp rove focus between items; Escape or an outside click dismisses."
-    >
-        <DropdownMenu>
-            <DropdownMenuTrigger Class="@Button.ResolveClass(ButtonVariant.Outline, ButtonSize.Default, null)">
-                Open menu
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem OnClick="@(() => _lastAction = "Edit")">Edit</DropdownMenuItem>
-                <DropdownMenuItem OnClick="@(() => _lastAction = "Duplicate")">Duplicate</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem OnClick="@(() => _lastAction = "Delete")">Delete</DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-        <p class="text-sm text-muted-foreground">Last action: @(_lastAction ?? "none")</p>
-    </PlaygroundSection>
-</div>
+<ComponentPlayground
+    Title="DropdownMenu"
+    Description="ArrowDown/ArrowUp rove focus between items; Escape or an outside click dismisses."
+    CodeSnippet="@CodeSnippet"
+    ApiParameters="ApiParameters"
+>
+    <Controls>
+        <BoolControl Label="Open" @bind-Value="_open" />
+    </Controls>
+    <Preview>
+        <div class="flex flex-col gap-4">
+            <DropdownMenu @bind-Open="_open">
+                <DropdownMenuTrigger Class="@Button.ResolveClass(ButtonVariant.Outline, ButtonSize.Default, null)">
+                    Open menu
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem OnClick="@(() => _lastAction = "Edit")">Edit</DropdownMenuItem>
+                    <DropdownMenuItem OnClick="@(() => _lastAction = "Duplicate")">Duplicate</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem OnClick="@(() => _lastAction = "Delete")">Delete</DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+            <p class="text-sm text-muted-foreground">Last action: @(_lastAction ?? "none")</p>
+        </div>
+    </Preview>
+</ComponentPlayground>
 
 @code {
+    private bool _open;
     private string? _lastAction;
+
+    private string CodeSnippet => $"<DropdownMenu{(_open ? " Open=\"true\"" : "")}>...</DropdownMenu>";
+
+    private static readonly PlaygroundParameter[] ApiParameters =
+    [
+        new("Open", "bool", "false", "Controls the open state (two-way bindable)."),
+        new("OpenChanged", "EventCallback<bool>", "-", "Fires when the open state changes."),
+        new("DefaultOpen", "bool", "false", "Initial open state when uncontrolled."),
+    ];
 }
