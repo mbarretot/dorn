@@ -1,4 +1,4 @@
-@inherits UiTestContext
+@inherits OverlayTestContext
 @using Bunit
 @using CleanArchBlazorWasm.Web.Components.Ui.Tooltip
 @using Microsoft.AspNetCore.Components.Web
@@ -25,7 +25,7 @@
     public void PointerEnter_DoesNotOpenImmediately_ThenOpensAfterDelay()
     {
         var show = AnchorModule.SetupVoid("show", _ => true).SetVoidResult();
-        var position = AnchorModule.SetupVoid("position", _ => true).SetVoidResult();
+        var position = SetupPosition();
 
         var cut = Render(BuildTooltip(openDelay: 30));
         cut.Find("[data-testid=trigger]").PointerEnter();
@@ -33,7 +33,7 @@
         Assert.Empty(show.Invocations);
 
         cut.WaitForAssertion(() => Assert.Single(show.Invocations), TimeSpan.FromMilliseconds(500));
-        Assert.Single(position.Invocations);
+        AssertPositionedWith(position, "top", "center", 4, 8);
         Assert.Empty(DismissModule.Invocations);
     }
 
