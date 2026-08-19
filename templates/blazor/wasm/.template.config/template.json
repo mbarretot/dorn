@@ -52,7 +52,10 @@
         },
         {
           "condition": "(!IncludePlayground)",
-          "exclude": ["src/CleanArchBlazorWasm.Web/Features/Playground/**"]
+          "exclude": [
+            "src/CleanArchBlazorWasm.Web/Features/Playground/**",
+            "tests/CleanArchBlazorWasm.Functional.Tests/Features/Playground/**"
+          ]
         },
         {
           "condition": "(IncludePlayground)",
