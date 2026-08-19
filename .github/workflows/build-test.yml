@@ -36,7 +36,7 @@ jobs:
 
       - name: Pack Dorn's own NuGet packages (local feed for templates/webapi)
         shell: pwsh
-        run: pwsh eng/scripts/pack-packages.ps1
+        run: pwsh eng/scripts/pack-packages.ps1 -WebUIPrimitivesVersion 1.0.3
 
       - name: Build and test gRPC template
         run: |
