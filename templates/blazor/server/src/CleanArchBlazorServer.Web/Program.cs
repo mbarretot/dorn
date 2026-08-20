@@ -9,6 +9,7 @@ builder.Services.AddScoped<ThemeState>();
 builder.Services.AddScoped<ModalInterop>();
 builder.Services.AddScoped<DismissInterop>();
 builder.Services.AddScoped<AnchorInterop>();
+builder.Services.AddScoped<ClipboardInterop>();
 
 var app = builder.Build();
 
