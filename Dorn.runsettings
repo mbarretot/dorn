@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RunSettings>
   <RunConfiguration>
-    <!-- Bounded, not 0 (unlimited) — unbounded parallelism oversubscribed CI runners and starved timer-based tests, causing flaky failures. -->
-    <MaxCpuCount>4</MaxCpuCount>
+    <MaxCpuCount>1</MaxCpuCount>
   </RunConfiguration>
 </RunSettings>
