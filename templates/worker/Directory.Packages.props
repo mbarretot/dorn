@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Local feed in dev, NuGet.org for end users; see docs/adr/0011-*.md. -->
+    <!-- Local feed in dev, NuGet.org for end users; see docs/adr/0010-*.md and 0026-*.md. -->
     <PackageVersion Include="Dorn.Messaging.Contracts" Version="1.0.1" />
     <PackageVersion Include="Dorn.Messaging" Version="1.0.1" />
     <PackageVersion Include="Dorn.SharedKernel" Version="1.0.1" />

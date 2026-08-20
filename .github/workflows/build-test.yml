@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # GitVersion (packages/*.csproj) needs full history and tags, not the default shallow clone.
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -40,9 +43,23 @@ jobs:
           path: ./.tools
           key: ${{ runner.os }}-reportgenerator-tool
 
+      # A local, never-pushed tag on HEAD makes GitVersion pack that exact version — see ADR 0026.
       - name: Pack Dorn's own NuGet packages (local feed for templates/webapi)
         shell: pwsh
-        run: pwsh eng/scripts/pack-packages.ps1
+        run: |
+          $messagingVersion = (Select-String -Path templates/grpc/Directory.Packages.props -Pattern 'Dorn\.SharedKernel" Version="([^"]+)"').Matches[0].Groups[1].Value
+          $webUiPrimitivesVersion = (Select-String -Path templates/blazor/wasm/Directory.Packages.props -Pattern 'Dorn\.WebUI\.Primitives" Version="([^"]+)"').Matches[0].Groups[1].Value
+
+          # -f: the pinned version can already be a real historical release tag in this checkout.
+          git tag -f "v$messagingVersion"
+          dotnet pack packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj -c Release -o ./artifacts
+          dotnet pack packages/Dorn.Messaging/Dorn.Messaging.csproj -c Release -o ./artifacts
+          dotnet pack packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj -c Release -o ./artifacts
+          git tag -d "v$messagingVersion"
+
+          git tag -f "v$webUiPrimitivesVersion"
+          dotnet pack packages/Dorn.WebUI.Primitives/Dorn.WebUI.Primitives.csproj -c Release -o ./artifacts
+          git tag -d "v$webUiPrimitivesVersion"
 
       - name: Build and test gRPC template
         run: |

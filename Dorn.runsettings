@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RunSettings>
   <RunConfiguration>
-    <!-- Bounded, not 0 (unlimited) — 23 test projects fully oversubscribed GitHub Actions' 4-vCPU
-         runners, which starved Task.Delay-based timer tests (Tooltip/HoverCard/Popover) past their
-         WaitForAssertion window and caused recurring CI flakiness. -->
+    <!-- Bounded, not 0 (unlimited) — unbounded parallelism oversubscribed CI runners and starved timer-based tests, causing flaky failures. -->
     <MaxCpuCount>4</MaxCpuCount>
   </RunConfiguration>
 </RunSettings>

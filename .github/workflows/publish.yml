@@ -27,6 +27,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # GitVersion (packages/*.csproj) needs full history and tags, not the default shallow clone.
+          fetch-depth: 0
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -44,9 +47,14 @@ jobs:
       - name: Extract version from tag
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
+      # GitVersion (packages/*.csproj) reads this exact tag on HEAD as the PackageVersion directly —
+      # no -p:PackageVersion override needed, see ADR 0026.
       - name: Pack library packages
-        shell: pwsh
-        run: ./eng/scripts/pack-packages.ps1 -Version $env:VERSION
+        run: |
+          dotnet pack packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj -c Release -o ./artifacts
+          dotnet pack packages/Dorn.Messaging/Dorn.Messaging.csproj -c Release -o ./artifacts
+          dotnet pack packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj -c Release -o ./artifacts
+          dotnet pack packages/Dorn.WebUI.Primitives/Dorn.WebUI.Primitives.csproj -c Release -o ./artifacts
 
       - name: Restore
         run: dotnet restore
