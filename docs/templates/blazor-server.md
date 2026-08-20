@@ -22,7 +22,7 @@ dotnet run --project src/MyApp.AppHost
 | Orchestrator | Aspire (always included, no opt-out), three projects (`Web`, `ServiceDefaults`, `AppHost`) |
 | Circuit config | Framework defaults only — no `CircuitOptions` tuning, no custom reconnect UI |
 | Themes | `slate` (default), `rose` — each with light/dark |
-| Components | Button, Card, Input+Label, Dialog, DropdownMenu, Tabs, Select |
+| Components | 24 components across Forms, Overlays, Display, Layout, and Feedback — see `/playground` for the full, searchable catalog |
 | Tests | Application, Functional, Integration, Architecture — included by default |
 
 The command accepts `<name>`, `-o|--output`, `--force`, `--no-restore`, `-t|--theme
@@ -70,9 +70,17 @@ inside the `Dorn.WebUI.Primitives` package.
 
 ## 🧩 Playground
 
-`IncludePlayground` defaults to `true` and generates `/playground` — one page per component
-demonstrating live, interactive usage under Interactive Server rendering, plus an index.
-`--no-playground` produces a lean project with no playground route or page files.
+`IncludePlayground` defaults to `true` and generates `/playground` — a layout with a searchable
+left-rail nav and one `ComponentPlayground` page per component, all rendered under Interactive
+Server rendering. `--no-playground` produces a lean project with no playground route or page
+files.
+
+Each page renders the same shell: a live **Preview** next to interactive **Controls** bound to
+real component parameters via plain Blazor two-way binding (no `DynamicComponent` or runtime
+reflection), a generated **Code** snippet with a copy-to-clipboard button, and an **API** table
+listing every documented parameter, its type, default, and description. The nav groups all 24
+components into five categories — Forms, Overlays, Display, Layout, Feedback — behind a live
+search box that filters by label or keyword and auto-expands matching categories.
 
 ## 🔌 Circuit behavior
 
@@ -99,8 +107,9 @@ from a machine with network access. `dorn doctor` reports this as a Warn, never 
 
 ## 🚫 Known gap
 
-Same as `blazor wasm`: the three owned JS interop modules have no automated browser-level test —
-bUnit proves the C#/JS contract and ARIA state, not real focus movement or positioning. Verified
+Same as `blazor wasm`: the four owned JS interop modules (`ui-modal.js`, `ui-dismiss.js`,
+`ui-anchor.js`, `ui-clipboard.js`) have no automated browser-level test — bUnit proves the C#/JS
+contract and ARIA state, not real focus movement, positioning, or clipboard access. Verified
 manually via the playground and, for Dialog specifically, via a one-time manual go/no-go check
 covering prerender-with-JS-disabled and circuit disconnect/reconnect.
 

@@ -35,6 +35,9 @@ public static class PlaygroundCatalog
             [
                 new("/playground/dialog", "Dialog", ["modal", "overlay"]),
                 new("/playground/dropdown-menu", "DropdownMenu", ["dropdown", "menu", "overlay"]),
+                new("/playground/tooltip", "Tooltip", ["hint", "hover", "help text"]),
+                new("/playground/popover", "Popover", ["overlay", "anchor", "panel"]),
+                new("/playground/hover-card", "HoverCard", ["hover", "preview", "card"]),
             ]
         ),
         new(
@@ -52,6 +55,7 @@ public static class PlaygroundCatalog
                 new("/playground/tabs", "Tabs", ["navigation", "panel"]),
                 new("/playground/separator", "Separator", ["divider", "line", "hr"]),
                 new("/playground/breadcrumb", "Breadcrumb", ["navigation", "trail", "path"]),
+                new("/playground/collapsible", "Collapsible", ["disclosure", "toggle", "expand"]),
             ]
         ),
         new(
