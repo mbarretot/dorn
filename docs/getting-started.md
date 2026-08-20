@@ -42,7 +42,10 @@ See the [Web API](./templates/webapi.md), [gRPC](./templates/grpc.md), and [work
 ```bash
 git clone https://github.com/mbarretot/dorn.git
 cd dorn
-pwsh eng/scripts/pack-packages.ps1
+dotnet pack packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj -c Release -o ./artifacts
+dotnet pack packages/Dorn.Messaging/Dorn.Messaging.csproj -c Release -o ./artifacts
+dotnet pack packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj -c Release -o ./artifacts
+dotnet pack packages/Dorn.WebUI.Primitives/Dorn.WebUI.Primitives.csproj -c Release -o ./artifacts
 dotnet restore Dorn.slnx
 dotnet build Dorn.slnx -c Release
 ```
@@ -61,7 +64,10 @@ Generated output defaults to `./<name>`. Use `-o|--output` to choose a path, `--
 ## 🧪 Run the repository checks
 
 ```bash
-pwsh eng/scripts/pack-packages.ps1
+dotnet pack packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj -c Release -o ./artifacts
+dotnet pack packages/Dorn.Messaging/Dorn.Messaging.csproj -c Release -o ./artifacts
+dotnet pack packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj -c Release -o ./artifacts
+dotnet pack packages/Dorn.WebUI.Primitives/Dorn.WebUI.Primitives.csproj -c Release -o ./artifacts
 dotnet build Dorn.slnx -c Release
 DORN_TEMPLATES_PATH="$(pwd)/templates" \
   DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" \

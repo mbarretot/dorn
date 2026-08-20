@@ -15,9 +15,9 @@
 
   <ItemGroup>
     <!-- Dorn's own packages - resolved from a local feed during development, from NuGet.org
-         for end-user installs. See nuget.config, eng/scripts/pack-packages.ps1, and
-         docs/adr/0011-*.md. -->
-    <PackageVersion Include="Dorn.WebUI.Primitives" Version="1.0.3" />
+         for end-user installs. See nuget.config, packages/Directory.Build.props (GitVersion), and
+         docs/adr/0010-*.md and 0026-*.md. -->
+    <PackageVersion Include="Dorn.WebUI.Primitives" Version="1.0.2" />
   </ItemGroup>
 
   <ItemGroup>

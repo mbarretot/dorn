@@ -4,6 +4,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <!-- Versioning — packages/*.csproj derive PackageVersion from git tags, see packages/Directory.Build.props and ADR 0026. -->
+        <PackageVersion Include="GitVersion.MsBuild" Version="6.8.2" />
+
         <!-- CLI -->
         <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
         <PackageVersion Include="Spectre.Console.Testing" Version="0.55.0" />

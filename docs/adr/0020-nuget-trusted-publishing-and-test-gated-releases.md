@@ -31,7 +31,7 @@ v* tag
 
 Keep OIDC login and push steps inside `.github/workflows/publish.yml`. NuGet validates the owning workflow in the token's `job_workflow_ref`; moving or renaming it can invalidate the trusted-publishing policy.
 
-`ci.yml` keeps `branches: ["**"]` alongside `tags-ignore: ["v*"]`. Without the explicit branches key, GitHub would also disable normal branch pushes.
+`ci.yml`'s `push` trigger is scoped to `branches: [main, develop]` (an explicit branches key is still required — GitHub disables normal branch pushes if `push` carries no branch filter at all). `tags-ignore: ["v*"]` was dropped as redundant: tag refs never match a `branches` filter, so `push: tags: v*` (publish.yml's own trigger) can never also satisfy `ci.yml`'s trigger regardless. `pull_request` (unfiltered by branch) remains the sole trigger for feature branches — narrowing `push` off them stopped every commit to an open PR from running the full matrix twice (once per event).
 
 ## Consequences
 
