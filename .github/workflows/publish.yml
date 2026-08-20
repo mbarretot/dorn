@@ -51,6 +51,8 @@ jobs:
       # no -p:PackageVersion override needed, see ADR 0026.
       - name: Pack library packages
         run: |
+          # nuget.config's dorn-local source must exist before the first restore, or NuGet errors NU1301.
+          mkdir -p ./artifacts
           dotnet pack packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj -c Release -o ./artifacts
           dotnet pack packages/Dorn.Messaging/Dorn.Messaging.csproj -c Release -o ./artifacts
           dotnet pack packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj -c Release -o ./artifacts

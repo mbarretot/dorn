@@ -50,6 +50,9 @@ jobs:
           $messagingVersion = (Select-String -Path templates/grpc/Directory.Packages.props -Pattern 'Dorn\.SharedKernel" Version="([^"]+)"').Matches[0].Groups[1].Value
           $webUiPrimitivesVersion = (Select-String -Path templates/blazor/wasm/Directory.Packages.props -Pattern 'Dorn\.WebUI\.Primitives" Version="([^"]+)"').Matches[0].Groups[1].Value
 
+          # nuget.config's dorn-local source must exist before the first restore, or NuGet errors NU1301.
+          New-Item -ItemType Directory -Force -Path ./artifacts | Out-Null
+
           # -f: the pinned version can already be a real historical release tag in this checkout.
           git tag -f "v$messagingVersion"
           dotnet pack packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj -c Release -o ./artifacts
