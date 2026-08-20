@@ -28,8 +28,8 @@ Extract exactly the 15 non-Razor primitive/interop/theme types into `packages/Do
 under `Dorn.WebUI.Primitives[.Interop|.Theme]`. Plain `Microsoft.NET.Sdk`, targeting `net10.0` via
 the root `Directory.Build.props`, referencing only `Microsoft.AspNetCore.Components`,
 `Microsoft.AspNetCore.Components.Forms`, and `Microsoft.JSInterop`. The package versions
-independently of `Dorn.SharedKernel`/`Dorn.Messaging`/`Dorn.Messaging.Contracts`, starting at
-`1.0.0`, via a dedicated parameter in `eng/scripts/pack-packages.ps1`.
+independently of `Dorn.SharedKernel`/`Dorn.Messaging`/`Dorn.Messaging.Contracts` (see ADR 0026),
+starting at `1.0.0`.
 
 **Out of scope, reaffirming ADR 0022**: every `.razor` file. All seven UI components (Button,
 Card, Dialog, DropdownMenu, Form, Select, Tabs), `ThemeSwitcher`, the Playground pages,
@@ -59,7 +59,7 @@ is the new sync guarantee.
   now coupled to a shared package version in a way they were not before ADR 0022's copy-owned
   model.
 - Generated Blazor apps (WASM and Server) gain a fourth `Dorn.*` package dependency; local
-  development must run `eng/scripts/pack-packages.ps1` before restoring, same as the existing
+  development must pack it (see ADR 0026) before restoring, same as the existing
   messaging/shared-kernel packages.
 - The JS-interop layout contract is now implicit and unverifiable at compile time in a way that was
   previously (accidentally) true only because both templates' `.cs` and `.js` files lived side by

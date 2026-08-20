@@ -1,0 +1,9 @@
+<Project>
+  <!-- MSBuild imports only the nearest Directory.Build.props, so import the root one explicitly. -->
+  <Import Project="../Directory.Build.props" />
+
+  <!-- PackageVersion for packages/*.csproj comes from GitVersion, not a hand-maintained string — see ADR 0026. -->
+  <ItemGroup>
+    <PackageReference Include="GitVersion.MsBuild" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # GitVersion (packages/*.csproj) needs full history and tags, not the default shallow clone.
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -29,14 +32,37 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          # Covers both Directory.Packages.props files (root + templates/webapi) so the cache key changes whenever either does.
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/Directory.Packages.props') }}
+          # No packages.lock.json anywhere in this repo (CPM via Directory.Packages.props only) — keyed on those files alone.
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Cache ReportGenerator tool
+        uses: actions/cache@v4
+        with:
+          path: ./.tools
+          key: ${{ runner.os }}-reportgenerator-tool
+
+      # A local, never-pushed tag on HEAD makes GitVersion pack that exact version — see ADR 0026.
       - name: Pack Dorn's own NuGet packages (local feed for templates/webapi)
         shell: pwsh
-        run: pwsh eng/scripts/pack-packages.ps1
+        run: |
+          $messagingVersion = (Select-String -Path templates/grpc/Directory.Packages.props -Pattern 'Dorn\.SharedKernel" Version="([^"]+)"').Matches[0].Groups[1].Value
+          $webUiPrimitivesVersion = (Select-String -Path templates/blazor/wasm/Directory.Packages.props -Pattern 'Dorn\.WebUI\.Primitives" Version="([^"]+)"').Matches[0].Groups[1].Value
+
+          # nuget.config's dorn-local source must exist before the first restore, or NuGet errors NU1301.
+          New-Item -ItemType Directory -Force -Path ./artifacts | Out-Null
+
+          # -f: the pinned version can already be a real historical release tag in this checkout.
+          git tag -f "v$messagingVersion"
+          dotnet pack packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj -c Release -o ./artifacts
+          dotnet pack packages/Dorn.Messaging/Dorn.Messaging.csproj -c Release -o ./artifacts
+          dotnet pack packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj -c Release -o ./artifacts
+          git tag -d "v$messagingVersion"
+
+          git tag -f "v$webUiPrimitivesVersion"
+          dotnet pack packages/Dorn.WebUI.Primitives/Dorn.WebUI.Primitives.csproj -c Release -o ./artifacts
+          git tag -d "v$webUiPrimitivesVersion"
 
       - name: Build and test gRPC template
         run: |
@@ -55,7 +81,7 @@ jobs:
           DORN_TEMPLATES_PATH: ${{ github.workspace }}/templates
           DORN_LOCAL_NUGET_FEED: ${{ github.workspace }}/artifacts
         # Coverage collection only feeds the ubuntu-only aggregate/upload steps below; skipping it on windows avoids paying coverlet's instrumentation cost for unused output.
-        # --settings enables MaxCpuCount (Dorn.runsettings) so the ~23 test projects run in parallel instead of one at a time.
+        # --settings enables MaxCpuCount (Dorn.runsettings, bounded to 4) so the ~23 test projects run in parallel without oversubscribing the runner's 4 vCPUs.
         run: >
           dotnet test Dorn.slnx --no-build -c Release --settings Dorn.runsettings
           ${{ matrix.os == 'ubuntu-latest' && '--collect:"XPlat Code Coverage"' || '' }}
@@ -65,7 +91,9 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: pwsh
         run: >
-          dotnet tool install --tool-path ./.tools/ dotnet-reportgenerator-globaltool;
+          if (-not (Test-Path ./.tools/reportgenerator)) {
+            dotnet tool install --tool-path ./.tools/ dotnet-reportgenerator-globaltool
+          };
           ./.tools/reportgenerator
           -reports:"**/coverage.cobertura.xml"
           -targetdir:"./coverage-report"

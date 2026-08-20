@@ -2,8 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
-    tags-ignore: ["v*"] # v* tags run publish.yml, which calls the same matrix
+    branches: [main, develop]
   pull_request:
 
 jobs:

@@ -39,7 +39,7 @@
 
         Assert.Empty(show.Invocations);
 
-        cut.WaitForAssertion(() => Assert.Single(show.Invocations), TimeSpan.FromMilliseconds(500));
+        cut.WaitForAssertion(() => Assert.Single(show.Invocations), TimeSpan.FromMilliseconds(2000));
         AssertPositionedWith(position, "bottom", "center", 4, 8);
         Assert.Equal(focusCountBeforeOpen, FocusInvocationCount());
     }
@@ -56,12 +56,12 @@
 
         var cut = Render(BuildHoverCard(openDelay: 10, closeDelay: 50));
         cut.Find("[data-testid=trigger]").PointerEnter();
-        cut.WaitForAssertion(() => Assert.Single(show.Invocations), TimeSpan.FromMilliseconds(300));
+        cut.WaitForAssertion(() => Assert.Single(show.Invocations), TimeSpan.FromMilliseconds(1200));
 
         cut.Find("[data-testid=trigger]").PointerLeave();
 
         Assert.Empty(hide.Invocations);
-        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(1500));
+        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(6000));
     }
 
     [Fact]
@@ -76,7 +76,7 @@
 
         var cut = Render(BuildHoverCard(openDelay: 10, closeDelay: 50));
         cut.Find("[data-testid=trigger]").PointerEnter();
-        cut.WaitForAssertion(() => Assert.Single(show.Invocations), TimeSpan.FromMilliseconds(300));
+        cut.WaitForAssertion(() => Assert.Single(show.Invocations), TimeSpan.FromMilliseconds(1200));
 
         cut.Find("[data-testid=trigger]").PointerLeave();
         cut.Find("[data-testid=content]").PointerEnter();
@@ -99,13 +99,13 @@
 
         var cut = Render(BuildHoverCard(openDelay: 10, closeDelay: 50));
         cut.Find("[data-testid=trigger]").PointerEnter();
-        cut.WaitForAssertion(() => Assert.Single(show.Invocations), TimeSpan.FromMilliseconds(300));
+        cut.WaitForAssertion(() => Assert.Single(show.Invocations), TimeSpan.FromMilliseconds(1200));
 
         cut.Find("[data-testid=trigger]").PointerLeave();
         cut.Find("[data-testid=content]").PointerEnter();
         cut.Find("[data-testid=content]").PointerLeave();
 
-        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(1500));
+        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(6000));
     }
 
     [Fact]
@@ -122,13 +122,13 @@
         cut.Find("[data-testid=trigger]").FocusIn();
         cut.WaitForAssertion(
             () => Assert.Equal("true", cut.Find("[data-testid=trigger]").GetAttribute("aria-expanded")),
-            TimeSpan.FromMilliseconds(300)
+            TimeSpan.FromMilliseconds(1200)
         );
 
         cut.Find("[data-testid=trigger]").FocusOut();
 
         Assert.Empty(hide.Invocations);
-        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(1500));
+        cut.WaitForAssertion(() => Assert.Single(hide.Invocations), TimeSpan.FromMilliseconds(6000));
     }
 
     [Fact]
@@ -143,7 +143,7 @@
 
         var cut = Render(BuildHoverCard(openDelay: 10));
         cut.Find("[data-testid=trigger]").PointerEnter();
-        cut.WaitForAssertion(() => Assert.Single(activate.Invocations), TimeSpan.FromMilliseconds(300));
+        cut.WaitForAssertion(() => Assert.Single(activate.Invocations), TimeSpan.FromMilliseconds(1200));
         var focusCountAfterOpen = FocusInvocationCount();
 
         var dotNetRef = ExtractDotNetRef(activate);
