@@ -12,6 +12,19 @@ public sealed class JsRuntimeConfinementTests
         Assert.Empty(violators);
     }
 
+    [Fact]
+    public void Server_Should_NeverDefineATemplateLocalClipboardInterop()
+    {
+        // ClipboardInterop lives in the Dorn.WebUI.Primitives package (Interop namespace),
+        // matching AnchorInterop/DismissInterop/ModalInterop — never a template-local copy.
+        var violators = WebAssembly
+            .GetTypes()
+            .Where(type => type.Name == "ClipboardInterop")
+            .ToList();
+
+        Assert.Empty(violators);
+    }
+
     private static bool InjectsJsRuntime(System.Type type)
     {
         const BindingFlags flags =
