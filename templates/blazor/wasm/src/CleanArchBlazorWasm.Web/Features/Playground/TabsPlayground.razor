@@ -50,5 +50,12 @@
     [
         new("Value", "string?", "null", "The active tab value (two-way bindable)."),
         new("DefaultValue", "string?", "null", "Initial active tab when uncontrolled."),
+        new("Orientation", "TabsOrientation", "Horizontal", "Arrow-key axis for roving focus."),
+        new(
+            "ActivationMode",
+            "TabsActivationMode",
+            "Automatic",
+            "Whether arrow navigation activates a tab immediately or only on Enter/Space."
+        ),
     ];
 }
