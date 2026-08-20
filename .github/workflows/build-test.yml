@@ -29,10 +29,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          # Covers both Directory.Packages.props files (root + templates/webapi) so the cache key changes whenever either does.
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/Directory.Packages.props') }}
+          # No packages.lock.json anywhere in this repo (CPM via Directory.Packages.props only) — keyed on those files alone.
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
+
+      - name: Cache ReportGenerator tool
+        uses: actions/cache@v4
+        with:
+          path: ./.tools
+          key: ${{ runner.os }}-reportgenerator-tool
 
       - name: Pack Dorn's own NuGet packages (local feed for templates/webapi)
         shell: pwsh
@@ -55,7 +61,7 @@ jobs:
           DORN_TEMPLATES_PATH: ${{ github.workspace }}/templates
           DORN_LOCAL_NUGET_FEED: ${{ github.workspace }}/artifacts
         # Coverage collection only feeds the ubuntu-only aggregate/upload steps below; skipping it on windows avoids paying coverlet's instrumentation cost for unused output.
-        # --settings enables MaxCpuCount (Dorn.runsettings) so the ~23 test projects run in parallel instead of one at a time.
+        # --settings enables MaxCpuCount (Dorn.runsettings, bounded to 4) so the ~23 test projects run in parallel without oversubscribing the runner's 4 vCPUs.
         run: >
           dotnet test Dorn.slnx --no-build -c Release --settings Dorn.runsettings
           ${{ matrix.os == 'ubuntu-latest' && '--collect:"XPlat Code Coverage"' || '' }}
@@ -65,7 +71,9 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: pwsh
         run: >
-          dotnet tool install --tool-path ./.tools/ dotnet-reportgenerator-globaltool;
+          if (-not (Test-Path ./.tools/reportgenerator)) {
+            dotnet tool install --tool-path ./.tools/ dotnet-reportgenerator-globaltool
+          };
           ./.tools/reportgenerator
           -reports:"**/coverage.cobertura.xml"
           -targetdir:"./coverage-report"

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RunSettings>
   <RunConfiguration>
-    <MaxCpuCount>0</MaxCpuCount>
+    <!-- Bounded, not 0 (unlimited) — 23 test projects fully oversubscribed GitHub Actions' 4-vCPU
+         runners, which starved Task.Delay-based timer tests (Tooltip/HoverCard/Popover) past their
+         WaitForAssertion window and caused recurring CI flakiness. -->
+    <MaxCpuCount>4</MaxCpuCount>
   </RunConfiguration>
 </RunSettings>
