@@ -43,6 +43,13 @@
     [
         new("Type", "ToggleGroupType", "Single", "Single binds Value/ValueChanged; Multiple binds Values/ValuesChanged."),
         new("Value", "TValue", "-", "The bound selected value in Single mode (two-way bindable)."),
+        new("DefaultValue", "TValue", "-", "Initial selected value in Single mode when uncontrolled."),
         new("Values", "IReadOnlyList<TValue>", "-", "The bound selected values in Multiple mode (two-way bindable)."),
+        new(
+            "DefaultValues",
+            "IReadOnlyList<TValue>",
+            "-",
+            "Initial selected values in Multiple mode when uncontrolled."
+        ),
     ];
 }
