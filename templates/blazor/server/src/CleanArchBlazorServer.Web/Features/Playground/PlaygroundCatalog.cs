@@ -14,6 +14,9 @@ public static class PlaygroundCatalog
                 new("/playground/button", "Button", ["action", "click", "cta"]),
                 new("/playground/form", "Form", ["input", "label", "text field"]),
                 new("/playground/select", "Select", ["dropdown", "combobox", "options"]),
+                new("/playground/checkbox", "Checkbox", ["input", "tick", "box"]),
+                new("/playground/switch", "Switch", ["toggle", "on", "off"]),
+                new("/playground/textarea", "Textarea", ["input", "multiline", "text field"]),
                 new("/playground/toggle", "Toggle", ["press", "button", "on", "off"]),
                 new(
                     "/playground/toggle-group",
@@ -40,6 +43,7 @@ public static class PlaygroundCatalog
                 new("/playground/card", "Card", ["container", "panel"]),
                 new("/playground/badge", "Badge", ["tag", "label", "chip", "status"]),
                 new("/playground/skeleton", "Skeleton", ["loading", "placeholder", "shimmer"]),
+                new("/playground/avatar", "Avatar", ["profile", "image", "fallback", "initials"]),
             ]
         ),
         new(
@@ -48,6 +52,13 @@ public static class PlaygroundCatalog
                 new("/playground/tabs", "Tabs", ["navigation", "panel"]),
                 new("/playground/separator", "Separator", ["divider", "line", "hr"]),
                 new("/playground/breadcrumb", "Breadcrumb", ["navigation", "trail", "path"]),
+            ]
+        ),
+        new(
+            "Feedback",
+            [
+                new("/playground/alert", "Alert", ["banner", "notice", "status", "warning"]),
+                new("/playground/progress", "Progress", ["loading", "bar", "meter", "percentage"]),
             ]
         ),
     ];
