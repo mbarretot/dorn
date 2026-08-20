@@ -20,7 +20,7 @@ dotnet run --project src/MyApp.AppHost
 | Layers | Front-end only — no backend, no persistence, no mediator |
 | Orchestrator | Aspire (always included, no opt-out) |
 | Themes | `slate` (default), `rose` — each with light/dark |
-| Components | Button, Card, Input+Label, Dialog, DropdownMenu, Tabs, Select |
+| Components | 24 components across Forms, Overlays, Display, Layout, and Feedback — see `/playground` for the full, searchable catalog |
 | Tests | Application, Functional, Integration, Architecture — included by default |
 
 The command accepts `<name>`, `-o|--output`, `--force`, `--no-restore`, `-t|--theme
@@ -51,9 +51,16 @@ to `localStorage`.
 
 ## 🧩 Playground
 
-`IncludePlayground` defaults to `true` and generates `/playground` — one page per component
-demonstrating live, interactive usage, plus an index. `--no-playground` produces a lean project
-with no playground route or page files.
+`IncludePlayground` defaults to `true` and generates `/playground` — a layout with a searchable
+left-rail nav and one `ComponentPlayground` page per component. `--no-playground` produces a lean
+project with no playground route or page files.
+
+Each page renders the same shell: a live **Preview** next to interactive **Controls** bound to
+real component parameters via plain Blazor two-way binding (no `DynamicComponent` or runtime
+reflection), a generated **Code** snippet with a copy-to-clipboard button, and an **API** table
+listing every documented parameter, its type, default, and description. The nav groups all 24
+components into five categories — Forms, Overlays, Display, Layout, Feedback — behind a live
+search box that filters by label or keyword and auto-expands matching categories.
 
 ## 🚧 Same-name ambiguity
 
@@ -73,11 +80,11 @@ resolved by any of these paths.
 
 ## 🚫 Known gap
 
-The three owned JS interop modules (`ui-modal.js`, `ui-dismiss.js`, `ui-anchor.js`) have no
-automated browser-level test — bUnit renders into AngleSharp with no layout engine and no real
-top layer, so it proves the C#/JS contract and ARIA state, not real focus movement or
-positioning. Verified manually via the playground; no browser-automation test tier exists in
-dorn today.
+The four owned JS interop modules (`ui-modal.js`, `ui-dismiss.js`, `ui-anchor.js`,
+`ui-clipboard.js`) have no automated browser-level test — bUnit renders into AngleSharp with no
+layout engine and no real top layer, so it proves the C#/JS contract and ARIA state, not real
+focus movement, positioning, or clipboard access. Verified manually via the playground; no
+browser-automation test tier exists in dorn today.
 
 ## 🧪 Test tiers
 
