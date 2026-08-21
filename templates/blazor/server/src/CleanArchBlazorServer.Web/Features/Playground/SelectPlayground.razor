@@ -16,12 +16,18 @@
         <div class="flex flex-col gap-1.5">
             <Label For="color-select">Favorite color</Label>
             <Select @bind-Value="_selectedColor" Placeholder="Choose a color" id="color-select">
-                <SelectItem Value="@("red")">Red</SelectItem>
-                <SelectItem Value="@("green")">Green</SelectItem>
-                <SelectItem Value="@("blue")">Blue</SelectItem>
+                <SelectGroup TValue="string" data-testid="select-group">
+                    <SelectLabel data-testid="select-label">Warm</SelectLabel>
+                    <SelectItem Value="@("red")" data-testid="select-item">Red</SelectItem>
+                </SelectGroup>
+                <SelectGroup TValue="string" data-testid="select-group">
+                    <SelectLabel data-testid="select-label">Cool</SelectLabel>
+                    <SelectItem Value="@("green")" data-testid="select-item">Green</SelectItem>
+                </SelectGroup>
+                <SelectItem Value="@("blue")" data-testid="select-item">Blue</SelectItem>
             </Select>
         </div>
-        <p class="text-sm text-muted-foreground">Selected: @(string.IsNullOrEmpty(_selectedColor) ? "none" : _selectedColor)</p>
+        <p class="text-sm text-muted-foreground">Groups and labels are non-focusable; only SelectItem joins roving focus. Selected: @(string.IsNullOrEmpty(_selectedColor) ? "none" : _selectedColor)</p>
     </Preview>
 </ComponentPlayground>
 
@@ -31,8 +37,14 @@
     private const string CodeSnippet =
         """
         <Select @bind-Value="_selectedColor" Placeholder="Choose a color">
-            <SelectItem Value="@("red")">Red</SelectItem>
-            <SelectItem Value="@("green")">Green</SelectItem>
+            <SelectGroup TValue="string">
+                <SelectLabel>Warm</SelectLabel>
+                <SelectItem Value="@("red")">Red</SelectItem>
+            </SelectGroup>
+            <SelectGroup TValue="string">
+                <SelectLabel>Cool</SelectLabel>
+                <SelectItem Value="@("green")">Green</SelectItem>
+            </SelectGroup>
             <SelectItem Value="@("blue")">Blue</SelectItem>
         </Select>
         """;
@@ -41,5 +53,7 @@
     [
         new("Value", "TValue", "-", "The bound selected value (two-way bindable)."),
         new("Placeholder", "string?", "null", "Text shown when no value is selected."),
+        new("SelectGroup", "component", "-", "Renders role=group and associates its registered SelectLabel with aria-labelledby."),
+        new("SelectLabel", "component", "-", "Labels a SelectGroup without becoming focusable; only SelectItem joins roving focus."),
     ];
 }
