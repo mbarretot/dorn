@@ -301,6 +301,27 @@ public class BlazorWasmTemplateGenerationTests
         Assert.Equal(ThemeValidator.ValidThemes, choices);
     }
 
+    [Fact]
+    public void AppHostLaunchSettings_ExistsWithHttpAndHttpsProfiles()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        var launchSettingsPath = Path.Combine(
+            templatesRoot,
+            "blazor",
+            "wasm",
+            "src",
+            "CleanArchBlazorWasm.AppHost",
+            "Properties",
+            "launchSettings.json"
+        );
+        Assert.True(File.Exists(launchSettingsPath), $"Expected {launchSettingsPath} to exist.");
+
+        using var launchSettings = JsonDocument.Parse(File.ReadAllText(launchSettingsPath));
+        var profiles = launchSettings.RootElement.GetProperty("profiles");
+        Assert.True(profiles.TryGetProperty("http", out _));
+        Assert.True(profiles.TryGetProperty("https", out _));
+    }
+
     /// <summary>
     /// Phase 7 go/no-go for the playground toggle (design E2): <c>IncludePlayground=false</c>
     /// must exclude <c>Features/Playground/**</c> entirely, rename

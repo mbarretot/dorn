@@ -292,6 +292,27 @@ public class BlazorServerTemplateGenerationTests
         Assert.Equal(ThemeValidator.ValidThemes, choices);
     }
 
+    [Fact]
+    public void AppHostLaunchSettings_ExistsWithHttpAndHttpsProfiles()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        var launchSettingsPath = Path.Combine(
+            templatesRoot,
+            "blazor",
+            "server",
+            "src",
+            "CleanArchBlazorServer.AppHost",
+            "Properties",
+            "launchSettings.json"
+        );
+        Assert.True(File.Exists(launchSettingsPath), $"Expected {launchSettingsPath} to exist.");
+
+        using var launchSettings = JsonDocument.Parse(File.ReadAllText(launchSettingsPath));
+        var profiles = launchSettings.RootElement.GetProperty("profiles");
+        Assert.True(profiles.TryGetProperty("http", out _));
+        Assert.True(profiles.TryGetProperty("https", out _));
+    }
+
     /// <summary>Phase 6 playground toggle, mirroring blazor-wasm-template's own test.</summary>
     [Fact]
     public async Task GenerateWithIncludePlaygroundFalse_ExcludesPlaygroundAndRenamesLeanNavMenu_AndBuilds()
