@@ -14,11 +14,13 @@ public abstract class UiTestContext : BunitContext
         ModalModule = JSInterop.SetupModule("./js/ui/ui-modal.js");
         DismissModule = JSInterop.SetupModule("./js/ui/ui-dismiss.js");
         AnchorModule = JSInterop.SetupModule("./js/ui/ui-anchor.js");
+        ClipboardModule = JSInterop.SetupModule("./js/ui/ui-clipboard.js");
         JSInterop.SetupVoid("Blazor._internal.domWrapper.focus", _ => true).SetVoidResult();
 
         Services.AddScoped(_ => new ModalInterop(JSInterop.JSRuntime));
         Services.AddScoped(_ => new DismissInterop(JSInterop.JSRuntime));
         Services.AddScoped(_ => new AnchorInterop(JSInterop.JSRuntime));
+        Services.AddScoped(_ => new ClipboardInterop(JSInterop.JSRuntime));
     }
 
     protected BunitJSModuleInterop ModalModule { get; }
@@ -26,4 +28,6 @@ public abstract class UiTestContext : BunitContext
     protected BunitJSModuleInterop DismissModule { get; }
 
     protected BunitJSModuleInterop AnchorModule { get; }
+
+    protected BunitJSModuleInterop ClipboardModule { get; }
 }
