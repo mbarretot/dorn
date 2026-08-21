@@ -85,7 +85,7 @@ public sealed class DismissStackTests
         startInfo.ArgumentList.Add("--input-type=module");
         startInfo.ArgumentList.Add("--eval");
         startInfo.ArgumentList.Add(script);
-        startInfo.ArgumentList.Add(modulePath);
+        startInfo.ArgumentList.Add(new Uri(modulePath).AbsoluteUri);
 
         using var process = Process.Start(startInfo)!;
         await process.WaitForExitAsync();
