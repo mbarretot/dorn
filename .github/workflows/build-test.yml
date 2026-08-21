@@ -43,30 +43,21 @@ jobs:
           path: ./.tools
           key: ${{ runner.os }}-reportgenerator-tool
 
-      # A local, never-pushed tag on HEAD makes GitVersion pack that exact version — see ADR 0026.
+      # DisableGitVersionTask: GitVersion computes a different version per branch/PR-merge-ref, but
+      # this pin is a fixed product decision, not something to derive from git — see ADR 0026.
       - name: Pack Dorn's own NuGet packages (local feed for templates/webapi)
         shell: pwsh
         run: |
           $messagingVersion = (Select-String -Path templates/grpc/Directory.Packages.props -Pattern 'Dorn\.SharedKernel" Version="([^"]+)"').Matches[0].Groups[1].Value
           $webUiPrimitivesVersion = (Select-String -Path templates/blazor/wasm/Directory.Packages.props -Pattern 'Dorn\.WebUI\.Primitives" Version="([^"]+)"').Matches[0].Groups[1].Value
 
-          # Cache key above is content-blind to these packages, so clear any stale extraction it restored.
-          Get-ChildItem -Path "$HOME/.nuget/packages" -Filter "dorn.*" -Directory -ErrorAction SilentlyContinue |
-            Remove-Item -Recurse -Force
-
           # nuget.config's dorn-local source must exist before the first restore, or NuGet errors NU1301.
           New-Item -ItemType Directory -Force -Path ./artifacts | Out-Null
 
-          # -f: the pinned version can already be a real historical release tag in this checkout.
-          git tag -f "v$messagingVersion"
-          dotnet pack packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj -c Release -o ./artifacts
-          dotnet pack packages/Dorn.Messaging/Dorn.Messaging.csproj -c Release -o ./artifacts
-          dotnet pack packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj -c Release -o ./artifacts
-          git tag -d "v$messagingVersion"
-
-          git tag -f "v$webUiPrimitivesVersion"
-          dotnet pack packages/Dorn.WebUI.Primitives/Dorn.WebUI.Primitives.csproj -c Release -o ./artifacts
-          git tag -d "v$webUiPrimitivesVersion"
+          dotnet pack packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj -c Release -o ./artifacts -p:DisableGitVersionTask=true "-p:PackageVersion=$messagingVersion"
+          dotnet pack packages/Dorn.Messaging/Dorn.Messaging.csproj -c Release -o ./artifacts -p:DisableGitVersionTask=true "-p:PackageVersion=$messagingVersion"
+          dotnet pack packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj -c Release -o ./artifacts -p:DisableGitVersionTask=true "-p:PackageVersion=$messagingVersion"
+          dotnet pack packages/Dorn.WebUI.Primitives/Dorn.WebUI.Primitives.csproj -c Release -o ./artifacts -p:DisableGitVersionTask=true "-p:PackageVersion=$webUiPrimitivesVersion"
 
       - name: Build and test gRPC template
         run: |
