@@ -22,7 +22,7 @@ Two other tools were evaluated and rejected on hands-on testing — see Alternat
 | Config | None required — zero-config, no `version.json`/`GitVersion.yml` needed for this repo's linear, single-tag model |
 | Real release (`publish.yml`) | Trigger stays `push: tags: v*`, unchanged. `dotnet pack`, no override — GitVersion reads the exact pushed tag directly |
 | Local dev/CI feed (`build-test.yml`) | Each `dotnet pack` passes `-p:DisableGitVersionTask=true -p:PackageVersion=<pinned>` explicitly, reading `<pinned>` from the checked-in `templates/*/Directory.Packages.props` |
-| Checkout | `actions/checkout@v4` needs `fetch-depth: 0` in both workflows — GitVersion needs real tag/commit history, not the default shallow clone |
+| Checkout | `actions/checkout` needs `fetch-depth: 0` in both workflows — GitVersion needs real tag/commit history, not the default shallow clone |
 
 The local-feed override is required, not incidental: templates' `Directory.Packages.props` pins are end-user-facing product decisions (*what version does a freshly-generated project reference*), not CI plumbing — they must stay exact, human-chosen values, and Central Package Management has no floating-version support to make them track a moving target automatically ([NuGet/Home#10432](https://github.com/NuGet/Home/issues/10432), open). The pinned value itself is never invented: it always equals either a real historical release tag, or — when a package has diverged locally and not yet been released — a value chosen by the maintainer at the point they made that change, exactly as `Directory.Packages.props` pins already work for every other dependency in this repo.
 

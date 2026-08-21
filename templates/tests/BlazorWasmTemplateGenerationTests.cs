@@ -108,11 +108,11 @@ public class BlazorWasmTemplateGenerationTests
             {
                 if (Directory.Exists(outputDirectory))
                 {
-                    Directory.Delete(outputDirectory, recursive: true);
+                    await DeleteDirectoryWithRetryAsync(outputDirectory);
                 }
                 if (Directory.Exists(toolsHome))
                 {
-                    Directory.Delete(toolsHome, recursive: true);
+                    await DeleteDirectoryWithRetryAsync(toolsHome);
                 }
             }
             else
@@ -187,7 +187,7 @@ public class BlazorWasmTemplateGenerationTests
         {
             if (Directory.Exists(outputDirectory))
             {
-                Directory.Delete(outputDirectory, recursive: true);
+                await DeleteDirectoryWithRetryAsync(outputDirectory);
             }
         }
     }
@@ -267,7 +267,7 @@ public class BlazorWasmTemplateGenerationTests
         {
             if (Directory.Exists(outputDirectory))
             {
-                Directory.Delete(outputDirectory, recursive: true);
+                await DeleteDirectoryWithRetryAsync(outputDirectory);
             }
         }
     }
@@ -388,11 +388,11 @@ public class BlazorWasmTemplateGenerationTests
             {
                 if (Directory.Exists(outputDirectory))
                 {
-                    Directory.Delete(outputDirectory, recursive: true);
+                    await DeleteDirectoryWithRetryAsync(outputDirectory);
                 }
                 if (Directory.Exists(toolsHome))
                 {
-                    Directory.Delete(toolsHome, recursive: true);
+                    await DeleteDirectoryWithRetryAsync(toolsHome);
                 }
             }
             else
@@ -451,7 +451,7 @@ public class BlazorWasmTemplateGenerationTests
         {
             if (Directory.Exists(toolsHome))
             {
-                Directory.Delete(toolsHome, recursive: true);
+                await DeleteDirectoryWithRetryAsync(toolsHome);
             }
         }
     }
@@ -491,7 +491,7 @@ public class BlazorWasmTemplateGenerationTests
         {
             if (Directory.Exists(toolsHome))
             {
-                Directory.Delete(toolsHome, recursive: true);
+                await DeleteDirectoryWithRetryAsync(toolsHome);
             }
         }
     }
@@ -616,6 +616,25 @@ public class BlazorWasmTemplateGenerationTests
         finally
         {
             Directory.SetCurrentDirectory(original);
+        }
+    }
+
+    // Windows can briefly hold a handle on the just-exited Tailwind CLI process.
+    private static async Task DeleteDirectoryWithRetryAsync(string path)
+    {
+        var attempt = 0;
+        while (true)
+        {
+            attempt++;
+            try
+            {
+                Directory.Delete(path, recursive: true);
+                return;
+            }
+            catch (IOException) when (attempt < 5)
+            {
+                await Task.Delay(200);
+            }
         }
     }
 
