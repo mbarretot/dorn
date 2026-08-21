@@ -13,7 +13,7 @@ public static class PlaygroundCatalog
             [
                 new("/playground/button", "Button", ["action", "click", "cta"]),
                 new("/playground/form", "Form", ["input", "label", "text field"]),
-                new("/playground/select", "Select", ["dropdown", "combobox", "options"]),
+                new("/playground/select", "Select", ["dropdown", "combobox", "options", "group"]),
                 new("/playground/checkbox", "Checkbox", ["input", "tick", "box"]),
                 new("/playground/switch", "Switch", ["toggle", "on", "off"]),
                 new("/playground/textarea", "Textarea", ["input", "multiline", "text field"]),
@@ -34,7 +34,11 @@ public static class PlaygroundCatalog
             "Overlays",
             [
                 new("/playground/dialog", "Dialog", ["modal", "overlay"]),
-                new("/playground/dropdown-menu", "DropdownMenu", ["dropdown", "menu", "overlay"]),
+                new(
+                    "/playground/dropdown-menu",
+                    "DropdownMenu",
+                    ["dropdown", "menu", "overlay", "submenu", "checkbox", "radio"]
+                ),
                 new("/playground/tooltip", "Tooltip", ["hint", "hover", "help text"]),
                 new("/playground/popover", "Popover", ["overlay", "anchor", "panel"]),
                 new("/playground/hover-card", "HoverCard", ["hover", "preview", "card"]),
@@ -62,6 +66,7 @@ public static class PlaygroundCatalog
             "Feedback",
             [
                 new("/playground/alert", "Alert", ["banner", "notice", "status", "warning"]),
+                new("/playground/toast", "Toast", ["feedback", "action", "capacity", "expiry"]),
                 new("/playground/progress", "Progress", ["loading", "bar", "meter", "percentage"]),
             ]
         ),

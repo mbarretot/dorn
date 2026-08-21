@@ -1,6 +1,6 @@
 # Dorn.WebUI.Primitives
 
-Framework-agnostic Blazor UI primitives shared by Dorn's Blazor templates: class merging (`Cn`/`ClassGroups`), roving-focus and typeahead state, `UiId`, `UiValueComponent`/`UiInputBase`, lazy JS-module interop wrappers, and theme state.
+Framework-agnostic Blazor UI primitives shared by Dorn's Blazor templates: class merging (`Cn`/`ClassGroups`), roving-focus and typeahead state, `UiId`, `UiValueComponent`/`UiInputBase`, lazy JS-module interop wrappers, theme state, and toast queue state.
 
 This package contains no `.razor` components. Components stay copy-owned per template — see [ADR 0022](https://github.com/mbarretot/dorn/blob/main/docs/adr/0022-copy-owned-ui-components.md).
 
@@ -30,4 +30,5 @@ Reference the package and use the primitives directly:
 using Dorn.WebUI.Primitives;
 using Dorn.WebUI.Primitives.Interop;
 using Dorn.WebUI.Primitives.Theme;
+using Dorn.WebUI.Primitives.Toast;
 ```

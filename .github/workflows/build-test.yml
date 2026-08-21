@@ -51,6 +51,10 @@ jobs:
           $messagingVersion = (Select-String -Path templates/grpc/Directory.Packages.props -Pattern 'Dorn\.SharedKernel" Version="([^"]+)"').Matches[0].Groups[1].Value
           $webUiPrimitivesVersion = (Select-String -Path templates/blazor/wasm/Directory.Packages.props -Pattern 'Dorn\.WebUI\.Primitives" Version="([^"]+)"').Matches[0].Groups[1].Value
 
+          # Cache key above is content-blind to these packages, so clear any stale extraction it restored.
+          Get-ChildItem -Path "$HOME/.nuget/packages" -Filter "dorn.*" -Directory -ErrorAction SilentlyContinue |
+            Remove-Item -Recurse -Force
+
           # nuget.config's dorn-local source must exist before the first restore, or NuGet errors NU1301.
           New-Item -ItemType Directory -Force -Path ./artifacts | Out-Null
 
