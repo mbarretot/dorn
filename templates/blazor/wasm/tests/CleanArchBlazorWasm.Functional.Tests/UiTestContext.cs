@@ -1,6 +1,10 @@
 using Bunit;
 using Dorn.WebUI.Primitives.Interop;
 using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+
+// Real Task.Delay-based open/close waits race under xUnit's default cross-class parallelism.
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace CleanArchBlazorWasm.Functional.Tests;
 
