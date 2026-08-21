@@ -1743,7 +1743,7 @@ public class WebApiTemplateGenerationTests
     }
 
     /// <summary>
-    /// Requirement "Setup and Cache Steps": checkout@v4 and setup-dotnet@v4 (reading the
+    /// Requirement "Setup and Cache Steps": checkout@v7 and setup-dotnet@v6 (reading the
     /// repository-root global.json) run before a NuGet cache keyed on Directory.Packages.props.
     /// </summary>
     [Fact]
@@ -1763,13 +1763,13 @@ public class WebApiTemplateGenerationTests
 
                 var steps = GetSteps(LoadCiWorkflowRoot(outputDirectory), "build-and-test");
                 var checkoutIndex = steps.FindIndex(s =>
-                    s.Uses?.StartsWith("actions/checkout@v4", StringComparison.Ordinal) == true
+                    s.Uses?.StartsWith("actions/checkout@v7", StringComparison.Ordinal) == true
                 );
                 var setupDotnetIndex = steps.FindIndex(s =>
-                    s.Uses?.StartsWith("actions/setup-dotnet@v4", StringComparison.Ordinal) == true
+                    s.Uses?.StartsWith("actions/setup-dotnet@v6", StringComparison.Ordinal) == true
                 );
                 var cacheIndex = steps.FindIndex(s =>
-                    s.Uses?.StartsWith("actions/cache@v4", StringComparison.Ordinal) == true
+                    s.Uses?.StartsWith("actions/cache@v6", StringComparison.Ordinal) == true
                 );
 
                 Assert.True(checkoutIndex >= 0);
