@@ -41,7 +41,7 @@
     protected override void OnAfterRender(bool firstRender) => Context.TriggerElement = _element;
 
     private Task HandleClickAsync() =>
-        Context.IsOpen ? Context.RequestClose() : Context.RequestOpen();
+        Context.IsOpen ? Context.CloseChainAsync() : Context.RequestOpen();
 
     private Task OnKeyDownAsync(KeyboardEventArgs e) =>
         e.Key switch
