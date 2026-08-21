@@ -3,7 +3,6 @@
 @using CleanArchBlazorWasm.Web.Components.Layout
 @using CleanArchBlazorWasm.Web.Components.Theme
 @using CleanArchBlazorWasm.Web.Components.Ui.Toast
-@using CleanArchBlazorWasm.Web.Features.Playground
 @using Dorn.WebUI.Primitives.Theme
 @using Dorn.WebUI.Primitives.Toast
 @using Microsoft.Extensions.DependencyInjection
@@ -108,16 +107,14 @@
     }
 
     [Fact]
-    public void MainAndPlaygroundLayouts_RenderToastHosts()
+    public void MainLayout_RendersToastHost()
     {
         JSInterop
             .Setup<ThemeSnapshot>("dornTheme.getSnapshot")
             .SetResult(new ThemeSnapshot("slate", "light", false));
 
         var main = Render<MainLayout>();
-        var playground = Render<PlaygroundLayout>();
 
         Assert.Single(main.FindAll("[data-testid='toast-viewport']"));
-        Assert.Single(playground.FindAll("[data-testid='toast-viewport']"));
     }
 }
