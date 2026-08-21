@@ -1,3 +1,5 @@
+using Dorn.WebUI.Primitives.Toast;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
@@ -5,6 +7,7 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
 builder.Services.AddScoped<ThemeInterop>();
 builder.Services.AddScoped<ThemeState>();
+builder.Services.AddScoped<ToastStore>();
 
 builder.Services.AddScoped<ModalInterop>();
 builder.Services.AddScoped<DismissInterop>();
