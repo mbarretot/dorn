@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "./themes/slate.css";
 @import "./themes/rose.css";
+@import "./themes/neutral.css";
+@import "./themes/linear.css";
+@import "./themes/primer.css";
+@import "./themes/lightning.css";
 
 /* B3: theme and mode are orthogonal data attributes on <html>, set by wwwroot/theme-boot.js
    before Blazor boots. Re-declaring `dark` against data-ui-mode (instead of Tailwind's default
@@ -14,6 +18,7 @@
 @source "../Components/**/*.razor";
 @source "../Features/**/*.razor";
 @source "../wwwroot/index.html";
+@source inline("bg-success text-success-foreground bg-warning text-warning-foreground");
 
 @theme inline {
   --color-background: var(--ui-background);
@@ -32,6 +37,10 @@
   --color-accent-foreground: var(--ui-accent-foreground);
   --color-destructive: var(--ui-destructive);
   --color-destructive-foreground: var(--ui-destructive-foreground);
+  --color-success: var(--ui-success);
+  --color-success-foreground: var(--ui-success-foreground);
+  --color-warning: var(--ui-warning);
+  --color-warning-foreground: var(--ui-warning-foreground);
   --color-border: var(--ui-border);
   --color-input: var(--ui-input);
   --color-ring: var(--ui-ring);
@@ -44,5 +53,16 @@
 @layer base {
   body {
     @apply bg-background text-foreground;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

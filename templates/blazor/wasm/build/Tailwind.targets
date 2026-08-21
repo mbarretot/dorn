@@ -153,7 +153,7 @@
       Condition="'$(TailwindExePath)' == ''"
       SourceUrl="$(TailwindDownloadUrl)"
       DestinationFolder="$(TailwindCacheDir)"
-      DestinationFileName="tailwindcss$(TailwindExeExtension).download"
+      DestinationFileName="tailwindcss$(TailwindExeExtension).download.$([System.Guid]::NewGuid())"
       Retries="3"
     >
       <Output TaskParameter="DownloadedFile" ItemName="_DornTailwindDownload" />
@@ -185,14 +185,22 @@
       Text="Tailwind CSS CLI download checksum mismatch for RID '$(TailwindRid)': expected '$(TailwindSha256)' but computed '$(_DornTailwindDownloadedHash)'. The corrupt download has been deleted."
     />
 
+    <PropertyGroup Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindChecksumMismatch)' != 'true' and Exists('$(TailwindCachedExePath)')">
+      <_DornTailwindAlreadyCachedByAnotherProcess>true</_DornTailwindAlreadyCachedByAnotherProcess>
+    </PropertyGroup>
+    <Delete
+      Condition="'$(_DornTailwindAlreadyCachedByAnotherProcess)' == 'true'"
+      Files="@(_DornTailwindDownload)"
+    />
+
     <Move
-      Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindChecksumMismatch)' != 'true'"
+      Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindChecksumMismatch)' != 'true' and '$(_DornTailwindAlreadyCachedByAnotherProcess)' != 'true'"
       SourceFiles="@(_DornTailwindDownload)"
       DestinationFiles="$(TailwindCachedExePath)"
     />
     <!-- chmod +x runs only after the download is in its final cached location. -->
     <Exec
-      Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindChecksumMismatch)' != 'true' and '$(OS)' != 'Windows_NT'"
+      Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindChecksumMismatch)' != 'true' and '$(_DornTailwindAlreadyCachedByAnotherProcess)' != 'true' and '$(OS)' != 'Windows_NT'"
       Command="chmod +x &quot;$(TailwindCachedExePath)&quot;"
     />
     <PropertyGroup Condition="'$(TailwindExePath)' == '' and '$(_DornTailwindChecksumMismatch)' != 'true'">

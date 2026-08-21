@@ -29,6 +29,62 @@ public class TailwindPipelineTests
     }
 
     [Fact]
+    public void GeneratedAppCss_ContainsThemeStatusTokensAndUtilityMappings()
+    {
+        var appCss = ReadGeneratedAppCss();
+
+        AssertStatusTokens(appCss, "slate", isDark: false);
+        AssertStatusTokens(appCss, "slate", isDark: true);
+        AssertStatusTokens(appCss, "rose", isDark: false);
+        AssertStatusTokens(appCss, "rose", isDark: true);
+
+        Assert.Contains(
+            ".bg-success{background-color:var(--ui-success)}",
+            appCss,
+            StringComparison.Ordinal
+        );
+        Assert.Contains(
+            ".text-success-foreground{color:var(--ui-success-foreground)}",
+            appCss,
+            StringComparison.Ordinal
+        );
+        Assert.Contains(
+            ".bg-warning{background-color:var(--ui-warning)}",
+            appCss,
+            StringComparison.Ordinal
+        );
+        Assert.Contains(
+            ".text-warning-foreground{color:var(--ui-warning-foreground)}",
+            appCss,
+            StringComparison.Ordinal
+        );
+    }
+
+    [Fact]
+    public void GeneratedAppCss_ContainsNeutralAndLinearThemeBlocksWithExpectedRadii()
+    {
+        var appCss = ReadGeneratedAppCss();
+
+        AssertThemeRadius(appCss, "neutral", ".625rem");
+        AssertThemeRadius(appCss, "linear", ".5rem");
+        AssertThemeBlock(appCss, "neutral", isDark: true);
+        AssertThemeBlock(appCss, "linear", isDark: true);
+    }
+
+    [Fact]
+    public void GeneratedAppCss_ContainsPrimerAndLightningThemeBlocksWithLightOnlyRadii()
+    {
+        var appCss = ReadGeneratedAppCss();
+
+        AssertThemeRadius(appCss, "primer", ".375rem");
+        AssertThemeRadius(appCss, "lightning", ".25rem");
+        AssertThemeBlock(appCss, "primer", isDark: true);
+        AssertThemeBlock(appCss, "lightning", isDark: true);
+        AssertThemeBlockDoesNotContainRadius(appCss, "primer");
+        AssertThemeBlockDoesNotContainRadius(appCss, "lightning");
+    }
+
+    [Fact]
     public void GeneratedAppCss_ContainsTokenUtilitiesEmittedByComponentsAndPreflightMarker()
     {
         var appCss = ReadGeneratedAppCss();
@@ -60,6 +116,52 @@ public class TailwindPipelineTests
         );
 
         return File.ReadAllText(appCssPath);
+    }
+
+    private static void AssertStatusTokens(string appCss, string theme, bool isDark)
+    {
+        var modeSelector = isDark ? "\\[data-ui-mode=[\"']?dark[\"']?\\]" : string.Empty;
+        var selector = $"\\[data-ui-theme=[\"']?{theme}[\"']?\\]{modeSelector}";
+        var tokenBlock = new Regex($"{selector}\\s*\\{{[^}}]*\\}}", RegexOptions.Singleline);
+        var match = tokenBlock.Match(appCss);
+
+        Assert.True(
+            match.Success,
+            $"Expected the {theme} {(isDark ? "dark" : "light")} token block."
+        );
+        Assert.Contains("--ui-success:", match.Value, StringComparison.Ordinal);
+        Assert.Contains("--ui-success-foreground:", match.Value, StringComparison.Ordinal);
+        Assert.Contains("--ui-warning:", match.Value, StringComparison.Ordinal);
+        Assert.Contains("--ui-warning-foreground:", match.Value, StringComparison.Ordinal);
+    }
+
+    private static void AssertThemeRadius(string appCss, string theme, string radius)
+    {
+        var match = AssertThemeBlock(appCss, theme, isDark: false);
+
+        Assert.Contains($"--ui-radius:{radius}", match.Value, StringComparison.Ordinal);
+    }
+
+    private static void AssertThemeBlockDoesNotContainRadius(string appCss, string theme)
+    {
+        var darkBlock = AssertThemeBlock(appCss, theme, isDark: true);
+
+        Assert.DoesNotContain("--ui-radius:", darkBlock.Value, StringComparison.Ordinal);
+    }
+
+    private static Match AssertThemeBlock(string appCss, string theme, bool isDark)
+    {
+        var modeSelector = isDark ? "\\[data-ui-mode=[\"']?dark[\"']?\\]" : string.Empty;
+        var selector = $"\\[data-ui-theme=[\"']?{theme}[\"']?\\]{modeSelector}";
+        var tokenBlock = new Regex($"{selector}\\s*\\{{[^}}]*\\}}", RegexOptions.Singleline);
+        var match = tokenBlock.Match(appCss);
+
+        Assert.True(
+            match.Success,
+            $"Expected the {theme} {(isDark ? "dark" : "light")} token block."
+        );
+
+        return match;
     }
 
     private static string ResolveAppCssPath()

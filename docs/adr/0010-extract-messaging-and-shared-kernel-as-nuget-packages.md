@@ -25,7 +25,7 @@ Create three packages under top-level `packages/`:
 - Shared code has one canonical implementation.
 - New templates add package references instead of copy pairs.
 - Generated projects stay self-contained and restore normal versioned packages.
-- Local package changes still require `eng/scripts/pack-packages.ps1` and the `./artifacts` feed during repository tests.
+- Local package changes still require packing `packages/*.csproj` (see ADR 0026) into the `./artifacts` feed during repository tests.
 - Package versioning becomes part of template compatibility.
 
 ## Alternatives

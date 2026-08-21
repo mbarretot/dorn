@@ -1,0 +1,74 @@
+@using CleanArchBlazorServer.Web.Components.Ui.Collapsible
+@using CleanArchBlazorServer.Web.Components.Ui.Form
+
+<div class="flex flex-col gap-2">
+    <Input
+        Value="_query"
+        ValueChanged="OnQueryChanged"
+        ValueExpression="() => _query"
+        placeholder="Search components..."
+        data-testid="playground-nav-search"
+    />
+    @foreach (var category in PlaygroundCatalog.Categories)
+    {
+        var entries = Filter(category, _query);
+        if (entries.Count == 0 && !string.IsNullOrEmpty(_query))
+        {
+            continue;
+        }
+
+        <Collapsible Open="@IsOpen(category.Name, entries.Count)" OpenChanged="@(open => OnCategoryToggled(category.Name, open))">
+            <CollapsibleTrigger
+                Class="flex w-full items-center justify-between text-sm font-medium text-foreground"
+                data-testid="@($"nav-category-{category.Name}")"
+            >
+                @category.Name
+            </CollapsibleTrigger>
+            <CollapsibleContent Class="flex flex-col gap-1 py-1 pl-2">
+                @foreach (var entry in entries)
+                {
+                    <a
+                        href="@entry.Href"
+                        class="text-sm text-muted-foreground hover:text-foreground"
+                        data-testid="@($"nav-entry-{entry.Label}")"
+                    >
+                        @entry.Label
+                    </a>
+                }
+            </CollapsibleContent>
+        </Collapsible>
+    }
+</div>
+
+@code {
+    private string _query = "";
+    private readonly HashSet<string> _manuallyOpen = [];
+
+    private void OnQueryChanged(string value) => _query = value;
+
+    private void OnCategoryToggled(string categoryName, bool open)
+    {
+        if (open)
+        {
+            _manuallyOpen.Add(categoryName);
+        }
+        else
+        {
+            _manuallyOpen.Remove(categoryName);
+        }
+    }
+
+    private bool IsOpen(string categoryName, int filteredCount) =>
+        !string.IsNullOrEmpty(_query) && filteredCount > 0
+            ? true
+            : _manuallyOpen.Contains(categoryName);
+
+    private static IReadOnlyList<PlaygroundEntry> Filter(PlaygroundCategory category, string query) =>
+        string.IsNullOrEmpty(query)
+            ? category.Entries
+            : category.Entries.Where(e => Matches(e, query)).ToList();
+
+    private static bool Matches(PlaygroundEntry entry, string query) =>
+        entry.Label.Contains(query, StringComparison.OrdinalIgnoreCase)
+        || entry.Keywords.Any(k => k.Contains(query, StringComparison.OrdinalIgnoreCase));
+}

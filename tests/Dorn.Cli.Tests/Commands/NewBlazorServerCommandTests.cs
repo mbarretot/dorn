@@ -165,6 +165,36 @@ public class NewBlazorServerCommandTests
     }
 
     [Fact]
+    public async Task NewBlazorServer_WithOmittedThemeAndInteractiveConsole_OffersAllSixThemes()
+    {
+        var (engine, _, command, console) = CreateCommandWithRealTestConsole();
+        engine
+            .GenerateAsync(Arg.Any<GenerationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GenerationResult(true, "/tmp/MyApp", ["Program.cs"], []));
+        console.Profile.Capabilities.Interactive = true;
+        for (var i = 0; i < 5; i++)
+        {
+            console.Input.PushKey(ConsoleKey.DownArrow);
+        }
+        console.Input.PushKey(ConsoleKey.Enter);
+
+        var exitCode = await command.RunAsync(
+            new NewBlazorServerSettings { Name = "MyApp" },
+            CancellationToken.None
+        );
+
+        Assert.Equal(0, exitCode);
+        await engine
+            .Received(1)
+            .GenerateAsync(
+                Arg.Is<GenerationRequest>(r =>
+                    r.Parameters != null && r.Parameters["Theme"] == "lightning"
+                ),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
     public async Task NewBlazorServer_WithNoPlaygroundFlag_MapsIncludePlaygroundFalse()
     {
         var (engine, _, command) = CreateCommand();

@@ -1,31 +1,57 @@
 @page "/playground/button"
+@layout PlaygroundLayout
 
 <PageTitle>Playground · Button</PageTitle>
 
-<div class="mx-auto flex max-w-2xl flex-col gap-8 p-8">
-    <PlaygroundSection Title="Variants" Description="The class-merge system resolves each variant to a distinct, non-conflicting class set.">
-        <div class="flex flex-wrap items-center gap-3">
-            <Button Variant="ButtonVariant.Default">Default</Button>
-            <Button Variant="ButtonVariant.Secondary">Secondary</Button>
-            <Button Variant="ButtonVariant.Destructive">Destructive</Button>
-            <Button Variant="ButtonVariant.Outline">Outline</Button>
-            <Button Variant="ButtonVariant.Ghost">Ghost</Button>
-            <Button Variant="ButtonVariant.Link">Link</Button>
-        </div>
-    </PlaygroundSection>
+<ComponentPlayground
+    Title="Button"
+    Description="The class-merge system resolves each variant/size combination to a distinct, non-conflicting class set."
+    CodeSnippet="@CodeSnippet"
+    ApiParameters="ApiParameters"
+>
+    <Controls>
+        <EnumControl TEnum="ButtonVariant" Label="Variant" @bind-Value="_variant" />
+        <EnumControl TEnum="ButtonSize" Label="Size" @bind-Value="_size" />
+        <BoolControl Label="Disabled" @bind-Value="_disabled" />
+        <BoolControl Label="Loading" @bind-Value="_loading" />
+        <TextControl Label="Text" @bind-Value="_text" />
+    </Controls>
+    <Preview>
+        <Button Variant="_variant" Size="_size" Disabled="_disabled" Loading="_loading">@_text</Button>
+    </Preview>
+</ComponentPlayground>
 
-    <PlaygroundSection Title="Sizes">
-        <div class="flex flex-wrap items-center gap-3">
-            <Button Size="ButtonSize.Sm">Small</Button>
-            <Button Size="ButtonSize.Default">Default</Button>
-            <Button Size="ButtonSize.Lg">Large</Button>
-            <Button Size="ButtonSize.Icon" aria-label="Icon button">★</Button>
-        </div>
-    </PlaygroundSection>
+@code {
+    private ButtonVariant _variant = ButtonVariant.Default;
+    private ButtonSize _size = ButtonSize.Default;
+    private bool _disabled;
+    private bool _loading;
+    private string _text = "Save";
 
-    <PlaygroundSection Title="Disabled">
-        <div class="flex flex-wrap items-center gap-3">
-            <Button Disabled="true">Disabled</Button>
-        </div>
-    </PlaygroundSection>
-</div>
+    private string CodeSnippet
+    {
+        get
+        {
+            var attributes = "";
+            attributes += _variant != ButtonVariant.Default ? $" Variant=\"ButtonVariant.{_variant}\"" : "";
+            attributes += _size != ButtonSize.Default ? $" Size=\"ButtonSize.{_size}\"" : "";
+            attributes += _disabled ? " Disabled=\"true\"" : "";
+            attributes += _loading ? " Loading=\"true\"" : "";
+            return $"<Button{attributes}>{_text}</Button>";
+        }
+    }
+
+    private static readonly PlaygroundParameter[] ApiParameters =
+    [
+        new("Variant", "ButtonVariant", "Default", "Visual style variant."),
+        new("Size", "ButtonSize", "Default", "Size preset."),
+        new("Disabled", "bool", "false", "Disables interaction."),
+        new(
+            "Loading",
+            "bool",
+            "false",
+            "Shows a spinner, disables interaction, suppresses the click handler."
+        ),
+        new("Type", "string", "\"button\"", "The native button type attribute."),
+    ];
+}

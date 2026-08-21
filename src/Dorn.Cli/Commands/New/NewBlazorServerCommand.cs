@@ -56,7 +56,7 @@ public sealed class NewBlazorServerCommand(
                     ? _console.Prompt(
                         new SelectionPrompt<string>()
                             .Title("Select a [green]theme[/]:")
-                            .AddChoices("slate", "rose")
+                            .AddChoices(ThemeValidator.ValidThemes)
                     )
                     : "slate"
             );
