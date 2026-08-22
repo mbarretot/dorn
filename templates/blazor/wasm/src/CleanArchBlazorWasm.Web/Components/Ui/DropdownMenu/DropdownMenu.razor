@@ -34,12 +34,21 @@
     {
         _value.SetParameters(Open, OpenChanged, DefaultOpen);
         _context.IsOpen = _value.CurrentValue;
+        if (_context.IsOpen)
+        {
+            _context.RegisterOpen();
+        }
+        else
+        {
+            _context.UnregisterOpen();
+        }
     }
 
     private async Task RequestOpenAsync()
     {
         await _value.SetValueAsync(true);
         _context.IsOpen = _value.CurrentValue;
+        _context.RegisterOpen();
         StateHasChanged();
     }
 
@@ -47,6 +56,7 @@
     {
         await _value.SetValueAsync(false);
         _context.IsOpen = _value.CurrentValue;
+        _context.UnregisterOpen();
         StateHasChanged();
     }
 }

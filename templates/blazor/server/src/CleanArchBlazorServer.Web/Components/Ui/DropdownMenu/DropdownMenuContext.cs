@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace CleanArchBlazorServer.Web.Components.Ui.DropdownMenu;
 
-// Same cascading-context shape as DialogContext/TabsContext: open state, roving-tabindex state, element registry.
 public sealed class DropdownMenuContext
 {
     private readonly List<(string Id, ElementReference Element, bool Disabled)> _items = [];
+    private readonly List<DropdownMenuContext> _openMenus = [];
 
     public RovingFocusState Focus { get; } = new(RovingFocusOrientation.Vertical, loop: true);
 
@@ -22,8 +22,17 @@ public sealed class DropdownMenuContext
 
     public required Func<Task> RequestClose { get; init; }
 
-    // Re-renders the whole menu subtree — roving-tabindex movement mutates Focus from whichever item's own keydown handler ran, and Blazor only auto-rerenders that one component, not its siblings.
     public required Action NotifyStateChanged { get; init; }
+
+    public DropdownMenuContext? Parent { get; init; }
+
+    public DropdownMenuContext Root => Parent?.Root ?? this;
+
+    public bool RestoreTriggerOnClose { get; private set; } = true;
+
+    internal bool PresentationClosed { get; set; }
+
+    internal Func<Task>? ClosePresentation { get; set; }
 
     internal void RegisterItem(string id, ElementReference element, bool disabled)
     {
@@ -70,6 +79,37 @@ public sealed class DropdownMenuContext
 
     internal async Task FocusTriggerAsync() => await TriggerElement.FocusAsync();
 
+    internal void RegisterOpen()
+    {
+        RestoreTriggerOnClose = true;
+        Root._openMenus.Remove(this);
+        Root._openMenus.Add(this);
+    }
+
+    internal void UnregisterOpen() => Root._openMenus.Remove(this);
+
+    internal async Task CloseCurrentAsync(bool restoreImmediateTrigger)
+    {
+        RestoreTriggerOnClose = restoreImmediateTrigger;
+        await RequestClose();
+    }
+
+    internal async Task CloseChainAsync()
+    {
+        var root = Root;
+        foreach (var menu in root._openMenus.AsEnumerable().Reverse().ToArray())
+        {
+            if (menu.ClosePresentation is not null)
+            {
+                await menu.ClosePresentation();
+            }
+
+            await menu.CloseCurrentAsync(false);
+        }
+
+        await root.FocusTriggerAsync();
+    }
+
     internal async Task SelectItemAsync(EventCallback onClick)
     {
         if (onClick.HasDelegate)
@@ -77,6 +117,6 @@ public sealed class DropdownMenuContext
             await onClick.InvokeAsync();
         }
 
-        await RequestClose();
+        await CloseChainAsync();
     }
 }

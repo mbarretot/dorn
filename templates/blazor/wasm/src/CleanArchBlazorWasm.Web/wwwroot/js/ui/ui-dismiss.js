@@ -1,40 +1,56 @@
-// Owned JS module (design C7), scoped to NON-modal surfaces (DropdownMenu/Select content,
-// PR6): capture-phase outside pointerdown + Escape, routed through the same
-// [JSInvokable] RequestDismissAsync callback shape ui-modal.js uses for Dialog. Dialog does not
-// use this module — showModal()'s native `cancel` event and document inertness already cover
-// its dismissal and focus-containment needs (see ui-modal.js).
-
 const activations = new Map();
+let isListening = false;
 
 export function activate(id, containerEl, dotNetRef) {
-  function requestDismiss() {
-    dotNetRef.invokeMethodAsync("RequestDismissAsync");
-  }
+  activations.delete(id);
+  activations.set(id, { containerEl, dotNetRef });
 
-  function onPointerDown(event) {
-    if (!containerEl.contains(event.target)) {
-      requestDismiss();
-    }
-  }
-
-  function onKeyDown(event) {
-    if (event.key === "Escape") {
-      requestDismiss();
-    }
+  if (isListening) {
+    return;
   }
 
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("keydown", onKeyDown, true);
-  activations.set(id, { onPointerDown, onKeyDown });
+  isListening = true;
 }
 
 export function deactivate(id) {
-  const handlers = activations.get(id);
-  if (!handlers) {
+  activations.delete(id);
+
+  if (activations.size !== 0 || !isListening) {
     return;
   }
 
-  document.removeEventListener("pointerdown", handlers.onPointerDown, true);
-  document.removeEventListener("keydown", handlers.onKeyDown, true);
-  activations.delete(id);
+  document.removeEventListener("pointerdown", onPointerDown, true);
+  document.removeEventListener("keydown", onKeyDown, true);
+  isListening = false;
+}
+
+function onPointerDown(event) {
+  const activation = getTopActivation();
+  if (activation && !activation.containerEl.contains(event.target)) {
+    requestDismiss(activation);
+  }
+}
+
+function onKeyDown(event) {
+  const activation = getTopActivation();
+  if (activation && event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    requestDismiss(activation);
+  }
+}
+
+function getTopActivation() {
+  let activation;
+  for (const candidate of activations.values()) {
+    activation = candidate;
+  }
+
+  return activation;
+}
+
+function requestDismiss(activation) {
+  activation.dotNetRef.invokeMethodAsync("RequestDismissAsync");
 }

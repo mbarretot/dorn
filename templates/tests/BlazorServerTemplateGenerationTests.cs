@@ -292,6 +292,27 @@ public class BlazorServerTemplateGenerationTests
         Assert.Equal(ThemeValidator.ValidThemes, choices);
     }
 
+    [Fact]
+    public void AppHostLaunchSettings_ExistsWithHttpAndHttpsProfiles()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        var launchSettingsPath = Path.Combine(
+            templatesRoot,
+            "blazor",
+            "server",
+            "src",
+            "CleanArchBlazorServer.AppHost",
+            "Properties",
+            "launchSettings.json"
+        );
+        Assert.True(File.Exists(launchSettingsPath), $"Expected {launchSettingsPath} to exist.");
+
+        using var launchSettings = JsonDocument.Parse(File.ReadAllText(launchSettingsPath));
+        var profiles = launchSettings.RootElement.GetProperty("profiles");
+        Assert.True(profiles.TryGetProperty("http", out _));
+        Assert.True(profiles.TryGetProperty("https", out _));
+    }
+
     /// <summary>Phase 6 playground toggle, mirroring blazor-wasm-template's own test.</summary>
     [Fact]
     public async Task GenerateWithIncludePlaygroundFalse_ExcludesPlaygroundAndRenamesLeanNavMenu_AndBuilds()
@@ -383,6 +404,140 @@ public class BlazorServerTemplateGenerationTests
             else
             {
                 Console.WriteLine("KEPT: " + outputDirectory);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task GenerateAndVerify_DornBlazorServerTemplate_WiresWave2ToastSelectDropdownMenu()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(
+            RealTempRoot,
+            $"dorn-tests-blazor-server-wave2-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-blazor-server",
+                "DornWave2BlazorServerApp",
+                outputDirectory
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webRoot = Path.Combine(outputDirectory, "src", "DornWave2BlazorServerApp.Web");
+
+            var program = await File.ReadAllTextAsync(Path.Combine(webRoot, "Program.cs"));
+            Assert.Contains("AddScoped<ToastStore>()", program, StringComparison.Ordinal);
+
+            var mainLayout = await File.ReadAllTextAsync(
+                Path.Combine(webRoot, "Components", "Layout", "MainLayout.razor")
+            );
+            Assert.Contains("<ToastHost />", mainLayout, StringComparison.Ordinal);
+
+            var playgroundLayout = await File.ReadAllTextAsync(
+                Path.Combine(webRoot, "Features", "Playground", "PlaygroundLayout.razor")
+            );
+            Assert.Contains("<ToastHost />", playgroundLayout, StringComparison.Ordinal);
+
+            var selectDir = Path.Combine(webRoot, "Components", "Ui", "Select");
+            Assert.True(File.Exists(Path.Combine(selectDir, "SelectGroup.razor")));
+            Assert.True(File.Exists(Path.Combine(selectDir, "SelectLabel.razor")));
+
+            var dropdownMenuDir = Path.Combine(webRoot, "Components", "Ui", "DropdownMenu");
+            foreach (
+                var file in new[]
+                {
+                    "DropdownMenuSub.razor",
+                    "DropdownMenuSubTrigger.razor",
+                    "DropdownMenuSubContent.razor",
+                    "DropdownMenuCheckboxItem.razor",
+                    "DropdownMenuRadioGroup.razor",
+                    "DropdownMenuRadioItem.razor",
+                }
+            )
+            {
+                Assert.True(
+                    File.Exists(Path.Combine(dropdownMenuDir, file)),
+                    $"Expected generated '{file}' under '{dropdownMenuDir}'."
+                );
+            }
+
+            var catalog = await File.ReadAllTextAsync(
+                Path.Combine(webRoot, "Features", "Playground", "PlaygroundCatalog.cs")
+            );
+            Assert.Contains("/playground/toast", catalog, StringComparison.Ordinal);
+            Assert.Contains("\"submenu\"", catalog, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                await DeleteDirectoryWithRetryAsync(outputDirectory);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task GenerateWithIncludePlaygroundFalse_StillWiresToastHostInMainLayout()
+    {
+        var templatesRoot = TemplateLocator.ResolveTemplatesRoot();
+        Assert.True(Directory.Exists(templatesRoot));
+
+        var services = new ServiceCollection();
+        services.AddDornCore();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetRequiredService<IGenerationEngine>();
+
+        var outputDirectory = Path.Combine(
+            RealTempRoot,
+            $"dorn-tests-blazor-server-wave2-lean-{Guid.NewGuid():N}"
+        );
+        try
+        {
+            var request = new GenerationRequest(
+                "dorn-blazor-server",
+                "DornWave2LeanBlazorServerApp",
+                outputDirectory,
+                Parameters: new Dictionary<string, string> { ["IncludePlayground"] = "false" }
+            );
+            var result = await engine.GenerateAsync(request);
+
+            Assert.True(
+                result.Success,
+                "Template generation failed: "
+                    + string.Join("; ", result.Diagnostics.Select(d => d.Message))
+            );
+
+            var webRoot = Path.Combine(outputDirectory, "src", "DornWave2LeanBlazorServerApp.Web");
+            var mainLayout = await File.ReadAllTextAsync(
+                Path.Combine(webRoot, "Components", "Layout", "MainLayout.razor")
+            );
+            Assert.Contains("<ToastHost />", mainLayout, StringComparison.Ordinal);
+
+            Assert.False(
+                Directory.Exists(Path.Combine(webRoot, "Features", "Playground")),
+                "Expected no playground directory when IncludePlayground=false."
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                await DeleteDirectoryWithRetryAsync(outputDirectory);
             }
         }
     }
