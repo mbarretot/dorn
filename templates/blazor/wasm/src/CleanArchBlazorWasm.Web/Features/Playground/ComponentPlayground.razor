@@ -32,6 +32,7 @@
                         <th class="px-4 py-2 font-medium">Type</th>
                         <th class="px-4 py-2 font-medium">Default</th>
                         <th class="px-4 py-2 font-medium">Description</th>
+                        <th class="w-px px-4 py-2 font-medium"><span class="sr-only">Copy</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -42,6 +43,13 @@
                             <td class="px-4 py-2 font-mono text-xs text-muted-foreground">@parameter.Type</td>
                             <td class="px-4 py-2 font-mono text-xs text-muted-foreground">@parameter.Default</td>
                             <td class="px-4 py-2 text-muted-foreground">@parameter.Description</td>
+                            <td class="px-4 py-2 text-right">
+                                <CopyButton
+                                    Text="@($"{parameter.Name}: {parameter.Type}")"
+                                    aria-label="@($"Copy {parameter.Name}")"
+                                    data-testid="@($"api-copy-{parameter.Name}")"
+                                />
+                            </td>
                         </tr>
                     }
                 </tbody>
