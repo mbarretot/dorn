@@ -55,6 +55,18 @@
     @apply bg-background text-foreground;
   }
 
+  #blazor-error-ui {
+    @apply fixed inset-x-0 bottom-0 z-50 hidden bg-destructive px-5 py-3 text-destructive-foreground shadow-lg;
+  }
+
+  #blazor-error-ui .reload {
+    @apply ml-2 underline;
+  }
+
+  #blazor-error-ui .dismiss {
+    @apply absolute right-3 top-2 cursor-pointer;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     ::before,
