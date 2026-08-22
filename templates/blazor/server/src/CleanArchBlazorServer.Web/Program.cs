@@ -13,6 +13,7 @@ builder.Services.AddScoped<ModalInterop>();
 builder.Services.AddScoped<DismissInterop>();
 builder.Services.AddScoped<AnchorInterop>();
 builder.Services.AddScoped<ClipboardInterop>();
+builder.Services.AddScoped<PlaygroundShortcutInterop>();
 
 var app = builder.Build();
 
