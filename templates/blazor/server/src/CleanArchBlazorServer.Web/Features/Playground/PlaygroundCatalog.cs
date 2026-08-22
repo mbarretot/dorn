@@ -48,9 +48,9 @@ public static class PlaygroundCatalog
             "Display",
             [
                 new("/playground/card", "Card", ["container", "panel"]),
+                new("/playground/avatar", "Avatar", ["profile", "image", "fallback", "initials"]),
                 new("/playground/badge", "Badge", ["tag", "label", "chip", "status"]),
                 new("/playground/skeleton", "Skeleton", ["loading", "placeholder", "shimmer"]),
-                new("/playground/avatar", "Avatar", ["profile", "image", "fallback", "initials"]),
             ]
         ),
         new(

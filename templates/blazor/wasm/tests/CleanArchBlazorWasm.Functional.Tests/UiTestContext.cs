@@ -27,12 +27,20 @@ public abstract class UiTestContext : BunitContext
         DismissModule = JSInterop.SetupModule("./js/ui/ui-dismiss.js");
         AnchorModule = JSInterop.SetupModule("./js/ui/ui-anchor.js");
         ClipboardModule = JSInterop.SetupModule("./js/ui/ui-clipboard.js");
+        PlaygroundShortcutModule = JSInterop.SetupModule("./js/playground/playground-shortcut.js");
+        ActivateShortcut = PlaygroundShortcutModule
+            .SetupVoid("activate", _ => true)
+            .SetVoidResult();
+        DeactivateShortcut = PlaygroundShortcutModule
+            .SetupVoid("deactivate", _ => true)
+            .SetVoidResult();
         JSInterop.SetupVoid("Blazor._internal.domWrapper.focus", _ => true).SetVoidResult();
 
         Services.AddScoped(_ => new ModalInterop(JSInterop.JSRuntime));
         Services.AddScoped(_ => new DismissInterop(JSInterop.JSRuntime));
         Services.AddScoped(_ => new AnchorInterop(JSInterop.JSRuntime));
         Services.AddScoped(_ => new ClipboardInterop(JSInterop.JSRuntime));
+        Services.AddScoped(_ => new PlaygroundShortcutInterop(JSInterop.JSRuntime));
     }
 
     protected BunitJSModuleInterop ModalModule { get; }
@@ -42,4 +50,10 @@ public abstract class UiTestContext : BunitContext
     protected BunitJSModuleInterop AnchorModule { get; }
 
     protected BunitJSModuleInterop ClipboardModule { get; }
+
+    protected BunitJSModuleInterop PlaygroundShortcutModule { get; }
+
+    protected JSRuntimeInvocationHandler ActivateShortcut { get; }
+
+    protected JSRuntimeInvocationHandler DeactivateShortcut { get; }
 }
