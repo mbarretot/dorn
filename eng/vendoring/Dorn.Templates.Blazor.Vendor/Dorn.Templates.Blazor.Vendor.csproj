@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+        <IsPackable>false</IsPackable>
+        <VendorTarget Condition="'$(VendorTarget)'==''"
+            >$(MSBuildThisFileDirectory)../../../templates/blazor</VendorTarget>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageDownload Include="Dorn.Templates.BlazorWasm" Version="[$(BlazorWasmPin)]" />
+        <PackageDownload Include="Dorn.Templates.BlazorServer" Version="[$(BlazorServerPin)]" />
+    </ItemGroup>
+    <Target Name="VendorBlazorTemplates">
+        <Error
+            Condition="'$(BlazorWasmPin)'=='' or '$(BlazorServerPin)'==''"
+            Text="Pins not supplied. Run ./eng/scripts/vendor-blazor-templates.ps1 instead of invoking this target directly."
+        />
+        <PropertyGroup>
+            <WasmContent>$(NuGetPackageRoot)dorn.templates.blazorwasm/$(BlazorWasmPin)/content</WasmContent>
+            <ServerContent>$(NuGetPackageRoot)dorn.templates.blazorserver/$(BlazorServerPin)/content</ServerContent>
+        </PropertyGroup>
+        <Error
+            Condition="!Exists('$(WasmContent)')"
+            Text="Dorn.Templates.BlazorWasm $(BlazorWasmPin) has no content/ at '$(WasmContent)'. The pinned version may be unpublished or yanked."
+        />
+        <Error
+            Condition="!Exists('$(ServerContent)')"
+            Text="Dorn.Templates.BlazorServer $(BlazorServerPin) has no content/ at '$(ServerContent)'. The pinned version may be unpublished or yanked."
+        />
+        <ItemGroup>
+            <WasmFiles Include="$(WasmContent)/**/*" />
+            <ServerFiles Include="$(ServerContent)/**/*" />
+        </ItemGroup>
+        <RemoveDir Directories="$(VendorTarget)/wasm;$(VendorTarget)/server" />
+        <Copy
+            SourceFiles="@(WasmFiles)"
+            DestinationFiles="@(WasmFiles->'$(VendorTarget)/wasm/%(RecursiveDir)%(Filename)%(Extension)')"
+        />
+        <Copy
+            SourceFiles="@(ServerFiles)"
+            DestinationFiles="@(ServerFiles->'$(VendorTarget)/server/%(RecursiveDir)%(Filename)%(Extension)')"
+        />
+    </Target>
+</Project>
