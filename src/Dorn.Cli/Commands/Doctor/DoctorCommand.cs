@@ -18,7 +18,7 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
     // Keep in sync with global.json and templates/webapi/global.json.
     internal const string MinimumSdkVersion = "10.0.301";
 
-    // Keep in sync with templates/blazor/wasm/build/Tailwind.targets' TailwindVersion.
+    // Keep in sync with mbarretot/dorn-templates-blazor's templates/blazor/wasm/build/Tailwind.targets' TailwindVersion.
     private const string TailwindVersion = "4.3.1";
     private const string TailwindPathEnvironmentVariable = "DORN_TAILWIND_PATH";
     private const string ToolsHomeEnvironmentVariable = "DORN_TOOLS_HOME";

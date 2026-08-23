@@ -16,21 +16,6 @@
         <Project Path="src/Dorn.Core/Dorn.Core.csproj" />
     </Folder>
     <Folder Name="/templates/" />
-    <Folder Name="/templates/blazor/">
-        <Project Path="templates/blazor/wasm/src/CleanArchBlazorWasm.AppHost/CleanArchBlazorWasm.AppHost.csproj" />
-        <Project Path="templates/blazor/wasm/src/CleanArchBlazorWasm.Web/CleanArchBlazorWasm.Web.csproj" />
-        <Project Path="templates/blazor/wasm/tests/CleanArchBlazorWasm.Application.Tests/CleanArchBlazorWasm.Application.Tests.csproj" />
-        <Project Path="templates/blazor/wasm/tests/CleanArchBlazorWasm.Architecture.Tests/CleanArchBlazorWasm.Architecture.Tests.csproj" />
-        <Project Path="templates/blazor/wasm/tests/CleanArchBlazorWasm.Functional.Tests/CleanArchBlazorWasm.Functional.Tests.csproj" />
-        <Project Path="templates/blazor/wasm/tests/CleanArchBlazorWasm.Integration.Tests/CleanArchBlazorWasm.Integration.Tests.csproj" />
-        <Project Path="templates/blazor/server/src/CleanArchBlazorServer.AppHost/CleanArchBlazorServer.AppHost.csproj" />
-        <Project Path="templates/blazor/server/src/CleanArchBlazorServer.ServiceDefaults/CleanArchBlazorServer.ServiceDefaults.csproj" />
-        <Project Path="templates/blazor/server/src/CleanArchBlazorServer.Web/CleanArchBlazorServer.Web.csproj" />
-        <Project Path="templates/blazor/server/tests/CleanArchBlazorServer.Application.Tests/CleanArchBlazorServer.Application.Tests.csproj" />
-        <Project Path="templates/blazor/server/tests/CleanArchBlazorServer.Architecture.Tests/CleanArchBlazorServer.Architecture.Tests.csproj" />
-        <Project Path="templates/blazor/server/tests/CleanArchBlazorServer.Functional.Tests/CleanArchBlazorServer.Functional.Tests.csproj" />
-        <Project Path="templates/blazor/server/tests/CleanArchBlazorServer.Integration.Tests/CleanArchBlazorServer.Integration.Tests.csproj" />
-    </Folder>
     <Folder Name="/templates/grpc/">
         <Project Path="templates/grpc/src/CleanArchGrpcService.AppHost/CleanArchGrpcService.AppHost.csproj" />
         <Project Path="templates/grpc/src/CleanArchGrpcService.Application/CleanArchGrpcService.Application.csproj" />
