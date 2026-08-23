@@ -37,6 +37,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      # Proves the pinned packs resolve and extract before C makes them load-bearing (ADR 0027).
+      - name: Vendor blazor template packs (verification only)
+        shell: pwsh
+        run: |
+          ./eng/scripts/vendor-blazor-templates.ps1 -VendorTarget "${{ github.workspace }}/artifacts/vendor-check"
+          foreach ($f in 'wasm','server') {
+            $p = "${{ github.workspace }}/artifacts/vendor-check/$f/.template.config/template.json"
+            if (-not (Test-Path $p)) { throw "Vendored pack is missing $p." }
+          }
+
       - name: Cache ReportGenerator tool
         uses: actions/cache@v6
         with:
