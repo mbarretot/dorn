@@ -6,6 +6,10 @@ $pinsFile = Join-Path $repoRoot "Directory.Packages.props"
 $wasmPin   = (Select-String -Path $pinsFile -Pattern 'Dorn\.Templates\.BlazorWasm" Version="([^"]+)"').Matches[0].Groups[1].Value
 $serverPin = (Select-String -Path $pinsFile -Pattern 'Dorn\.Templates\.BlazorServer" Version="([^"]+)"').Matches[0].Groups[1].Value
 $proj = Join-Path $repoRoot "eng/vendoring/Dorn.Templates.Blazor.Vendor/Dorn.Templates.Blazor.Vendor.csproj"
+# nuget.config's dorn-local source points at ./artifacts; NuGet validates every configured local
+# source exists whenever it needs to actually search (i.e. on any cache miss), so a fresh clone/CI
+# checkout without that folder yet fails restore with NU1301 before it ever reaches nuget.org.
+New-Item -ItemType Directory -Force -Path (Join-Path $repoRoot "artifacts") | Out-Null
 $args = @("-p:BlazorWasmPin=$wasmPin", "-p:BlazorServerPin=$serverPin")
 if ($VendorTarget) { $args += "-p:VendorTarget=$VendorTarget" }
 Write-Host "==> Vendoring Dorn.Templates.BlazorWasm $wasmPin / BlazorServer $serverPin..."
