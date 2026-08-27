@@ -37,6 +37,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      # Vendors templates/webapi in place (ADR 0028) — sources are no longer tracked in git, so
+      # this step is load-bearing for every step below that touches templates/webapi/**.
+      - name: Vendor webapi template pack
+        shell: pwsh
+        run: ./eng/scripts/vendor-webapi-templates.ps1
+
       # Vendors templates/blazor/{wasm,server} in place (ADR 0027) — sources are no longer tracked
       # in git, so this step is load-bearing for every step below that touches templates/blazor/**.
       - name: Vendor blazor template packs
@@ -125,17 +131,3 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: pwsh
         run: ./eng/scripts/smoke-test-cli.ps1 -ArtifactsDirectory ${{ github.workspace }}/artifacts
-
-      # Dual-distribution smoke test: standalone dotnet new template pack, independent of the dorn CLI — see ADR 0008.
-      - name: Pack and smoke-test Dorn.Templates.WebApi (dotnet new)
-        if: matrix.os == 'ubuntu-latest'
-        shell: pwsh
-        run: |
-          ./eng/scripts/pack-templates.ps1
-          dotnet new install ./artifacts/Dorn.Templates.WebApi.*.nupkg
-          dotnet new list | Select-String "dorn-webapi"
-          dotnet new dorn-webapi -n CiSmokeTestApp -o /tmp/ci-smoke-test-app
-          # Generated project is outside the repo (no local nuget.config feed) — point restore at the local artifacts feed explicitly (see ADR 0010).
-          dotnet restore /tmp/ci-smoke-test-app -p:RestoreAdditionalProjectSources=${{ github.workspace }}/artifacts
-          dotnet build /tmp/ci-smoke-test-app -c Release --no-restore
-          dotnet new uninstall Dorn.Templates.WebApi

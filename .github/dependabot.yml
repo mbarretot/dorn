@@ -6,6 +6,9 @@ updates:
       interval: weekly
     open-pull-requests-limit: 10
     groups:
+      dorn-webapi-templates:
+        patterns:
+          - "Dorn.Templates.WebApi"
       dorn-blazor-templates:
         patterns:
           - "Dorn.Templates.Blazor*"
