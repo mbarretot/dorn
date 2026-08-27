@@ -37,6 +37,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      # Proves the pinned pack resolves and extracts before a later unit makes it load-bearing (ADR 0028).
+      - name: Vendor webapi template pack (verification only)
+        shell: pwsh
+        run: |
+          ./eng/scripts/vendor-webapi-templates.ps1 -VendorTarget "${{ github.workspace }}/artifacts/vendor-check/webapi"
+          $p = "${{ github.workspace }}/artifacts/vendor-check/webapi/.template.config/template.json"
+          if (-not (Test-Path $p)) { throw "Vendored pack is missing $p." }
+
       - name: Cache ReportGenerator tool
         uses: actions/cache@v6
         with:

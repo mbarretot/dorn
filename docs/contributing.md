@@ -47,6 +47,7 @@ The direct reference in a transitive override is essential. Central Package Mana
 Run in this order:
 
 ```bash
+pwsh ./eng/scripts/vendor-webapi-templates.ps1
 dotnet pack packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj -c Release -o ./artifacts
 dotnet pack packages/Dorn.Messaging/Dorn.Messaging.csproj -c Release -o ./artifacts
 dotnet pack packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj -c Release -o ./artifacts
@@ -56,7 +57,9 @@ DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" 
 ```
 
 > [!IMPORTANT]
-> The 4 `dotnet pack` calls must run first — raw templates and generation tests restore the local Dorn packages from `./artifacts`. Version comes from [GitVersion](../packages/Directory.Build.props) ([ADR 0026](adr/0026-gitversion-for-package-versioning.md)): on a commit with no tag, each pack lands at a branch-derived prerelease version that won't satisfy templates' exact `Directory.Packages.props` pins — if restore fails locally with a missing-package error, tag your current commit first (`git tag -f v<pinned version>`) before the relevant `dotnet pack`, matching what `templates/grpc/Directory.Packages.props`/`templates/blazor/wasm/Directory.Packages.props` already pin, exactly as `.github/workflows/build-test.yml` does — then delete the local tag afterward (`git tag -d v<pinned version>`).
+> The vendor step needs network access to nuget.org and only needs to re-run when the pinned webapi
+> template pack version bumps ([ADR 0028](adr/0028-external-template-repos-webapi.md)).
+> The 4 `dotnet pack` calls must run first — raw templates and generation tests restore the local Dorn packages from `./artifacts`. Version comes from [GitVersion](../packages/Directory.Build.props) ([ADR 0026](adr/0026-gitversion-for-package-versioning.md)): on a commit with no tag, each pack lands at a branch-derived prerelease version that won't satisfy templates' exact `Directory.Packages.props` pins — if restore fails locally with a missing-package error, tag your current commit first (`git tag -f v<pinned version>`) before the relevant `dotnet pack`, matching what `templates/grpc/Directory.Packages.props`/`templates/blazor/wasm/Directory.Packages.props`/`templates/webapi/Directory.Packages.props` already pin, exactly as `.github/workflows/build-test.yml` does — then delete the local tag afterward (`git tag -d v<pinned version>`).
 
 CI runs the reusable build and test matrix on Ubuntu and Windows.
 
