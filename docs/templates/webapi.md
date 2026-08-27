@@ -152,6 +152,13 @@ dotnet new uninstall Dorn.Templates.WebApi
 
 This path uses the global `dotnet new` cache. Dorn's CLI uses its separate `~/.dorn/template-engine` cache.
 
+## 📦 Template source
+
+This template's source is migrating to [`mbarretot/dorn-templates-webapi`](https://github.com/mbarretot/dorn-templates-webapi),
+which will become the source of truth and publish `Dorn.Templates.WebApi` from its own CI (see
+[ADR 0028](../adr/0028-external-template-repos-webapi.md)). Today `templates/webapi/` in this repo is
+still authoritative; `dorn new webapi` and the vanilla `dotnet new` path above are unaffected either way.
+
 ## 📚 Related decisions
 
-[Persistence](../adr/0005-ef-core-sqlite-default-persistence.md) · [Database choices](../adr/0011-database-provider-selection.md) · [PostgreSQL](../adr/0014-postgresql-database-provider.md) · [Authentication](../adr/0016-opt-in-jwt-auth-scaffolding.md) · [Observability](../adr/0017-orchestrator-agnostic-observability.md)
+[Persistence](../adr/0005-ef-core-sqlite-default-persistence.md) · [Database choices](../adr/0011-database-provider-selection.md) · [PostgreSQL](../adr/0014-postgresql-database-provider.md) · [Authentication](../adr/0016-opt-in-jwt-auth-scaffolding.md) · [Observability](../adr/0017-orchestrator-agnostic-observability.md) · [ADR 0028: External template repositories (webapi)](../adr/0028-external-template-repos-webapi.md)

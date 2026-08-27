@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+        <IsPackable>false</IsPackable>
+        <VendorTarget Condition="'$(VendorTarget)'==''"
+            >$(MSBuildThisFileDirectory)../../../templates/webapi</VendorTarget>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageDownload Include="Dorn.Templates.WebApi" Version="[$(WebApiPin)]" />
+    </ItemGroup>
+    <Target Name="VendorWebApiTemplates">
+        <Error
+            Condition="'$(WebApiPin)'==''"
+            Text="Pin not supplied. Run ./eng/scripts/vendor-webapi-templates.ps1 instead of invoking this target directly."
+        />
+        <PropertyGroup>
+            <WebApiContent>$(NuGetPackageRoot)dorn.templates.webapi/$(WebApiPin)/content</WebApiContent>
+        </PropertyGroup>
+        <Error
+            Condition="!Exists('$(WebApiContent)')"
+            Text="Dorn.Templates.WebApi $(WebApiPin) has no content/ at '$(WebApiContent)'. The pinned version may be unpublished or yanked."
+        />
+        <ItemGroup>
+            <WebApiFiles Include="$(WebApiContent)/**/*" />
+        </ItemGroup>
+        <RemoveDir Directories="$(VendorTarget)" />
+        <Copy
+            SourceFiles="@(WebApiFiles)"
+            DestinationFiles="@(WebApiFiles->'$(VendorTarget)/%(RecursiveDir)%(Filename)%(Extension)')"
+        />
+    </Target>
+</Project>

@@ -42,4 +42,9 @@
         <PackageVersion Include="YamlDotNet" Version="16.2.0" />
         <PackageVersion Include="bunit" Version="2.9.0" />
     </ItemGroup>
+
+    <ItemGroup>
+        <!-- Vendored webapi template pack (ADR 0028). Bumped automatically by Dependabot. -->
+        <PackageVersion Include="Dorn.Templates.WebApi" Version="1.0.5" />
+    </ItemGroup>
 </Project>
