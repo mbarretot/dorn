@@ -95,9 +95,17 @@ browser-automation test tier exists in dorn today.
 | Integration | The Tailwind build pipeline produced real CSS with the expected tokens |
 | Architecture | `Components/Ui/` never depends on `Features/`; no app type touches `IJSRuntime` directly |
 
+## 📦 Template source
+
+This template's source lives in [`mbarretot/dorn-templates-blazor`](https://github.com/mbarretot/dorn-templates-blazor),
+not this repository — dorn vendors the published `Dorn.Templates.BlazorWasm` pack at build time
+(see [ADR 0027](../adr/0027-external-template-repos-blazor-first.md)). Contribute template fixes
+there; `dorn new blazor wasm` stays a dorn CLI command, documented above.
+
 ## 📚 Related
 
 - [ADR 0021: Tailwind standalone CLI acquisition](../adr/0021-tailwind-standalone-cli.md)
 - [ADR 0022: Copy-owned UI components](../adr/0022-copy-owned-ui-components.md)
 - [ADR 0023: Blazor WASM scoped MVP](../adr/0023-blazor-wasm-scoped-mvp.md)
+- [ADR 0027: External template repositories (blazor first)](../adr/0027-external-template-repos-blazor-first.md)
 - [Architecture](../architecture.md)

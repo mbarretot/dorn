@@ -43,6 +43,12 @@ jobs:
         shell: pwsh
         run: ./eng/scripts/vendor-webapi-templates.ps1
 
+      # Vendors templates/blazor/{wasm,server} in place (ADR 0027) — sources are no longer tracked
+      # in git, so this step is load-bearing for every step below that touches templates/blazor/**.
+      - name: Vendor blazor template packs
+        shell: pwsh
+        run: ./eng/scripts/vendor-blazor-templates.ps1
+
       - name: Cache ReportGenerator tool
         uses: actions/cache@v6
         with:

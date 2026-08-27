@@ -9,6 +9,9 @@ updates:
       dorn-webapi-templates:
         patterns:
           - "Dorn.Templates.WebApi"
+      dorn-blazor-templates:
+        patterns:
+          - "Dorn.Templates.Blazor*"
     commit-message:
       prefix: "chore(deps)"
   - package-ecosystem: github-actions

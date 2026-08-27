@@ -62,6 +62,9 @@ samples/*
 # Vendored from mbarretot/dorn-templates-webapi at build time (ADR 0028)
 /templates/webapi/
 
+# Vendored from mbarretot/dorn-templates-blazor at build time (ADR 0027)
+/templates/blazor/
+
 # Local agent tooling, not part of the project
 .atl/
 .claude/
