@@ -9,12 +9,7 @@ public sealed record AuthValidationResult(bool IsValid, string? ErrorMessage)
 
 public static class AuthValidator
 {
-    private static readonly HashSet<string> ValidAuthModes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "none",
-        "custom",
-        "azure-ad",
-    };
+    public static readonly IReadOnlyList<string> ValidAuthModes = ["none", "custom", "azure-ad"];
 
     public static AuthValidationResult Validate(string? value)
     {
@@ -23,7 +18,7 @@ public static class AuthValidator
             return AuthValidationResult.Valid;
         }
 
-        if (!ValidAuthModes.Contains(value))
+        if (!ValidAuthModes.Contains(value, StringComparer.OrdinalIgnoreCase))
         {
             return AuthValidationResult.Invalid(
                 $"Unknown auth mode '{value}'. Valid values are 'none', 'custom', 'azure-ad'."

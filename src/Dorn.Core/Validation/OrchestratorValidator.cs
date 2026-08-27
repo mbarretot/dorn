@@ -10,14 +10,12 @@ public sealed record OrchestratorValidationResult(bool IsValid, string? ErrorMes
 
 public static class OrchestratorValidator
 {
-    private static readonly HashSet<string> ValidOrchestrators = new(
-        StringComparer.OrdinalIgnoreCase
-    )
-    {
+    public static readonly IReadOnlyList<string> ValidOrchestrators =
+    [
         "aspire",
         "docker-compose",
         "none",
-    };
+    ];
 
     public static OrchestratorValidationResult Validate(string? value)
     {
@@ -26,7 +24,7 @@ public static class OrchestratorValidator
             return OrchestratorValidationResult.Valid;
         }
 
-        if (!ValidOrchestrators.Contains(value))
+        if (!ValidOrchestrators.Contains(value, StringComparer.OrdinalIgnoreCase))
         {
             return OrchestratorValidationResult.Invalid(
                 $"Unknown orchestrator '{value}'. Valid values are 'aspire', 'docker-compose', 'none'."
