@@ -7,11 +7,10 @@ Build, packaging, and release tools for this repository. Nothing here ships insi
 | Goal | Command |
 | --- | --- |
 | Pack shared packages | `dotnet pack packages/<Name>/<Name>.csproj -c Release -o ./artifacts` (per package — no wrapper script; version comes from GitVersion, see ADR 0026) |
-| Pack the Web API template | `pwsh eng/scripts/pack-templates.ps1` |
 | Vendor the webapi template | `pwsh eng/scripts/vendor-webapi-templates.ps1` (see [ADR 0028](../docs/adr/0028-external-template-repos-webapi.md)) |
 | Smoke-test a packed CLI | `pwsh eng/scripts/smoke-test-cli.ps1` |
 
-Packages are written to `./artifacts`. The template packaging project lives in `eng/packaging/` so generated projects never receive it.
+Packages are written to `./artifacts`. `Dorn.Templates.WebApi` itself is packed and published from `mbarretot/dorn-templates-webapi`'s own CI, not from here (ADR 0028).
 
 ## 📦 Release flow
 
@@ -21,7 +20,7 @@ Packages are written to `./artifacts`. The template packaging project lives in `
 | Gate | Reusable Linux and Windows test matrix must pass |
 | Version | Computed by GitVersion from the tag ([ADR 0026](../docs/adr/0026-gitversion-for-package-versioning.md)) |
 | Authentication | NuGet Trusted Publishing through OIDC |
-| Output | Four libraries, `Dorn.Cli`, and `Dorn.Templates.WebApi` |
+| Output | Four libraries and `Dorn.Cli` |
 
 > [!IMPORTANT]
 > Do not rename `.github/workflows/publish.yml`. The NuGet Trusted Publishing policy is bound to that workflow name.
