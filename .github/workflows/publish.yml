@@ -47,6 +47,18 @@ jobs:
       - name: Extract version from tag
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
+      # Vendors templates/webapi in place (ADR 0028) before Dorn.Cli's None glob sees the tree —
+      # this job runs in its own checkout, independent of build-test.yml's.
+      - name: Vendor webapi template pack
+        shell: pwsh
+        run: ./eng/scripts/vendor-webapi-templates.ps1
+
+      # Vendors templates/blazor/{wasm,server} in place (ADR 0027) before Dorn.Cli's None glob
+      # sees the tree — this job runs in its own checkout, independent of build-test.yml's.
+      - name: Vendor blazor template packs
+        shell: pwsh
+        run: ./eng/scripts/vendor-blazor-templates.ps1
+
       # GitVersion (packages/*.csproj) reads this exact tag on HEAD as the PackageVersion directly —
       # no -p:PackageVersion override needed, see ADR 0026.
       - name: Pack library packages
@@ -71,10 +83,6 @@ jobs:
           --no-build
           -p:PackageVersion=${{ env.VERSION }}
           --output ./artifacts
-
-      - name: Pack Dorn.Templates.WebApi
-        shell: pwsh
-        run: ./eng/scripts/pack-templates.ps1 -Version $env:VERSION
 
       - name: Verify generated packages
         run: |

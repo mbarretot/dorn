@@ -10,12 +10,12 @@ public sealed record DatabaseProviderValidationResult(bool IsValid, string? Erro
 
 public static class DatabaseProviderValidator
 {
-    private static readonly HashSet<string> ValidProviders = new(StringComparer.OrdinalIgnoreCase)
-    {
+    public static readonly IReadOnlyList<string> ValidProviders =
+    [
         "sqlite",
         "sqlserver",
         "postgres",
-    };
+    ];
 
     public static DatabaseProviderValidationResult Validate(string? value)
     {
@@ -24,7 +24,7 @@ public static class DatabaseProviderValidator
             return DatabaseProviderValidationResult.Valid;
         }
 
-        if (!ValidProviders.Contains(value))
+        if (!ValidProviders.Contains(value, StringComparer.OrdinalIgnoreCase))
         {
             return DatabaseProviderValidationResult.Invalid(
                 $"Unknown database provider '{value}'. Valid values are 'sqlite', 'sqlserver', 'postgres'."

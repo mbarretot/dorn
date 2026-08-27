@@ -47,6 +47,8 @@ The direct reference in a transitive override is essential. Central Package Mana
 Run in this order:
 
 ```bash
+pwsh ./eng/scripts/vendor-webapi-templates.ps1
+pwsh ./eng/scripts/vendor-blazor-templates.ps1
 dotnet pack packages/Dorn.Messaging.Contracts/Dorn.Messaging.Contracts.csproj -c Release -o ./artifacts
 dotnet pack packages/Dorn.Messaging/Dorn.Messaging.csproj -c Release -o ./artifacts
 dotnet pack packages/Dorn.SharedKernel/Dorn.SharedKernel.csproj -c Release -o ./artifacts
@@ -56,7 +58,11 @@ DORN_TEMPLATES_PATH="$(pwd)/templates" DORN_LOCAL_NUGET_FEED="$(pwd)/artifacts" 
 ```
 
 > [!IMPORTANT]
-> The 4 `dotnet pack` calls must run first — raw templates and generation tests restore the local Dorn packages from `./artifacts`. Version comes from [GitVersion](../packages/Directory.Build.props) ([ADR 0026](adr/0026-gitversion-for-package-versioning.md)): on a commit with no tag, each pack lands at a branch-derived prerelease version that won't satisfy templates' exact `Directory.Packages.props` pins — if restore fails locally with a missing-package error, tag your current commit first (`git tag -f v<pinned version>`) before the relevant `dotnet pack`, matching what `templates/grpc/Directory.Packages.props`/`templates/blazor/wasm/Directory.Packages.props` already pin, exactly as `.github/workflows/build-test.yml` does — then delete the local tag afterward (`git tag -d v<pinned version>`).
+> Neither `templates/webapi/` nor `templates/blazor/` is tracked in git anymore — the vendor steps
+> are what put them on disk at all ([ADR 0028](adr/0028-external-template-repos-webapi.md),
+> [ADR 0027](adr/0027-external-template-repos-blazor-first.md)). Run both first on every fresh
+> checkout, and again whenever a pinned template pack version bumps. They need network access to nuget.org.
+> The 4 `dotnet pack` calls must run next — raw templates and generation tests restore the local Dorn packages from `./artifacts`. Version comes from [GitVersion](../packages/Directory.Build.props) ([ADR 0026](adr/0026-gitversion-for-package-versioning.md)): on a commit with no tag, each pack lands at a branch-derived prerelease version that won't satisfy templates' exact `Directory.Packages.props` pins — if restore fails locally with a missing-package error, tag your current commit first (`git tag -f v<pinned version>`) before the relevant `dotnet pack`, matching what `templates/grpc/Directory.Packages.props` pins, exactly as `.github/workflows/build-test.yml` does — then delete the local tag afterward (`git tag -d v<pinned version>`).
 
 CI runs the reusable build and test matrix on Ubuntu and Windows.
 

@@ -9,11 +9,7 @@ public sealed record OrmValidationResult(bool IsValid, string? ErrorMessage)
 
 public static class OrmValidator
 {
-    private static readonly HashSet<string> ValidOrms = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "efcore",
-        "dapper",
-    };
+    public static readonly IReadOnlyList<string> ValidOrms = ["efcore", "dapper"];
 
     public static OrmValidationResult Validate(string? value)
     {
@@ -22,7 +18,7 @@ public static class OrmValidator
             return OrmValidationResult.Valid;
         }
 
-        if (!ValidOrms.Contains(value))
+        if (!ValidOrms.Contains(value, StringComparer.OrdinalIgnoreCase))
         {
             return OrmValidationResult.Invalid(
                 $"Unknown ORM '{value}'. Valid values are 'efcore', 'dapper'."

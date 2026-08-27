@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted
+Accepted. Partially superseded by [ADR 0028](./0028-external-template-repos-webapi.md): the packaging
+project and `eng/scripts/pack-templates.ps1` moved to `mbarretot/dorn-templates-webapi`, which now packs
+and publishes `Dorn.Templates.WebApi` directly; this monorepo vendors the published package back into
+`templates/webapi/` instead of packing it from in-repo source. The dual-distribution decision itself
+(`dorn new webapi` and `dotnet new install Dorn.Templates.WebApi` as independent entry points) still
+holds.
 
 ## Context
 
