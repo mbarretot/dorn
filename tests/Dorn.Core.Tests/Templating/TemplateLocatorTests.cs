@@ -51,23 +51,40 @@ public class TemplateLocatorTests
     }
 
     [Fact]
-    public void ResolveTemplatesRoot_WithBlazorGroupingSubfolder_StillResolvesRoot()
+    public void ResolveTemplatesRoot_WithGroupingSubfolder_StillResolvesRoot()
     {
-        // templates/blazor/ is a non-template grouping folder; templates/blazor/wasm/ is the real one.
-        var original = Environment.GetEnvironmentVariable(EnvironmentVariableName);
+        var originalEnv = Environment.GetEnvironmentVariable(EnvironmentVariableName);
+        var originalBaseDirectory = AppContext.BaseDirectory;
+        var tempRoot = Directory.CreateTempSubdirectory("dorn-locator-grouping-test-");
         try
         {
+            var templatesRoot = Path.Combine(tempRoot.FullName, "templates");
+            var plainFamilyConfig = Path.Combine(templatesRoot, "plainfamily", ".template.config");
+            var groupedChildConfig = Path.Combine(
+                templatesRoot,
+                "groupfamily",
+                "child",
+                ".template.config"
+            );
+            Directory.CreateDirectory(plainFamilyConfig);
+            Directory.CreateDirectory(groupedChildConfig);
+
+            var probeBaseDirectory = Directory.CreateDirectory(
+                Path.Combine(tempRoot.FullName, "bin", "Debug", "net10.0")
+            );
             Environment.SetEnvironmentVariable(EnvironmentVariableName, null);
+            AppContext.SetData("APP_CONTEXT_BASE_DIRECTORY", probeBaseDirectory.FullName);
 
             var resolved = TemplateLocator.ResolveTemplatesRoot();
 
-            Assert.True(
-                Directory.Exists(Path.Combine(resolved, "blazor", "wasm", ".template.config"))
-            );
+            Assert.Equal(Path.GetFullPath(templatesRoot), resolved);
+            Assert.True(Directory.Exists(groupedChildConfig));
         }
         finally
         {
-            Environment.SetEnvironmentVariable(EnvironmentVariableName, original);
+            AppContext.SetData("APP_CONTEXT_BASE_DIRECTORY", originalBaseDirectory);
+            Environment.SetEnvironmentVariable(EnvironmentVariableName, originalEnv);
+            tempRoot.Delete(recursive: true);
         }
     }
 

@@ -126,6 +126,13 @@ Note the one tier-placement divergence from `blazor wasm`: the root-document ass
 Integration (`WebApplicationFactory<Program>`), not Functional — they verify what the build
 pipeline actually produced, the same tier that already owns the Tailwind CSS assertions.
 
+## 📦 Template source
+
+This template's source lives in [`mbarretot/dorn-templates-blazor`](https://github.com/mbarretot/dorn-templates-blazor),
+not this repository — dorn vendors the published `Dorn.Templates.BlazorServer` pack at build time
+(see [ADR 0027](../adr/0027-external-template-repos-blazor-first.md)). Contribute template fixes
+there; `dorn new blazor server` stays a dorn CLI command, documented above.
+
 ## 📚 Related
 
 - [ADR 0012: Four-tier test strategy](../adr/0012-four-tier-test-strategy.md)
@@ -135,5 +142,6 @@ pipeline actually produced, the same tier that already owns the Tailwind CSS ass
 - [ADR 0023: Blazor WASM scoped MVP](../adr/0023-blazor-wasm-scoped-mvp.md)
 - [ADR 0024: Blazor Server template scoped MVP](../adr/0024-blazor-server-scoped-mvp.md)
 - [ADR 0025: Extract Dorn.WebUI.Primitives as a NuGet package](../adr/0025-extract-dorn-webui-primitives-as-nuget-package.md)
+- [ADR 0027: External template repositories (blazor first)](../adr/0027-external-template-repos-blazor-first.md)
 - [Architecture](../architecture.md)
 - [Blazor WASM template](./blazor-wasm.md)

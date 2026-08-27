@@ -42,4 +42,10 @@
         <PackageVersion Include="YamlDotNet" Version="16.2.0" />
         <PackageVersion Include="bunit" Version="2.9.0" />
     </ItemGroup>
+
+    <ItemGroup>
+        <!-- Vendored blazor template packs (ADR 0027). Bumped automatically by Dependabot. -->
+        <PackageVersion Include="Dorn.Templates.BlazorWasm" Version="1.0.0" />
+        <PackageVersion Include="Dorn.Templates.BlazorServer" Version="1.0.0" />
+    </ItemGroup>
 </Project>
